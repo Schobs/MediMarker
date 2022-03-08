@@ -1,0 +1,39 @@
+Setting CUDA_VISIBLE_DEVICES=0
+==> Using device cuda
+DATASET:
+  DATA_AUG: False
+  DEBUG: False
+  IMAGE_MODALITY: CMRI
+  INPUT_SIZE: [512, 512]
+  LANDMARKS: [0]
+  NAME: ASPIRE
+  ROOT: /shared/tale2/Shared/data/CMRI/ASPIRE
+  SRC_TARGETS: /shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV
+MODEL:
+  ACTIVATION_FUNCTION: leaky_relu
+  ARCHITECTURE: U-Net
+  GAUSS_SIGMA: 12
+  INIT_FEATURES: 32
+  KERNEL_SIZE: 3
+  MAX_FEATURES: 256
+  MIN_FEATURE_RESOLUTION: 4
+OUTPUT:
+  FAST_DEV_RUN: False
+  TB_DIR: ./lightning_logs
+  VERBOSE: True
+OUTPUT_DIR: /shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/base_case_512featuresmax
+SOLVER:
+  AUTO_MIXED_PRECISION: True
+  BASE_LR: 0.01
+  DATA_LOADER_BATCH_SIZE: 12
+  DECAY_POLICY: poly
+  DEEP_SUPERVISION: False
+  LOSS_FUNCTION: mse
+  MAX_EPOCHS: 1000
+  MINI_BATCH_SIZE: 250
+  MOMENTUM: 0.99
+  NESTEROV: True
+  NUM_RES_SUPERVISIONS: 1
+  SEED: 42
+  TYPE: SGD
+/shared/tale2/Shared/data/CMRI/ASPIRE /shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV AND  /shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV

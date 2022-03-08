@@ -1,0 +1,15 @@
+
+# OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/base_case_256_big_gauss"
+OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256_8GS_1LM"
+
+SOLVER:
+  DEEP_SUPERVISION: False
+  NUM_RES_SUPERVISIONS: 1
+  LOSS_FUNCTION: "mse"
+DATASET:
+  LANDMARKS: [0]
+  DEBUG: False
+
+MODEL:
+  GAUSS_SIGMA: 8
+  MAX_FEATURES: 256

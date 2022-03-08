@@ -1,0 +1,12 @@
+
+OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/base_case_512featuresmax"
+SOLVER:
+  DEEP_SUPERVISION: False
+  NUM_RES_SUPERVISIONS: 1
+  LOSS_FUNCTION: "mse"
+DATASET:
+  LANDMARKS: [0]
+  DEBUG: False
+
+MODEL:
+  GAUSS_SIGMA: 8

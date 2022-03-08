@@ -1,0 +1,9 @@
+
+OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/awl_aug"
+SOLVER:
+  DEEP_SUPERVISION: False
+  NUM_RES_SUPERVISIONS: 1
+  LOSS_FUNCTION: "awl"
+
+DATASET:
+  DATA_AUG: True

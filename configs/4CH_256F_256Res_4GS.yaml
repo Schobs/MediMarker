@@ -1,0 +1,24 @@
+
+# OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/base_case_256_big_gauss"
+OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS"
+
+SOLVER:
+  DEEP_SUPERVISION: False
+  NUM_RES_SUPERVISIONS: 1
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 6 
+
+DATASET:
+  LANDMARKS: [0]
+  DEBUG: False
+
+MODEL:
+  GAUSS_SIGMA: 4
+  MAX_FEATURES: 256
+  CHECKPOINT: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS/model_best_valid.model"
+
+DATASET:
+  ROOT: '/mnt/tale_all/data/CMRI/ASPIRE/'
+  SRC_TARGETS: '/mnt/tale_all/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV'
+  DEBUG: False
+  INPUT_SIZE: [256,256]

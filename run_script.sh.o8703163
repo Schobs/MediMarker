@@ -1,0 +1,294 @@
+Setting CUDA_VISIBLE_DEVICES=0
+==> Using device cuda
+DATASET:
+  IMAGE_MODALITY: CMRI
+  INPUT_SIZE: [512, 512]
+  NAME: ASPIRE
+  NUM_LANDMARKS: 3
+  ROOT: /shared/tale2/Shared/data/CMRI/ASPIRE
+  SRC_TARGETS: /shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV
+MODEL:
+  ACTIVATION_FUNCTION: leaky_relu
+  ARCHITECTURE: U-Net
+  GAUSS_SIGMA: 4
+  INIT_FEATURES: 32
+  KERNEL_SIZE: 3
+  MAX_FEATURES: 512
+  MIN_FEATURE_RESOLUTION: 4
+OUTPUT:
+  FAST_DEV_RUN: False
+  TB_DIR: ./lightning_logs
+  VERBOSE: False
+OUTPUT_DIR: ./outputs
+SOLVER:
+  BASE_LR: 0.01
+  DATA_LOADER_BATCH_SIZE: 16
+  DECAY_POLICY: poly
+  MAX_EPOCHS: 250
+  MINI_BATCH_SIZE: 250
+  MOMENTUM: 0.99
+  NESTEROV: True
+  NUM_RES_SUPERVISIONS: 5
+  SEED: 42
+  TYPE: SGD
+/shared/tale2/Shared/data/CMRI/ASPIRE /shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV AND  /shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV
+Epoch:  0  - train loss:  0.049016245  - val loss:  0.0013834058  -time:  160.97083401679993
+Epoch:  1  - train loss:  0.00102095  - val loss:  0.00082292577  -time:  154.35861778259277
+Epoch:  2  - train loss:  0.0007636452  - val loss:  0.0007383503  -time:  154.24415373802185
+Epoch:  3  - train loss:  0.0007156666  - val loss:  0.0007083398  -time:  153.89336323738098
+Epoch:  4  - train loss:  0.000691746  - val loss:  0.0006915858  -time:  154.08490300178528
+Epoch:  5  - train loss:  0.00067655544  - val loss:  0.0006788647  -time:  153.882581949234
+Epoch:  6  - train loss:  0.00066486385  - val loss:  0.000669446  -time:  153.69249606132507
+Epoch:  7  - train loss:  0.0006565593  - val loss:  0.0006625682  -time:  153.7726743221283
+Epoch:  8  - train loss:  0.0006494658  - val loss:  0.0006556738  -time:  153.46176552772522
+Epoch:  9  - train loss:  0.0006432772  - val loss:  0.0006510115  -time:  153.65166926383972
+Epoch:  10  - train loss:  0.0006386615  - val loss:  0.0006464417  -time:  153.4634997844696
+Epoch:  11  - train loss:  0.0006346831  - val loss:  0.00064278947  -time:  153.2863974571228
+Epoch:  12  - train loss:  0.0006308023  - val loss:  0.00063975976  -time:  153.44096612930298
+Epoch:  13  - train loss:  0.0006266055  - val loss:  0.0006375162  -time:  153.27840209007263
+Epoch:  14  - train loss:  0.0006246901  - val loss:  0.00063396455  -time:  153.41831254959106
+Epoch:  15  - train loss:  0.0006218341  - val loss:  0.0006315296  -time:  153.4214539527893
+Epoch:  16  - train loss:  0.0006192014  - val loss:  0.0006294248  -time:  153.27510476112366
+Epoch:  17  - train loss:  0.0006170045  - val loss:  0.00062754104  -time:  153.46486115455627
+Epoch:  18  - train loss:  0.0006148906  - val loss:  0.00062594865  -time:  153.39725375175476
+Epoch:  19  - train loss:  0.000613254  - val loss:  0.00062432955  -time:  153.3032305240631
+Epoch:  20  - train loss:  0.00061104965  - val loss:  0.0006232384  -time:  153.45094323158264
+Epoch:  21  - train loss:  0.0006097628  - val loss:  0.00062159135  -time:  153.3188931941986
+Epoch:  22  - train loss:  0.0006086945  - val loss:  0.0006202108  -time:  153.45346689224243
+Epoch:  23  - train loss:  0.0006073449  - val loss:  0.00061929534  -time:  153.45629715919495
+Epoch:  24  - train loss:  0.0006058834  - val loss:  0.0006179543  -time:  153.0805480480194
+Epoch:  25  - train loss:  0.00060488674  - val loss:  0.0006164834  -time:  153.04898142814636
+Epoch:  26  - train loss:  0.0006026275  - val loss:  0.00061543024  -time:  152.92076325416565
+Epoch:  27  - train loss:  0.000601925  - val loss:  0.0006145907  -time:  152.9231059551239
+Epoch:  28  - train loss:  0.00060115324  - val loss:  0.0006138469  -time:  152.99160981178284
+Epoch:  29  - train loss:  0.0006006036  - val loss:  0.00061327574  -time:  152.88953232765198
+Epoch:  30  - train loss:  0.00059999106  - val loss:  0.0006119971  -time:  152.89009523391724
+Epoch:  31  - train loss:  0.00059838424  - val loss:  0.00061169936  -time:  152.92557954788208
+Epoch:  32  - train loss:  0.0005969999  - val loss:  0.0006106985  -time:  152.9175992012024
+Epoch:  33  - train loss:  0.00059599377  - val loss:  0.00061051437  -time:  153.0083601474762
+Epoch:  34  - train loss:  0.0005959927  - val loss:  0.0006095381  -time:  152.9624285697937
+Epoch:  35  - train loss:  0.00059454865  - val loss:  0.00060881895  -time:  152.92261815071106
+Epoch:  36  - train loss:  0.00059405935  - val loss:  0.00060826895  -time:  152.92148351669312
+Epoch:  37  - train loss:  0.0005927547  - val loss:  0.0006077726  -time:  152.8966109752655
+Epoch:  38  - train loss:  0.0005929692  - val loss:  0.00060722674  -time:  152.9140977859497
+Epoch:  39  - train loss:  0.0005922758  - val loss:  0.00060682266  -time:  152.8693835735321
+Epoch:  40  - train loss:  0.000591196  - val loss:  0.00060588104  -time:  152.89728331565857
+Epoch:  41  - train loss:  0.0005907955  - val loss:  0.0006055234  -time:  152.8253755569458
+Epoch:  42  - train loss:  0.00058939133  - val loss:  0.0006049746  -time:  152.71020364761353
+Epoch:  43  - train loss:  0.0005888132  - val loss:  0.0006044613  -time:  152.73552322387695
+Epoch:  44  - train loss:  0.00058852864  - val loss:  0.0006041227  -time:  152.75297331809998
+Epoch:  45  - train loss:  0.0005879125  - val loss:  0.00060350593  -time:  152.69450521469116
+Epoch:  46  - train loss:  0.00058701367  - val loss:  0.0006031029  -time:  152.69976091384888
+Epoch:  47  - train loss:  0.00058597425  - val loss:  0.00060233846  -time:  152.68607020378113
+Epoch:  48  - train loss:  0.00058524334  - val loss:  0.00060256815  -time:  152.70422458648682
+saving scheduled checkpoint file...
+done
+Epoch:  49  - train loss:  0.00058545603  - val loss:  0.0006017057  -time:  156.38949990272522
+Epoch:  50  - train loss:  0.00058463647  - val loss:  0.0006014526  -time:  152.9310495853424
+Epoch:  51  - train loss:  0.000583433  - val loss:  0.0006007323  -time:  152.93780732154846
+Epoch:  52  - train loss:  0.00058166566  - val loss:  0.00060028094  -time:  152.95722484588623
+Epoch:  53  - train loss:  0.000581186  - val loss:  0.0005997825  -time:  152.95659923553467
+Epoch:  54  - train loss:  0.00058007694  - val loss:  0.0005994573  -time:  152.945631980896
+Epoch:  55  - train loss:  0.0005788288  - val loss:  0.000599197  -time:  152.92949628829956
+Epoch:  56  - train loss:  0.0005781745  - val loss:  0.00059870956  -time:  152.9486382007599
+Epoch:  57  - train loss:  0.0005782456  - val loss:  0.0005980203  -time:  152.97339797019958
+Epoch:  58  - train loss:  0.0005768938  - val loss:  0.00059810636  -time:  152.849937915802
+Epoch:  59  - train loss:  0.0005751426  - val loss:  0.00059726497  -time:  152.76890587806702
+Epoch:  60  - train loss:  0.0005742009  - val loss:  0.0005977093  -time:  152.81788563728333
+Epoch:  61  - train loss:  0.00057309394  - val loss:  0.0005967209  -time:  152.75813794136047
+Epoch:  62  - train loss:  0.000571589  - val loss:  0.00059662084  -time:  152.76393938064575
+Epoch:  63  - train loss:  0.00057090004  - val loss:  0.0005961608  -time:  152.7852725982666
+Epoch:  64  - train loss:  0.0005686274  - val loss:  0.00059565157  -time:  152.73145508766174
+Epoch:  65  - train loss:  0.00056714553  - val loss:  0.0005954207  -time:  152.72811484336853
+Epoch:  66  - train loss:  0.0005655477  - val loss:  0.0005948922  -time:  152.74512243270874
+Epoch:  67  - train loss:  0.00056399865  - val loss:  0.00059453683  -time:  152.8247880935669
+Epoch:  68  - train loss:  0.000561164  - val loss:  0.00059471466  -time:  152.68729734420776
+Epoch:  69  - train loss:  0.0005585467  - val loss:  0.0005941779  -time:  152.62138271331787
+Epoch:  70  - train loss:  0.00055626326  - val loss:  0.0005943318  -time:  152.7375509738922
+Epoch:  71  - train loss:  0.0005524212  - val loss:  0.0005943929  -time:  152.73771023750305
+Epoch:  72  - train loss:  0.0005516545  - val loss:  0.0005939941  -time:  152.7229208946228
+Epoch:  73  - train loss:  0.00054644095  - val loss:  0.00059383624  -time:  152.70910501480103
+Epoch:  74  - train loss:  0.00054252456  - val loss:  0.0005944047  -time:  152.68736481666565
+Epoch:  75  - train loss:  0.00053945696  - val loss:  0.00059460587  -time:  152.6758143901825
+Epoch:  76  - train loss:  0.00053243386  - val loss:  0.0005956843  -time:  152.7038538455963
+Epoch:  77  - train loss:  0.0005271522  - val loss:  0.0005963536  -time:  152.7047894001007
+Epoch:  78  - train loss:  0.00052077026  - val loss:  0.00059973786  -time:  152.72255182266235
+Epoch:  79  - train loss:  0.0005158495  - val loss:  0.0006008486  -time:  152.69563555717468
+Epoch:  80  - train loss:  0.0005096364  - val loss:  0.00060126215  -time:  152.7011523246765
+Epoch:  81  - train loss:  0.00050092227  - val loss:  0.0006007153  -time:  152.7968897819519
+Epoch:  82  - train loss:  0.0004942484  - val loss:  0.0006043047  -time:  152.77049255371094
+Epoch:  83  - train loss:  0.00048478702  - val loss:  0.00060332747  -time:  152.76124238967896
+Epoch:  84  - train loss:  0.00047508374  - val loss:  0.00060431054  -time:  152.76423978805542
+Epoch:  85  - train loss:  0.00047152693  - val loss:  0.0006039941  -time:  152.77098894119263
+Epoch:  86  - train loss:  0.00046339174  - val loss:  0.0006044874  -time:  152.72822213172913
+Epoch:  87  - train loss:  0.00045619893  - val loss:  0.00060429214  -time:  152.73426985740662
+Epoch:  88  - train loss:  0.0004475869  - val loss:  0.00060641486  -time:  152.7366919517517
+Epoch:  89  - train loss:  0.00044289755  - val loss:  0.00060388265  -time:  152.75779628753662
+Epoch:  90  - train loss:  0.00043773372  - val loss:  0.0006039796  -time:  152.74908018112183
+Epoch:  91  - train loss:  0.0004258814  - val loss:  0.0006029512  -time:  152.74320220947266
+Epoch:  92  - train loss:  0.0004198398  - val loss:  0.0006034672  -time:  152.72125458717346
+Epoch:  93  - train loss:  0.00040869988  - val loss:  0.0006032863  -time:  152.71129727363586
+Epoch:  94  - train loss:  0.00039787954  - val loss:  0.00060402567  -time:  152.69577050209045
+Epoch:  95  - train loss:  0.00038976717  - val loss:  0.0006045963  -time:  152.7107560634613
+Epoch:  96  - train loss:  0.00038051055  - val loss:  0.0006055078  -time:  152.74139213562012
+Epoch:  97  - train loss:  0.00037127675  - val loss:  0.00060944253  -time:  152.70805096626282
+Epoch:  98  - train loss:  0.000360247  - val loss:  0.0006109417  -time:  152.71387362480164
+saving scheduled checkpoint file...
+done
+Epoch:  99  - train loss:  0.00034986238  - val loss:  0.0006113769  -time:  156.86388659477234
+Epoch:  100  - train loss:  0.0003376288  - val loss:  0.0006161004  -time:  152.72906804084778
+Epoch:  101  - train loss:  0.00032954934  - val loss:  0.00061852636  -time:  152.72809648513794
+Epoch:  102  - train loss:  0.0003193006  - val loss:  0.0006194745  -time:  152.68515300750732
+Epoch:  103  - train loss:  0.000307557  - val loss:  0.0006226318  -time:  152.76907563209534
+Epoch:  104  - train loss:  0.0002944619  - val loss:  0.0006241554  -time:  152.73421335220337
+Epoch:  105  - train loss:  0.0002824419  - val loss:  0.00062906713  -time:  152.71739625930786
+Epoch:  106  - train loss:  0.00026797794  - val loss:  0.00062931044  -time:  152.71253180503845
+Epoch:  107  - train loss:  0.0002574155  - val loss:  0.0006338552  -time:  152.7082109451294
+Epoch:  108  - train loss:  0.00024433454  - val loss:  0.0006327726  -time:  152.71806359291077
+Epoch:  109  - train loss:  0.00023230689  - val loss:  0.00063536706  -time:  152.70875573158264
+Epoch:  110  - train loss:  0.00022451088  - val loss:  0.0006379314  -time:  152.69854545593262
+Epoch:  111  - train loss:  0.00021307665  - val loss:  0.00063874875  -time:  152.70495080947876
+Epoch:  112  - train loss:  0.00020385052  - val loss:  0.00063653954  -time:  152.70605278015137
+Epoch:  113  - train loss:  0.0001988517  - val loss:  0.0006360982  -time:  152.7512137889862
+Epoch:  114  - train loss:  0.00019269488  - val loss:  0.000639245  -time:  152.72102856636047
+Epoch:  115  - train loss:  0.00018730997  - val loss:  0.0006361948  -time:  152.71370649337769
+Epoch:  116  - train loss:  0.00018170473  - val loss:  0.0006359313  -time:  152.797771692276
+Epoch:  117  - train loss:  0.00017768111  - val loss:  0.0006359505  -time:  152.74649143218994
+Epoch:  118  - train loss:  0.000174845  - val loss:  0.0006334217  -time:  152.7482488155365
+Epoch:  119  - train loss:  0.00017141094  - val loss:  0.00063655607  -time:  152.72500729560852
+Epoch:  120  - train loss:  0.00016853654  - val loss:  0.00063428417  -time:  152.74443173408508
+Epoch:  121  - train loss:  0.00016547418  - val loss:  0.0006342935  -time:  152.74929451942444
+Epoch:  122  - train loss:  0.0001634269  - val loss:  0.0006335851  -time:  152.7446596622467
+Epoch:  123  - train loss:  0.00016071957  - val loss:  0.0006324288  -time:  152.7314944267273
+Epoch:  124  - train loss:  0.00015928409  - val loss:  0.0006335756  -time:  152.73659110069275
+Epoch:  125  - train loss:  0.00015657321  - val loss:  0.000633103  -time:  152.75546622276306
+Epoch:  126  - train loss:  0.0001543947  - val loss:  0.00063091965  -time:  152.76573634147644
+Epoch:  127  - train loss:  0.00015240812  - val loss:  0.00063090137  -time:  152.77045440673828
+Epoch:  128  - train loss:  0.00015246031  - val loss:  0.0006310692  -time:  152.7949984073639
+Epoch:  129  - train loss:  0.00015089569  - val loss:  0.0006306486  -time:  152.76935052871704
+Epoch:  130  - train loss:  0.00014942607  - val loss:  0.00062978535  -time:  152.76215529441833
+Epoch:  131  - train loss:  0.00014841133  - val loss:  0.0006303261  -time:  152.75152325630188
+Epoch:  132  - train loss:  0.0001466472  - val loss:  0.00062892516  -time:  152.702734708786
+Epoch:  133  - train loss:  0.00014580073  - val loss:  0.00062814244  -time:  152.69512295722961
+Epoch:  134  - train loss:  0.00014482677  - val loss:  0.0006283525  -time:  152.70812058448792
+Epoch:  135  - train loss:  0.00014400372  - val loss:  0.00062718155  -time:  152.66938281059265
+Epoch:  136  - train loss:  0.00014350253  - val loss:  0.00062726357  -time:  152.70371866226196
+Epoch:  137  - train loss:  0.00014260289  - val loss:  0.0006277247  -time:  152.6757025718689
+Epoch:  138  - train loss:  0.0001422951  - val loss:  0.0006283548  -time:  152.6830050945282
+Epoch:  139  - train loss:  0.00014149383  - val loss:  0.000626806  -time:  152.70426845550537
+Epoch:  140  - train loss:  0.00014084182  - val loss:  0.0006265154  -time:  152.72464656829834
+Epoch:  141  - train loss:  0.00013838614  - val loss:  0.00062584993  -time:  152.7591028213501
+Epoch:  142  - train loss:  0.00013876348  - val loss:  0.0006273682  -time:  152.77220273017883
+Epoch:  143  - train loss:  0.00013810574  - val loss:  0.00062663236  -time:  152.73735165596008
+Epoch:  144  - train loss:  0.00013726795  - val loss:  0.0006259331  -time:  152.72807502746582
+Epoch:  145  - train loss:  0.00013730748  - val loss:  0.00062615285  -time:  152.75678491592407
+Epoch:  146  - train loss:  0.0001362908  - val loss:  0.0006269064  -time:  152.694265127182
+Epoch:  147  - train loss:  0.00013633365  - val loss:  0.00062572164  -time:  152.68518686294556
+Epoch:  148  - train loss:  0.00013613001  - val loss:  0.0006258126  -time:  152.68578672409058
+saving scheduled checkpoint file...
+done
+Epoch:  149  - train loss:  0.00013499623  - val loss:  0.00062603026  -time:  156.37624979019165
+Epoch:  150  - train loss:  0.00013465002  - val loss:  0.0006252733  -time:  152.75393295288086
+Epoch:  151  - train loss:  0.00013420338  - val loss:  0.00062488933  -time:  152.7649745941162
+Epoch:  152  - train loss:  0.00013428458  - val loss:  0.0006260002  -time:  152.830890417099
+Epoch:  153  - train loss:  0.00013416375  - val loss:  0.0006249039  -time:  152.76369714736938
+Epoch:  154  - train loss:  0.00013305637  - val loss:  0.0006249398  -time:  152.75067901611328
+Epoch:  155  - train loss:  0.00013359185  - val loss:  0.00062521413  -time:  152.75029945373535
+Epoch:  156  - train loss:  0.00013274486  - val loss:  0.0006246719  -time:  152.74340224266052
+Epoch:  157  - train loss:  0.00013241339  - val loss:  0.00062537484  -time:  152.76428604125977
+Epoch:  158  - train loss:  0.00013239121  - val loss:  0.0006251362  -time:  152.80097222328186
+Epoch:  159  - train loss:  0.00013212531  - val loss:  0.00062513276  -time:  152.75201177597046
+Epoch:  160  - train loss:  0.00013152024  - val loss:  0.0006243557  -time:  152.76053047180176
+Epoch:  161  - train loss:  0.00013133971  - val loss:  0.00062413176  -time:  152.7535355091095
+Epoch:  162  - train loss:  0.00013169444  - val loss:  0.0006247918  -time:  152.8104031085968
+Epoch:  163  - train loss:  0.00013026908  - val loss:  0.0006245311  -time:  152.79744720458984
+Epoch:  164  - train loss:  0.00012998574  - val loss:  0.00062457786  -time:  152.7644968032837
+Epoch:  165  - train loss:  0.00013010496  - val loss:  0.00062430755  -time:  152.76359248161316
+Epoch:  166  - train loss:  0.00012976443  - val loss:  0.00062439364  -time:  152.77238035202026
+Epoch:  167  - train loss:  0.00013018855  - val loss:  0.00062505953  -time:  152.76206254959106
+Epoch:  168  - train loss:  0.00012914263  - val loss:  0.00062486157  -time:  152.76499247550964
+Epoch:  169  - train loss:  0.00012938955  - val loss:  0.0006252505  -time:  152.78660368919373
+Epoch:  170  - train loss:  0.00012980166  - val loss:  0.0006253057  -time:  152.78116083145142
+Epoch:  171  - train loss:  0.00012939486  - val loss:  0.0006240934  -time:  152.76192831993103
+Epoch:  172  - train loss:  0.0001281975  - val loss:  0.0006244646  -time:  152.7781765460968
+Epoch:  173  - train loss:  0.00012828628  - val loss:  0.00062473136  -time:  152.817378282547
+Epoch:  174  - train loss:  0.00012899408  - val loss:  0.0006244383  -time:  152.7487633228302
+Epoch:  175  - train loss:  0.00012791848  - val loss:  0.0006239683  -time:  152.75221371650696
+Epoch:  176  - train loss:  0.0001283379  - val loss:  0.00062476983  -time:  152.74859237670898
+Epoch:  177  - train loss:  0.00012921535  - val loss:  0.000624293  -time:  152.73490810394287
+Epoch:  178  - train loss:  0.00012839094  - val loss:  0.00062427553  -time:  152.74095034599304
+Epoch:  179  - train loss:  0.00012749546  - val loss:  0.0006242696  -time:  152.74455738067627
+Epoch:  180  - train loss:  0.00012728016  - val loss:  0.0006248697  -time:  152.74041318893433
+Epoch:  181  - train loss:  0.00012750004  - val loss:  0.00062453025  -time:  152.74890851974487
+Epoch:  182  - train loss:  0.00012727469  - val loss:  0.00062544196  -time:  152.74654579162598
+Epoch:  183  - train loss:  0.00012644308  - val loss:  0.00062455074  -time:  152.75809502601624
+Epoch:  184  - train loss:  0.00012751025  - val loss:  0.00062486826  -time:  152.78677344322205
+Epoch:  185  - train loss:  0.000127825  - val loss:  0.0006256447  -time:  152.78771114349365
+Epoch:  186  - train loss:  0.00012715619  - val loss:  0.00062472676  -time:  152.7785882949829
+Epoch:  187  - train loss:  0.00012584672  - val loss:  0.0006247424  -time:  152.7737832069397
+Epoch:  188  - train loss:  0.00012677161  - val loss:  0.00062482426  -time:  152.76574397087097
+Epoch:  189  - train loss:  0.00012758285  - val loss:  0.00062499667  -time:  152.74106764793396
+Epoch:  190  - train loss:  0.00012661987  - val loss:  0.000624993  -time:  152.7539312839508
+Epoch:  191  - train loss:  0.00012658467  - val loss:  0.00062521675  -time:  152.75785374641418
+Epoch:  192  - train loss:  0.00012530056  - val loss:  0.00062456774  -time:  152.75111365318298
+Epoch:  193  - train loss:  0.00012541896  - val loss:  0.0006247956  -time:  152.79090881347656
+Epoch:  194  - train loss:  0.00012576286  - val loss:  0.00062500604  -time:  152.76267647743225
+Epoch:  195  - train loss:  0.0001262311  - val loss:  0.00062534184  -time:  152.71447443962097
+Epoch:  196  - train loss:  0.00012555305  - val loss:  0.0006247634  -time:  152.71936702728271
+Epoch:  197  - train loss:  0.00012606644  - val loss:  0.0006250394  -time:  152.7436420917511
+Epoch:  198  - train loss:  0.00012487077  - val loss:  0.0006249014  -time:  152.736980676651
+saving scheduled checkpoint file...
+done
+Epoch:  199  - train loss:  0.00012651422  - val loss:  0.00062485  -time:  156.45604014396667
+Epoch:  200  - train loss:  0.00012551954  - val loss:  0.00062504155  -time:  152.80693244934082
+Epoch:  201  - train loss:  0.00012508107  - val loss:  0.00062517484  -time:  152.73606491088867
+Epoch:  202  - train loss:  0.00012580155  - val loss:  0.00062539405  -time:  152.76122069358826
+Epoch:  203  - train loss:  0.00012504228  - val loss:  0.0006257139  -time:  152.74547934532166
+Epoch:  204  - train loss:  0.00012547206  - val loss:  0.00062580506  -time:  152.81503176689148
+Epoch:  205  - train loss:  0.00012455223  - val loss:  0.0006255093  -time:  152.76043248176575
+Epoch:  206  - train loss:  0.00012463209  - val loss:  0.00062501396  -time:  152.7828197479248
+Epoch:  207  - train loss:  0.00012496582  - val loss:  0.0006254195  -time:  152.77610325813293
+Epoch:  208  - train loss:  0.00012501526  - val loss:  0.00062459294  -time:  152.7574815750122
+Epoch:  209  - train loss:  0.00012517134  - val loss:  0.00062518334  -time:  152.78398537635803
+Epoch:  210  - train loss:  0.00012578355  - val loss:  0.0006253764  -time:  152.7739703655243
+Epoch:  211  - train loss:  0.00012433372  - val loss:  0.00062549725  -time:  152.79431462287903
+Epoch:  212  - train loss:  0.00012452695  - val loss:  0.0006252811  -time:  152.8080837726593
+Epoch:  213  - train loss:  0.00012501923  - val loss:  0.0006254766  -time:  152.78430008888245
+Epoch:  214  - train loss:  0.00012574665  - val loss:  0.00062534143  -time:  152.8058090209961
+Epoch:  215  - train loss:  0.0001250273  - val loss:  0.0006255923  -time:  152.80878138542175
+Epoch:  216  - train loss:  0.00012471409  - val loss:  0.0006256735  -time:  152.75962734222412
+Epoch:  217  - train loss:  0.00012462845  - val loss:  0.00062528433  -time:  152.78907442092896
+Epoch:  218  - train loss:  0.0001235703  - val loss:  0.0006255001  -time:  152.82105422019958
+Epoch:  219  - train loss:  0.0001240008  - val loss:  0.0006255506  -time:  152.8033790588379
+Epoch:  220  - train loss:  0.00012484759  - val loss:  0.00062583806  -time:  152.78595209121704
+Epoch:  221  - train loss:  0.00012341008  - val loss:  0.00062564923  -time:  152.74993777275085
+Epoch:  222  - train loss:  0.00012363725  - val loss:  0.0006260734  -time:  152.77422404289246
+Epoch:  223  - train loss:  0.00012379508  - val loss:  0.0006257409  -time:  152.82500624656677
+Epoch:  224  - train loss:  0.00012426471  - val loss:  0.00062560407  -time:  152.74989557266235
+Epoch:  225  - train loss:  0.0001238436  - val loss:  0.000625997  -time:  152.74919867515564
+Epoch:  226  - train loss:  0.00012454305  - val loss:  0.0006256756  -time:  152.8013951778412
+Epoch:  227  - train loss:  0.00012455213  - val loss:  0.0006258415  -time:  152.78142714500427
+Epoch:  228  - train loss:  0.00012364725  - val loss:  0.00062607543  -time:  152.77970838546753
+Epoch:  229  - train loss:  0.00012373249  - val loss:  0.0006259397  -time:  152.74098992347717
+Epoch:  230  - train loss:  0.00012359126  - val loss:  0.00062619545  -time:  152.7395966053009
+Epoch:  231  - train loss:  0.00012408872  - val loss:  0.0006259515  -time:  152.76901602745056
+Epoch:  232  - train loss:  0.00012316229  - val loss:  0.0006258382  -time:  152.77153182029724
+Epoch:  233  - train loss:  0.00012419872  - val loss:  0.00062580797  -time:  152.78332686424255
+Epoch:  234  - train loss:  0.00012306395  - val loss:  0.0006257025  -time:  152.78287887573242
+Epoch:  235  - train loss:  0.00012366979  - val loss:  0.00062593265  -time:  152.76106309890747
+Epoch:  236  - train loss:  0.0001225159  - val loss:  0.0006257497  -time:  152.80307006835938
+Epoch:  237  - train loss:  0.00012298198  - val loss:  0.0006257604  -time:  152.79933905601501
+Epoch:  238  - train loss:  0.00012369892  - val loss:  0.00062595546  -time:  152.78265190124512
+Epoch:  239  - train loss:  0.00012258394  - val loss:  0.0006262396  -time:  152.77271342277527
+Epoch:  240  - train loss:  0.00012321574  - val loss:  0.0006261386  -time:  152.77743458747864
+Epoch:  241  - train loss:  0.00012383661  - val loss:  0.0006258775  -time:  152.79929089546204
+Epoch:  242  - train loss:  0.00012331111  - val loss:  0.00062614476  -time:  152.81537055969238
+Epoch:  243  - train loss:  0.00012408609  - val loss:  0.00062617264  -time:  152.79328632354736
+Epoch:  244  - train loss:  0.00012363703  - val loss:  0.00062621885  -time:  152.7829191684723
+Epoch:  245  - train loss:  0.00012338393  - val loss:  0.00062603055  -time:  152.75386238098145
+Epoch:  246  - train loss:  0.00012314576  - val loss:  0.000626118  -time:  152.77649641036987
+Epoch:  247  - train loss:  0.00012352316  - val loss:  0.0006261949  -time:  152.78331661224365
+Epoch:  248  - train loss:  0.00012358537  - val loss:  0.0006259924  -time:  152.79185724258423
+saving scheduled checkpoint file...
+done
+Epoch:  249  - train loss:  0.00012329967  - val loss:  0.00062608114  -time:  156.49237251281738

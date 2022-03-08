@@ -1,0 +1,5 @@
+Conda uses environments to load different sets of Python packages
+type conda env list to see the environments availible.
+Global seed set to 42
+/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/jit/_trace.py:965: TracerWarning: Encountering a list at the output of the tracer might cause the trace to be incorrect, this is only valid if the container structure does not change based on the module's inputs. Consider using a constant container instead (e.g. for `list`, use a `tuple` instead. for `dict`, use a `NamedTuple` instead). If you absolutely need this and know the side effects, pass strict=False to trace() to allow this behavior.
+  argument_names,

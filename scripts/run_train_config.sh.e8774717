@@ -1,0 +1,51 @@
+Conda uses environments to load different sets of Python packages
+type conda env list to see the environments availible.
+Global seed set to 42
+/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/jit/_trace.py:965: TracerWarning: Encountering a list at the output of the tracer might cause the trace to be incorrect, this is only valid if the container structure does not change based on the module's inputs. Consider using a constant container instead (e.g. for `list`, use a `tuple` instead. for `dict`, use a `NamedTuple` instead). If you absolutely need this and know the side effects, pass strict=False to trace() to allow this behavior.
+  argument_names,
+Traceback (most recent call last):
+  File "../main.py", line 93, in <module>
+    main()
+  File "../main.py", line 88, in main
+    trainer.train()
+  File "/shared/tale2/Shared/schobs/landmark_unet/ensemble/model_trainer.py", line 226, in train
+    l = self.run_iteration(generator, self.valid_dataloader, False, True, val_coord_errors)
+  File "/shared/tale2/Shared/schobs/landmark_unet/ensemble/model_trainer.py", line 291, in run_iteration
+    self.logger.add_graph(self.network, data)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/utils/tensorboard/writer.py", line 736, in add_graph
+    self._get_file_writer().add_graph(graph(model, input_to_model, verbose, use_strict_trace))
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/utils/tensorboard/_pytorch_graph.py", line 295, in graph
+    raise e
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/utils/tensorboard/_pytorch_graph.py", line 289, in graph
+    trace = torch.jit.trace(model, args, strict=use_strict_trace)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/jit/_trace.py", line 750, in trace
+    _module_class,
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/jit/_trace.py", line 965, in trace_module
+    argument_names,
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1090, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "/shared/tale2/Shared/schobs/landmark_unet/ensemble/model.py", line 223, in forward
+    x = self.conv_blocks_decoder[decoder_lvl](x)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1090, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/container.py", line 141, in forward
+    input = module(input)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1090, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "/shared/tale2/Shared/schobs/landmark_unet/ensemble/model.py", line 51, in forward
+    return self.activation(self.normalization(x))
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1102, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/module.py", line 1090, in _slow_forward
+    result = self.forward(*input, **kwargs)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/modules/instancenorm.py", line 59, in forward
+    self.training or not self.track_running_stats, self.momentum, self.eps)
+  File "/data/acq19las/landmark_unet_env/lib/python3.7/site-packages/torch/nn/functional.py", line 2328, in instance_norm
+    input, weight, bias, running_mean, running_var, use_input_stats, momentum, eps, torch.backends.cudnn.enabled
+RuntimeError: CUDA out of memory. Tried to allocate 848.00 MiB (GPU 0; 11.17 GiB total capacity; 8.11 GiB already allocated; 298.88 MiB free; 10.40 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
