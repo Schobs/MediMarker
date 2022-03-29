@@ -1,4 +1,5 @@
 import torch
+import os
 #
 # # setting device on GPU if available, else CPU
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -11,3 +12,6 @@ if device.type == 'cuda':
     print('Memory Usage:')
     print('Allocated:', round(torch.cuda.memory_allocated(0)/1024**3,1), 'GB')
     print('Cached:   ', round(torch.cuda.memory_reserved(0)/1024**3,1), 'GB')
+
+
+print("cpu cores: ", os.cpu_count())

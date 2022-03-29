@@ -23,6 +23,7 @@ _C.DATASET.IMAGE_MODALITY= 'CMRI'
 _C.DATASET.LANDMARKS = [0,1,2]
 _C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512]
 _C.DATASET.INPUT_SIZE = [512,512]
+_C.DATASET.SCALE_LMS_TO_INPUT_SIZE = True
 
 _C.DATASET.DEBUG = False
 _C.DATASET.DATA_AUG = None
@@ -40,13 +41,19 @@ _C.SOLVER.DECAY_POLICY = "poly"
 _C.SOLVER.NESTEROV = True
 _C.SOLVER.TYPE = "SGD"
 _C.SOLVER.MAX_EPOCHS = 1000 
-_C.SOLVER.MINI_BATCH_SIZE = 250 
+_C.SOLVER.MINI_BATCH_SIZE = 150 
 _C.SOLVER.DATA_LOADER_BATCH_SIZE = 12 
 _C.SOLVER.NUM_RES_SUPERVISIONS = 5 
 _C.SOLVER.AUTO_MIXED_PRECISION = True
 _C.SOLVER.DEEP_SUPERVISION = True
 _C.SOLVER.LOSS_FUNCTION = "mse"
 
+
+## model trainer
+_C.TRAINER = CN()
+_C.TRAINER.PERFORM_VALIDATION = True
+_C.TRAINER.SAVE_LATEST_ONLY = True
+_C.TRAINER.CACHE_DATA = True
 
 # ---------------------------------------------------------------------------- #
 # U-Net Model configs# ---------------------------------------------------------------------------- #
@@ -56,13 +63,16 @@ _C.MODEL.MIN_FEATURE_RESOLUTION = 4
 _C.MODEL.ACTIVATION_FUNCTION = "leaky_relu"
 _C.MODEL.KERNEL_SIZE = 3
 _C.MODEL.GAUSS_SIGMA = 4
+_C.MODEL.HM_LAMBDA_SCALE = 100.0
+
 _C.MODEL.MAX_FEATURES= 512
 _C.MODEL.INIT_FEATURES= 32
 _C.MODEL.CHECKPOINT= None
 
 
 
-
+_C.INFERENCE = CN()
+_C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
 
 # ---------------------------------------------------------------------------- #
 # Misc options

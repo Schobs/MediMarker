@@ -4,7 +4,39 @@ import torch
 
 
 class AdaptiveWingLoss(nn.Module):
-    def __init__(self, omega=14, theta=0.5, epsilon=1, alpha=2.1):
+    def __init__(self,hm_lambda_scale, omega=14, theta=0.5, epsilon=1, alpha=1.1):
+        super(AdaptiveWingLoss, self).__init__()
+        self.omega = omega
+        self.theta = theta
+        self.epsilon = epsilon
+        self.alpha = alpha + hm_lambda_scale
+
+    def forward(self, pred, target):
+        '''
+        :param pred: BxNxHxH
+        :param target: BxNxHxH
+        :return:
+        '''
+
+        y = target
+        y_hat = pred
+        delta_y = (y - y_hat).abs() # get error for each pixel
+        delta_y1 = delta_y[delta_y < self.theta] #get the low activation pixels (predicted background)
+        delta_y2 = delta_y[delta_y >= self.theta] #get the high activation pixels (predcited foreground)
+        y1 = y[delta_y < self.theta] # get the low act target pixels (background)
+        y2 = y[delta_y >= self.theta]# get the high act target pixels (foreground)
+        loss1 = self.omega * torch.log(1 + torch.pow(delta_y1 / self.omega, self.alpha - y1))
+        A = self.omega * (1 / (1 + torch.pow(self.theta / self.epsilon, self.alpha - y2))) * (self.alpha - y2) * (
+            torch.pow(self.theta / self.epsilon, self.alpha - y2 - 1)) * (1 / self.epsilon)
+        C = self.theta * A - self.omega * torch.log(1 + torch.pow(self.theta / self.epsilon, self.alpha - y2))
+        loss2 = A * delta_y2 - C
+
+        # print("awl: ", (loss1.sum() + loss2.sum()) / (len(loss1) + len(loss2)))
+        return (loss1.sum() + loss2.sum()) / (len(loss1) + len(loss2))
+
+
+class MyWingLoss(nn.Module):
+    def __init__(self, omega=30, theta=0.5, epsilon=1, alpha=2.1):
         super(AdaptiveWingLoss, self).__init__()
         self.omega = omega
         self.theta = theta
@@ -33,7 +65,6 @@ class AdaptiveWingLoss(nn.Module):
 
         # print("awl: ", (loss1.sum() + loss2.sum()) / (len(loss1) + len(loss2)))
         return (loss1.sum() + loss2.sum()) / (len(loss1) + len(loss2))
-
 
 
 def soft_argmax(image):
@@ -97,16 +128,16 @@ class IntermidiateOutputLoss(nn.Module):
         # print("we have 7 outputs, 1 for each resolution,", len(x))
         # print(" each output has 20 (batchsize)", len(x[0]))
         # print("target len", len(y))
-        # # print("in the multiple output loss the x ", torch.stack(x,dim=1).squeeze(0).cpu().numpy().shape)
+        # print("in the multiple output loss the x ", torch.stack(x,dim=1).squeeze(0).cpu().numpy().shape)
         # print(" and y shapes are:", torch.stack(y,dim=1).squeeze(0).cpu().numpy().shape)
 
         # for idx, inp in enumerate(x):
           
-            # print(idx, " len inp", len(inp))
+        #     print(idx, " len inp", len(inp))
 
 
-            # print(idx, ", inp shape", inp.detach().cpu().numpy().shape)
-            # print(idx, "targ shape: ", y[idx].detach().cpu().numpy().shape)
+        #     print(idx, ", inp shape", inp.detach().cpu().numpy().shape)
+        #     print(idx, "targ shape: ", y[idx].detach().cpu().numpy().shape)
         l = self.weights[0] * self.loss(x[0], y[0])
 
         # print("the weights are: ", self.weights)

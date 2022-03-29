@@ -4,7 +4,7 @@ from skimage.measure import block_reduce
 import math
 import matplotlib.pyplot as plt
 
-def generate_heatmaps(landmarks, image_size, sigma, num_res_levels, dtype=np.float32):
+def generate_heatmaps(landmarks, image_size, sigma, num_res_levels, lambda_scale=100, dtype=np.float32):
     heatmap_list = []
 
     num_heatmaps = len(landmarks)
@@ -17,7 +17,7 @@ def generate_heatmaps(landmarks, image_size, sigma, num_res_levels, dtype=np.flo
             lm = np.round(lm / size_f)
             downsample_size = [image_size[0] / size_f[0], image_size[1] / size_f[1]]
             down_sigma = sigma/ size_f[0]
-            intermediate_heatmaps.append(gaussian_gen(lm, downsample_size, 1, down_sigma, dtype))
+            intermediate_heatmaps.append(gaussian_gen(lm, downsample_size, 1, down_sigma, dtype, lambda_scale))
         heatmap_list.append(np.array(intermediate_heatmaps))
 
 
@@ -26,13 +26,14 @@ def generate_heatmaps(landmarks, image_size, sigma, num_res_levels, dtype=np.flo
     # for i,map in enumerate(heatmap_list):
     #     print("this map shape, ", map.shape)
     #     for c in range(num_heatmaps):
-    #         ax[c, i].imshow(map[0,c])
+    #         ax[c, i].imshow(map[c])
     
     # plt.show()
     return heatmap_list[::-1]
 
 #generate Guassian with center on landmark. sx and sy are the std.
 def gaussian_gen(landmark, resolution, step_size, std, dtype=np.float32, lambda_scale=100):
+
     sx = std
     sy = std
 

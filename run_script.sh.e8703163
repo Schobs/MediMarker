@@ -1,6 +1,0 @@
-Conda uses environments to load different sets of Python packages
-type conda env list to see the environments availible.
-Global seed set to 42
-fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.
-Use '--' to separate paths from revisions, like this:
-'git <command> [<revision>...] -- [<file>...]'

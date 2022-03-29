@@ -1,7 +1,14 @@
 import os
 import json
 from typing import Optional
+import nibabel as nib
+from PIL import Image
 
+def get_datatype_load(im_path):
+    if "nii.gz" in im_path:
+        return lambda pth: Image.fromarray(nib.load(pth).get_fdata())
+    else:
+        return lambda pth: Image.open(pth)
 
 def _compute_path(base_dir, element):
 
@@ -67,5 +74,6 @@ def load_aspire_datalist(
  
     if base_dir is None:
         base_dir = os.path.dirname(data_list_file_path)
-
+    
+    
     return _append_paths(base_dir, expected_data)

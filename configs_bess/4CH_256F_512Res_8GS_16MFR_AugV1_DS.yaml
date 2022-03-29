@@ -1,0 +1,24 @@
+
+OUTPUT_DIR: "/home/acq19las/landmark_unet/LaNNU-Net/outputs2/4CH_256F_512Res_8GS_16MFR_AugV1_DS"
+# OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
+
+SOLVER:
+  DEEP_SUPERVISION: True
+  NUM_RES_SUPERVISIONS: 5
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 12
+  # MAX_EPOCHS: 1000
+
+
+MODEL:
+  GAUSS_SIGMA: 8
+  MAX_FEATURES: 256
+  MIN_FEATURE_RESOLUTION: 16
+
+DATASET:
+  DEBUG: False
+  INPUT_SIZE: [512,512]
+  DATA_AUG: 'V1'
+  ROOT: '/home/acq19las/data/ASPIRE'
+  SRC_TARGETS: '/home/acq19las/data/ASPIRE/cardiac4ch_labels_VPnC_CV'
+  

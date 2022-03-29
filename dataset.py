@@ -1,6 +1,7 @@
 import torch
 from torchvision import transforms
 import numpy as np
+import nibabel as nib
 
 from torch.utils import data
 from pathlib import Path
@@ -8,16 +9,18 @@ from typing import List
 import os
 
 from transformations import normalize_cmr, ToTensor, NormalizeZScore, HeatmapsToTensor
-from visualisation import visualize_image_target, visualize_image_trans_target
-from load_data import load_aspire_datalist
+from visualisation import visualize_image_target, visualize_image_trans_target, visualize_image_trans_coords, visualize_heat_pred_coords
+from load_data import load_aspire_datalist, get_datatype_load
 from PIL import Image
 from generate_labels import generate_heatmaps, get_downsampled_heatmaps
 
+# import albumentations as A
+# import albumentations.augmentations.functional as F
+# from albumentations.pytorch import ToTensorV2
 
-import albumentations as A
-import albumentations.augmentations.functional as F
-from albumentations.pytorch import ToTensorV2
-
+import imgaug as ia
+import imgaug.augmenters as iaa
+from imgaug.augmentables import Keypoint, KeypointsOnImage
 
 class ASPIRELandmarks(data.Dataset):
     """
@@ -39,6 +42,7 @@ class ASPIRELandmarks(data.Dataset):
     def __init__(
         self,
         landmarks,
+        hm_lambda_scale: float,
         annotation_path: str,
         image_modality: str= "CMRI",
         split: str ="training",
@@ -58,90 +62,153 @@ class ASPIRELandmarks(data.Dataset):
         super(ASPIRELandmarks, self).__init__()
 
         self.data_augmentation = data_augmentation
+        self.hm_lambda_scale = hm_lambda_scale
+
+        # self.sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+
         self.heatmaps_to_tensor = transforms.Compose([
                 HeatmapsToTensor()
             ])
-        if not self.data_augmentation:
-            self.transform = transforms.Compose([
-                ToTensor()
+        if self.data_augmentation == None:
+            print("WARNING: No data Augmentation.")
+            # self.transform = transforms.Compose([
+            # ])
+            
+
+        elif self.data_augmentation =="AffineSimple":
+ 
+            self.transform = iaa.Sequential([
+                iaa.Sometimes(
+                    0.75,
+                    iaa.Affine(
+                        rotate=(-45,45),
+                        scale=(0.8, 1.2),
+                    ),
+                ),
+                iaa.flip.Flipud(p=0.5),
             ])
-        elif self.data_augmentation == "V1":
-            print("V1")
-            self.transform = A.Compose(
-                [
-                    # A.AdvancedBlur(),
-                    # A.CLAHE(),
-                    # A.HueSaturationValue(),
-                    # A.RandomBrightnessContrast(),
-                    # A.RandomGamma(),
-                    # A.GaussNoise(),
-                    # A.CoarseDropout(),
-                    # A.Downscale(),
-                    # A.ElasticTransform(),
-                    A.Flip(),
-                    A.SafeRotate(),
-                    # A.Perspective(),
-                    NormalizeZScore(),
-                    ToTensorV2()
-                ], keypoint_params=A.KeypointParams(format='xy')
-            )
-        elif self.data_augmentation == "V2":
-            self.transform = A.Compose(
-                [
-                
-                    A.Downscale(),
-                    A.Flip(),
-                    A.SafeRotate(),
-                    A.Perspective(),
-                    NormalizeZScore(),
-                    ToTensorV2()
-                ], keypoint_params=A.KeypointParams(format='xy')
-            )
-        elif self.data_augmentation == "V3":
-            self.transform = A.Compose(
-                [
-                  
-                    A.GaussNoise(var_limit=15.0),
-                    A.Downscale(),
-                    A.Flip(),
-                    A.SafeRotate(),
-                    A.Perspective(),
-                    NormalizeZScore(),
-                    ToTensorV2()
-                ], keypoint_params=A.KeypointParams(format='xy')
-            )
-        
-        elif self.data_augmentation == "V4":
-            self.transform = A.Compose(
-                [
-                  
-                    A.RandomBrightnessContrast(),
-                    A.RandomGamma(),
-                    # A.GaussNoise(),
-                    A.CoarseDropout(),
-                    A.Downscale(),
-                    A.Flip(),
-                    A.SafeRotate(),
-                    # A.Perspective(),
-                    NormalizeZScore(),
-                    ToTensorV2()
-                ], keypoint_params=A.KeypointParams(format='xy')
-            )
-        elif self.data_augmentation == "V5":
-            self.transform = A.Compose(
-                [
-                    A.RandomBrightnessContrast(),
-                    A.RandomGamma(),
-                    A.GaussNoise(),
-                    A.CoarseDropout(),
-                    A.Downscale(),
-                    A.Flip(),
-                    A.SafeRotate(),
-                    A.Perspective(),
-                    NormalizeZScore(),
-                    ToTensorV2()
-                ], keypoint_params=A.KeypointParams(format='xy')
-            )
+
+        elif self.data_augmentation =="AffineComplex":
+            self.transform = iaa.Sequential([
+                iaa.Sometimes(
+                    0.5,
+                    iaa.Affine(
+                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        rotate=(-45, 45),
+                        shear=(-16, 16),
+                        order=[0, 1],
+                    )
+                ),
+                iaa.flip.Flipud(p=0.5),
+
+            ])
+        elif self.data_augmentation == "AffineComplexElastic":
+            self.transform = iaa.Sequential([
+                iaa.Sometimes(
+                    0.5,
+                    iaa.Affine(
+                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        rotate=(-45, 45),
+                        shear=(-16, 16),
+                        order=[0, 1],
+                    )
+                ),
+                iaa.flip.Flipud(p=0.5),
+                iaa.Sometimes(
+                    0.5,
+                    iaa.ElasticTransformation(alpha=(0,200), sigma=(9,13))
+                ),
+
+            ])
+        elif self.data_augmentation == "AffineComplexElasticLight":
+            self.transform = iaa.Sequential([
+                iaa.Sometimes(
+                    0.5,
+                    iaa.Affine(
+                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        rotate=(-45, 45),
+                        shear=(-16, 16),
+                        order=[0, 1],
+                    )
+                ),
+                iaa.flip.Flipud(p=0.5),
+                iaa.Sometimes(
+                    0.5,
+                    iaa.ElasticTransformation(alpha=(0,50), sigma=(5,10))
+                ),
+
+            ])
+        elif self.data_augmentation == "AffineComplexElasticBlur":
+            self.transform = iaa.Sequential([
+                iaa.Sometimes(
+                    0.5,
+                    iaa.Affine(
+                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        rotate=(-45, 45),
+                        shear=(-16, 16),
+                        order=[0, 1],
+                    )
+                ),
+                iaa.flip.Flipud(p=0.5),
+                iaa.Sometimes(
+                    0.5,
+                    iaa.ElasticTransformation(alpha=(0, 50), sigma=(2,5))
+                ),
+
+                iaa.Sometimes(
+                    0.5,
+                    iaa.OneOf([
+                        iaa.GaussianBlur((0, 0.2)),
+                        iaa.AverageBlur(k=(3, 5)),
+                        iaa.MedianBlur(k=(3, 5)),
+                        iaa.AveragePooling(2)
+                    ])
+                ),
+
+            ])
+        elif self.data_augmentation == "AffineComplexElasticBlurSharp":
+            self.transform = iaa.Sequential([
+                iaa.Sometimes(
+                    0.5,
+                    iaa.Affine(
+                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        rotate=(-45, 45),
+                        shear=(-16, 16),
+                        order=[0, 1],
+                    )
+                ),
+                iaa.flip.Flipud(p=0.5),
+                iaa.Sometimes(
+                    0.5,
+                    iaa.ElasticTransformation(alpha=(0, 50), sigma=(2,5))
+                ),
+
+                iaa.Sometimes(
+                    0.5,
+                    iaa.OneOf([
+                        iaa.GaussianBlur((0, 0.2)),
+                        iaa.AverageBlur(k=(3, 5)),
+                        iaa.MedianBlur(k=(3, 5)),
+                        iaa.AveragePooling(2)
+                    ])
+                ),
+                iaa.Sometimes(
+                    0.5,
+                    iaa.SomeOf(
+                        (0,3), 
+                        [
+                            iaa.Sharpen(alpha=(0, 0.75), lightness=(0, 0.5)),
+                            iaa.Emboss(alpha=(0, 0.5), strength=(0, 1)),
+                            iaa.LinearContrast((0.4, 1.6))                            
+                        ]
+                    )
+                )
+            ])
         else:
             raise ValueError("transformations mode for dataaugmentation not recognised, try None, V1, V2, V3 or V4")
 
@@ -159,100 +226,122 @@ class ASPIRELandmarks(data.Dataset):
 
         self.original_image_size = original_image_size
         self.num_res_supervisions = num_res_supervisions
+        self.downscale_factor = [original_image_size[0]/input_size[0], original_image_size[1]/input_size[1]]
 
 
-        if self.cache_data:
-            self.images = []
-            self.labels = []
-            self.target_coordinates = []
-
+        #Lists to save the image paths (or images if caching), target coordinates (scaled to input size), and full resolution coords.
+        self.images = []
+        self.target_coordinates = []
+        self.full_res_coordinates = [] #full_res will be same as target if input and original image same size
+        self.image_paths = []
 
 
 
         if cv > 0:
             # label_std = os.path.join('fold' + str(self.cv) + '_' + str(self.sigma) + 'std.json' )
-            label_std = os.path.join('fold' + str(self.cv) + '_' + str(4) + 'std.json' )
+            label_std = os.path.join('fold' + str(self.cv) +'.json' )
 
             datalist = load_aspire_datalist(os.path.join(self.annotation_path, label_std), data_list_key=self.split, base_dir=self.root_path)
+        
         else:
             raise NotImplementedError("Only cross validation is currently implemented")
         #   /mnt/tale_all/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV
+
+        self.datatype_load = get_datatype_load(datalist[0]["image"]) # based on first image extenstion, get the load function.
         if self.cache_data:
+            self.load_function = lambda img: img #If cached, no load function needed.
+
             for idx, data in enumerate(datalist):
 
-                downscale_factor = [original_image_size[0]/input_size[0], original_image_size[1]/input_size[1]]
-                interested_landmarks = np.rint(np.array(data["coordinates"])[self.landmarks,:2] / downscale_factor)
-                generated_heatmaps = generate_heatmaps(interested_landmarks, self.input_size, self.sigma,  self.num_res_supervisions)
-                # multi_level_heatmaps = get_downsampled_heatmaps(generated_heatmap, self.num_res_supervisions)
-                
-                expanded_image = np.expand_dims(normalize_cmr(Image.open(data["image"]).resize( self.input_size)), axis=0)
-              
-                self.images.append(expanded_image)
-                self.labels.append(generated_heatmaps)
-                self.target_coordinates.append(interested_landmarks)
+                interested_landmarks = np.rint(np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
+                expanded_image = np.expand_dims(normalize_cmr(self.datatype_load(data["image"]).resize( self.input_size)), axis=0)
 
-                if self.debug and not self.data_augmentation:
-                    from utils.heatmap_manipulation import get_coords
-                    print("coordinates: ", interested_landmarks)
-                    landmarks_from_label = get_coords(torch.from_numpy(np.expand_dims(generated_heatmaps[-1], axis=0)))
-                    print("landmarks from heatmap label: ", landmarks_from_label)
-                    # print("heatmap: ", generated_heatmaps.shape)
-                    visualize_image_target(np.squeeze(expanded_image), generated_heatmaps)
-                    # visualize_image_target(self.images[-1], self.labels[-1])
+    
+
+                self.images.append(expanded_image)
+                self.target_coordinates.append(interested_landmarks)
+                self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
+                self.image_paths.append(data["image"])
+
+            print("Cached all %s data in memory. Length of %s " % (self.split, len(self.images)))
         else:
-            raise NotImplementedError("Not caching dataset not implemented yet. set cache_data=true for now.")
+            self.load_function = lambda pth_: np.expand_dims(normalize_cmr(self.datatype_load(pth_).resize(self.input_size)), axis=0)
+
+            for idx, data in enumerate(datalist):
+
+                interested_landmarks = np.rint(np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
+                self.images.append(data["image"]) #just appends the path, the load_function will load it later.
+                self.target_coordinates.append(interested_landmarks)
+                self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
+                self.image_paths.append(data["image"])
+
+
+            print("Not caching %s image data in memory, will load on the fly. Length of %s " % (self.split, len(self.images)))
 
     def __len__(self):
         return len(self.images)
 
 
     def __getitem__(self, index):
-
-        image = self.images[index]
-        label = self.labels[index]
+        
+        image = self.load_function(self.images[index])
         coords = self.target_coordinates[index]
-        sample = {"image": image, "label": label,  "target_coords": coords}
+        full_res_coods = self.full_res_coordinates[index]
+        im_path = self.image_paths[index]
+        run_time_debug= False
 
-        # print("iamge type %s min max %s %s and mean and std: %s %s " % ((image).dtype, image.min(), image.max(), np.mean(image), np.std(image)))
-        # print("OG Coords", coords[:,:2])
-        # if self.transform_complex:
-        #     # coords_to_transform = [(x[0], x[1]) for x in coords[:,:2] ]
-        #     # print("tuple coords", coords_to_transform)
 
-        #     transformed_sample = self.transform(image=image[0], keypoints=coords[:,:2])
-        #     heatmaps = generate_heatmaps(np.array(transformed_sample["keypoints"]), self.image_size, self.sigma,  self.num_res_supervisions)  
-        #     sample = {"image":transformed_sample['image'], "label":heatmaps, "target_coords": transformed_sample['keypoints']  }
-
-        #     print("trans image shape", sample["image"].shape, "trans targ coords: ", sample["target_coords"])
-
-        #     visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
-
-        if self.data_augmentation:
-
-            transformed_sample = self.transform(image=image[0], keypoints=coords[:,:2])
-            heatmaps = self.heatmaps_to_tensor(generate_heatmaps(np.array(transformed_sample["keypoints"]), self.input_size, self.sigma,  self.num_res_supervisions))  
-            sample = {"image":transformed_sample['image'] , "label":heatmaps, "target_coords": np.rint(transformed_sample['keypoints'])  }
+        #Do data augmentation
+        if self.data_augmentation != None:
             
+            kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in coords[:,:2]], shape=image[0].shape )
+            transformed_sample = self.transform(image=image[0], keypoints=kps)
+            trans_kps = np.array([[coo.x_int, coo.y_int] for coo in transformed_sample[1]])
+            heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, self.sigma,  self.num_res_supervisions, self.hm_lambda_scale))  
 
-            if self.debug:
-                from utils.heatmap_manipulation import get_coords
+            sample = {"image":normalize_cmr(transformed_sample[0], to_tensor=True) , "label":heatmaps, "target_coords": trans_kps, 
+                "full_res_coords": full_res_coods, "image_path": im_path  }
 
-                print("og image sahpe: ", image.shape, "trans image shape", sample["image"].shape, "trans targ coords: ", sample["target_coords"])
-                print("len of hetamps ", len(heatmaps), " and shape: ", heatmaps[-1].shape, " and hm exp shape ", np.expand_dims(heatmaps[-1], axis=0).shape)
-                landmarks_from_label = get_coords(torch.from_numpy(np.expand_dims(heatmaps[-1], axis=0)))
-                print("landmarks from heatmap label: ", landmarks_from_label)
-                
-                visualize_image_trans_target(image[0], sample["image"][0], heatmaps[-1])
+            # print("kpcs, trans kps ", kps, "   AND  ", trans_kps)
+            # print("transformed sample: ", transformed_sample)
+            #If coordinates are cutoff by augmentation throw a run time error. 
+            if len(np.array(transformed_sample[1])) <len(coords):
+                print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
+                run_time_debug = True
 
+            # if self.debug or run_time_debug:
+            #     from utils.heatmap_manipulation import get_coords
+            #     print("before coords: ", coords[:,:2], " and len of non coords[:,;2] n  coords: ", np.array(coords[:,2]).shape, np.array(coords).shape)
+            #     print("og image sahpe: ", image.shape, "trans image shape", sample["image"].shape, "trans targ coords: ", sample["target_coords"])
+            #     print("len of hetamps ", len(heatmaps), " and shape: ", heatmaps[-1].shape, " and hm exp shape ", np.expand_dims(heatmaps[-1], axis=0).shape)
+            #     landmarks_from_label = get_coords(torch.from_numpy(np.expand_dims(heatmaps[-1], axis=0)))
+            #     print("landmarks reverse engineered from heatmap label: ", landmarks_from_label)
+
+            #     # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
+            #     # visualize_heat_pred_coords(np.squeeze(image), sample["target_coords"], sample["target_coords"])
+            #     visualize_image_trans_coords(image[0], sample["image"][0] , coords)
+
+        #Don't do data augmentation
         else:
-            sample = self.transform(sample)
+            # print("no data aug")
+            #TODO: need to test cache/no cache with no data augmentation hyere.
+            label = self.heatmaps_to_tensor(generate_heatmaps(coords, self.input_size, self.sigma,  self.num_res_supervisions, self.hm_lambda_scale))
+            sample = {"image": torch.from_numpy(image), "label": label,  "target_coords": coords, "full_res_coords": full_res_coods, "image_path": im_path}
 
-            
+        if self.debug or run_time_debug:
+            from utils.heatmap_manipulation import get_coords
+            print("before coords: ", coords)
+            print("og image sahpe: ", image.shape, "trans image shape", sample["image"].shape, "trans targ coords: ", sample["target_coords"])
+            print("len of hetamps ", len(sample["label"]), " and shape: ", sample["label"][-1].shape, " and hm exp shape ", np.expand_dims(sample["label"][-1], axis=0).shape)
+            landmarks_from_label = get_coords(torch.from_numpy(np.expand_dims(sample["label"][-1], axis=0)))
+            print("landmarks reverse engineered from heatmap label: ", landmarks_from_label)
 
-        # else:
-        #     sample = {"image": image, "label": label,  "target_coords": coords}
+            # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
+            visualize_image_trans_coords(image[0], sample["image"][0] , sample["target_coords"])
 
+    
         return sample
+
 
 
     

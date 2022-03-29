@@ -17,7 +17,7 @@ from torch import device, cuda
 class ConvNormNonlin(nn.Module):
     def __init__(self, input_channels, output_channels,
                     conv_op=nn.Conv2d, conv_kwargs=None,
-                    norm_op=nn.BatchNorm2d, norm_op_kwargs=None,
+                    norm_op=nn.InstanceNorm2d, norm_op_kwargs=None,
                     nonlin=nn.LeakyReLU, nonlin_kwargs=None):
         super(ConvNormNonlin, self).__init__()
         if nonlin_kwargs is None:
@@ -225,7 +225,7 @@ class UNet(nn.Module):
 
             if self.deep_supervision:
                 seg_outputs.append((self.intermediate_outputs[decoder_lvl](x))) #Don't use an activation function
-
+                # print("seg outputs level ", decoder_lvl, " is ", seg_outputs[-1].shape)
         if not self.deep_supervision:
             seg_outputs.append((self.intermediate_outputs[-1](x))) #if not deep supervision, only use the final layer
 

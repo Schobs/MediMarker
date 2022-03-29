@@ -4,20 +4,34 @@ import numpy as np
 from albumentations.augmentations.transforms import ImageOnlyTransform
 from albumentations.core.transforms_interface import BasicTransform
 
-def normalize_cmr(image):
+def normalize_cmr(image,to_tensor=False):
+    # image = sample["image"]
+    if torch.is_tensor(image):
+        norm_image = ((image-torch.mean(image))/torch.std(image)).float()
 
-    return (zscore(image, axis=None)).astype(np.float32)
+    else:
+        norm_image = ((image-np.mean(image))/np.std(image))
+        if to_tensor:
+            norm_image = torch.from_numpy(np.expand_dims(norm_image, axis=0))
+    # sample["image"] = norm_image
+    # return (zscore(image, axis=None)).astype(np.float32)
     # image = ((image - np.min(image)) / (np.max(image) - np.min(image))).astype(np.float32)
-    return image
+    return norm_image
 
 
 class NormalizeZScore(ImageOnlyTransform):
-    def __init__(self):
+    def __init__(
+        self,
+        always_apply=True,
+        p=1.0
+    ):
         super(NormalizeZScore, self).__init__()
 
     def apply(self, image, **params):
-        norm_image = (zscore(image, axis=None))
-        return norm_image
+        print("applying normalization")
+        return (zscore(image, axis=None))
+        # norm_image = (image-np.mean(image))/np.std(image)
+        # return norm_image
 
 
 class ToTensor(object):
@@ -43,6 +57,41 @@ class ToTensor(object):
         sample["label"] = all_seg_labels
 
         return sample
+
+
+# class ToTensorImgaug(object):
+#     """Convert ndarrays in sample to Tensors."""
+
+#     def __call__(self, sample):
+#         image = torch.from_numpy(sample.image)
+#         coords = torch.from_numpy([sample.keypoints.x_int, sample.keypoints.y_int])
+
+#         sample["image"] = image
+
+#         sample["target_coords"] = coords
+
+
+#     def func_images(images, random_state, parents, hooks):
+#         bg_ids = random_state.randint(0, len(backgrounds), size=(len(images),))
+#         result = []
+#         for image, bg_id in zip(images, bg_ids):
+#             image_small = ia.imresize_single_image(image, (64, 64))
+#             image_aug = np.copy(backgrounds[bg_id])
+#             image_aug[32:-32, 32:-32, :] = image_small
+#             result.append(image_aug)
+#         return result
+        
+#     def func_heatmaps(heatmaps, random_state, parents, hooks):
+#         return heatmaps
+        
+#     def func_keypoints(keypoints_on_images, random_state, parents, hooks):
+#         return keypoints_on_images
+
+# bg_augmenter = iaa.Lambda(
+#     func_images=func_images,
+#     func_heatmaps=func_heatmaps,
+#     func_keypoints=func_keypoints
+# )
 
 class HeatmapsToTensor(object):
     """Convert ndarrays in sample to Tensors."""

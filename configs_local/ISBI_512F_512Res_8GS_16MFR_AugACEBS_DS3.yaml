@@ -1,0 +1,35 @@
+
+OUTPUT_DIR: "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/ISBI_512F_512Res_8GS_16MFR_AugACEBS_DS3"
+# OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
+
+SOLVER:
+  DEEP_SUPERVISION: True
+  NUM_RES_SUPERVISIONS: 4
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 12
+
+
+
+MODEL:
+  GAUSS_SIGMA: 8
+  MAX_FEATURES: 512
+  MIN_FEATURE_RESOLUTION: 16
+
+DATASET:
+  # DEBUG: True
+  DATA_AUG: 'AffineComplexElasticLight'
+  ROOT: '/mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds'
+  NAME:  "ISBI 2015 Junior"
+  IMAGE_MODALITY: 'Cephalometric'
+  LANDMARKS : [0,1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+  ORIGINAL_IMAGE_SIZE : [1935,2400]
+  SCALE_LMS_TO_INPUT_SIZE: False
+  INPUT_SIZE : [512,512]
+ 
+TRAINER:
+  PERFORM_VALIDATION: False
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: True
+
+  #TODO: boolean for performing validation or not. its false in the isbi one because it is tested directly instead.
