@@ -19,8 +19,13 @@ class UnetTrainer():
     """ Class for the u-net trainer stuff.
     """
 
-    def __init__(self, fold, model_config= None, output_folder=None, logger=None, profiler=None):
+    def __init__(self, model_config= None, output_folder=None, logger=None, profiler=None):
         
+        #early stopping
+
+        self.early_stop_patience = 150
+        self.epochs_wo_val_improv = 0
+
         #config variable
         self.model_config = model_config
 
@@ -34,7 +39,7 @@ class UnetTrainer():
         self.auto_mixed_precision = model_config.SOLVER.AUTO_MIXED_PRECISION
         self.amp_grad_scaler = None #initialise later 
         self.was_initialized = False
-        self.fold= fold
+        self.fold= model_config.TRAINER.FOLD
         self.output_folder = output_folder
         self.pin_memory = True
 
@@ -247,30 +252,27 @@ class UnetTrainer():
             self.network.train()
             generator = iter(self.train_dataloader)
 
-            #Train for X number of batches per epoch e.g. 250
-            # for iter_b in range(1):
-            # for iter_b in range(self.num_batches_per_epoch):
+            # Train for X number of batches per epoch e.g. 250
+            for iter_b in range(self.num_batches_per_epoch):
 
-            #     # e = time()
-            #     l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True)
+                l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True)
 
-            #     # print("return", iter_b, torch.cuda.memory_allocated(0))
-            #     # print("1 iter time: ", time()-e)
-            #     # print(".", l, end= "")
+                # print("return", iter_b, torch.cuda.memory_allocated(0))
+                # print("1 iter time: ", time()-e)
+                # print(".", l, end= "")
 
-            #     train_losses_epoch.append(l)
+                train_losses_epoch.append(l)
 
-            #     if self.logger:
-            #         self.logger.log_current_epoch(self.epoch )
-            #         self.logger.log_metric("training loss iteration", l, step)
-            #     step += 1
+                if self.logger:
+                    self.logger.log_current_epoch(self.epoch )
+                    self.logger.log_metric("training loss iteration", l, step)
+                step += 1
 
-            # # print("training steps: ", time()-e )
-            # del generator
-            # self.all_tr_losses.append(np.mean(train_losses_epoch))
+            # print("training steps: ", time()-e )
+            del generator
+            self.all_tr_losses.append(np.mean(train_losses_epoch))
             # s = time()
 
-            self.all_tr_losses.append(0)
 
             #Validate
             
@@ -283,11 +285,9 @@ class UnetTrainer():
 
                 for iter_b in range(int(len(self.valid_dataloader.dataset)/self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE)):
 
-                    # for b in range(self.num_val_batches_per_epoch):
                     l, generator = self.run_iteration(generator, self.valid_dataloader, False, True, val_coord_errors)
                     val_losses_epoch.append(l)
-                    # print("VCE: ", val_coord_errors)
-                    # print(l, len(self.valid_dataloader.dataset), l/len(generator))
+                 
 
                 self.all_valid_losses.append(np.mean(val_losses_epoch)) #go through all valid at once here
                 self.all_valid_coords.append(np.mean(val_coord_errors))
@@ -299,17 +299,11 @@ class UnetTrainer():
 
             # print("on epoch end:  ", time()-self.epoch_end_time)
             if not continue_training:
-                # allows for early stopping
-                # self.logger.flush()
-                # self.logger.close()
-
                 if self.profiler:
                     self.profiler.stop()
 
                 break
-            
-
-
+     
             self.epoch +=1
 
         #Save the final weights
@@ -342,7 +336,6 @@ class UnetTrainer():
             #torch resize does HxW so need to flip the dimesions for resize
             final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
 
-        # print("final heatmap shape: ", final_heatmap.shape)
         predicted_coords = get_coords(final_heatmap)
 
         heatmaps_return = output
@@ -356,12 +349,9 @@ class UnetTrainer():
     def run_iteration(self, generator, dataloader, backprop, get_coord_error=False, coord_error_list=None):
         so = time()
         try:
-            # print("next")
             # Samples the batch
             data_dict = next(generator)
         except StopIteration:
-            # print("restart")
-
             # restart the generator if the previous generator is exhausted.
             generator = iter(dataloader)
             data_dict = next(generator)
@@ -374,12 +364,9 @@ class UnetTrainer():
         # print("gen data and to device ", time()-so,  torch.cuda.memory_allocated(0))
 
         so = time()
-
-        #write to tensorboard if verbose if first epoch
        
       
         self.optimizer.zero_grad()
-
         from_which_level_supervision = self.num_res_supervision 
 
         # print("from which level supervision:@ ", from_which_level_supervision)
@@ -391,8 +378,6 @@ class UnetTrainer():
                     output = self.network(data)[-from_which_level_supervision:]                
                 else:
                     output = self.network(data)
-                    # target = target[0] 
-
 
                 # print("forward" , time()-so,  torch.cuda.memory_allocated(0))
                 so = time()
@@ -418,17 +403,10 @@ class UnetTrainer():
         
             # s=time()
             if backprop:
-                # sa = time()
                 l.backward()
-                # print("loss back time ", time()-sa)
-                # sa = time()
-                torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12) #this taking olong. 0.085 secs , now 0.15 secs???
-                # print("grad clip time ", time()-sa)
-                # sa = time()
-                self.optimizer.step() #optimizer taking long: 0.21 secs , now 0.338 secs??
-                # print("optimizer time ", time()-sa)
+                torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
+                self.optimizer.step() 
 
-        # print("back prop time ", time()-s)
 
         # print("itertime ", time()-so)
         if get_coord_error:
@@ -451,20 +429,10 @@ class UnetTrainer():
                     pred_coords = torch.rint(pred_coords * downscale_factor)
 
                 coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
-                # print("target coords, us pred coords, and errors: ", target_coords,pred_coords , coord_error)
-                # print("mean coord errror: ", np.mean(coord_error.detach().cpu().numpy()))
-                # og_im = np.asarray(dataloader.dataset.datatype_load(data_dict["image_path"][0]))
-                # visualize_heat_pred_coords(og_im, pred_coords.cpu().numpy()[0], target_coords.cpu().numpy()[0])
-
-                # print("pred %s and targ %s : " % (predicted_coords, target_coords))
-                # coord_error = torch.linalg.norm((predicted_coords- target_coords), axis=2).detach().cpu().numpy()
-                # print("coord errors: ", coord_error)
                 coord_error_list.append(np.mean(coord_error.detach().cpu().numpy()))
 
-            # raise NotImplementedError("have not implented coord error yet.")
 
         if self.profiler:
-            # print("profiler step")
             self.profiler.step()
 
         del output
@@ -492,7 +460,16 @@ class UnetTrainer():
             self.best_valid_coord_error = self.all_valid_coords[-1]
             self.best_valid_coords_epoch = self.epoch
             new_best_coord_valid = True
-        
+            self.epochs_wo_val_improv = 0
+        else:
+            self.epochs_wo_val_improv += 1
+
+
+            
+        if self.epochs_wo_val_improv == self.early_stop_patience:
+            continue_training = False
+            print("EARLY STOPPING. Validation Coord Error did not reduce for %s epochs. " % self.early_stop_patience)
+
         self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
 
         self.maybe_update_lr(epoch=self.epoch)
@@ -514,22 +491,26 @@ class UnetTrainer():
         Saves a checkpoint every save_ever epochs.
         :return:
         """
+
+        fold_str = str(self.model_config.TRAINER.FOLD)
         if (self.save_intermediate_checkpoints and (self.epoch % self.save_every == (self.save_every - 1))) or self.epoch== self.max_num_epochs-1:
             print("saving scheduled checkpoint file...")
             if not self.save_latest_only:
-                self.save_checkpoint(os.path.join(self.output_folder, "model_ep_%03.0d.model" % (self.epoch)))
-                
-            self.save_checkpoint(os.path.join(self.output_folder, "model_latest.model"))
+                self.save_checkpoint(os.path.join(self.output_folder, "model_ep_"+ str(self.epoch) + "_fold" + fold_str+ ".model" % ()))
+            
+                if self.epoch >=249:
+                    self.save_every = 200
+            self.save_checkpoint(os.path.join(self.output_folder, "model_latest_fold"+ (fold_str) +".model"))
             print("done")
         if new_best_valid_bool:
             print("saving scheduled checkpoint file as it's new best on validation set...")
-            self.save_checkpoint(os.path.join(self.output_folder, "model_best_valid_loss.model"))
+            self.save_checkpoint(os.path.join(self.output_folder, "model_best_valid_loss_fold" + fold_str +".model"))
 
             print("done")
 
         if new_best_valid_coord_bool:
             print("saving scheduled checkpoint file as it's new best on validation set for coord error...")
-            self.save_checkpoint(os.path.join(self.output_folder, "model_best_valid_coord_error.model"))
+            self.save_checkpoint(os.path.join(self.output_folder, "model_best_valid_coord_error_fold" + fold_str +".model"))
 
             print("done")
 
@@ -590,7 +571,7 @@ class UnetTrainer():
             split = "training",
             root_path = self.model_config.DATASET.ROOT,
             sigma = self.model_config.MODEL.GAUSS_SIGMA,
-            cv = 1,
+            cv = self.model_config.TRAINER.FOLD,
             cache_data = self.model_config.TRAINER.CACHE_DATA,
             normalize=True,
             num_res_supervisions = self.num_res_supervision,
@@ -613,7 +594,7 @@ class UnetTrainer():
                 split = val_split,
                 root_path = self.model_config.DATASET.ROOT,
                 sigma = self.model_config.MODEL.GAUSS_SIGMA,
-                cv = 1,
+                cv = self.model_config.TRAINER.FOLD,
                 cache_data = self.model_config.TRAINER.CACHE_DATA,
                 normalize=True,
                 num_res_supervisions = self.num_res_supervision,
@@ -629,7 +610,6 @@ class UnetTrainer():
             print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
 
 
-        # print("cpu count ", os.cpu_count())
 
         if self.model_config.DATASET.DEBUG:
             num_workers_cfg=1

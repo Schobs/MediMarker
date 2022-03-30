@@ -54,6 +54,8 @@ _C.TRAINER = CN()
 _C.TRAINER.PERFORM_VALIDATION = True
 _C.TRAINER.SAVE_LATEST_ONLY = True
 _C.TRAINER.CACHE_DATA = True
+_C.TRAINER.FOLD = 0
+
 
 # ---------------------------------------------------------------------------- #
 # U-Net Model configs# ---------------------------------------------------------------------------- #

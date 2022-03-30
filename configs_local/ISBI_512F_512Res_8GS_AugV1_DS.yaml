@@ -22,9 +22,8 @@ DATASET:
   SRC_TARGETS: '/mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
-  LANDMARKS : [0,1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+  LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
   ORIGINAL_IMAGE_SIZE : [1935,2400]
-  SCALE_LMS_TO_INPUT_SIZE: False
   INPUT_SIZE : [512,512]
  
 TRAINER:

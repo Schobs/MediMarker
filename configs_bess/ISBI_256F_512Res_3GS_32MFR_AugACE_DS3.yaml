@@ -1,5 +1,5 @@
 
-OUTPUT_DIR: "/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/ISBI_256F_512Res_3GS_32MFR_AugACE_DS3"
+OUTPUT_DIR: "/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2/ISBI_256F_512Res_3GS_32MFR_AugACE_DS3"
 # OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
 
 SOLVER:
@@ -19,16 +19,16 @@ DATASET:
   # DEBUG: True
   DATA_AUG: 'AffineComplexElastic'
   ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
-  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
-  LANDMARKS : [0,1,2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+  LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
   ORIGINAL_IMAGE_SIZE : [1935,2400]
-  SCALE_LMS_TO_INPUT_SIZE: False
+  
   INPUT_SIZE : [512,512]
  
 TRAINER:
-  PERFORM_VALIDATION: False
+  PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
 
   #TODO: boolean for performing validation or not. its false in the isbi one because it is tested directly instead.

@@ -234,34 +234,36 @@ class ASPIRELandmarks(data.Dataset):
         self.target_coordinates = []
         self.full_res_coordinates = [] #full_res will be same as target if input and original image same size
         self.image_paths = []
+        self.uids = []
 
 
 
-        if cv > 0:
-            # label_std = os.path.join('fold' + str(self.cv) + '_' + str(self.sigma) + 'std.json' )
+        if cv >= 0:
             label_std = os.path.join('fold' + str(self.cv) +'.json' )
-
+            print("Loading %s data for CV %s " % (self.split, os.path.join(self.annotation_path, label_std)))
             datalist = load_aspire_datalist(os.path.join(self.annotation_path, label_std), data_list_key=self.split, base_dir=self.root_path)
         
         else:
-            raise NotImplementedError("Only cross validation is currently implemented")
-        #   /mnt/tale_all/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV
+            raise NotImplementedError("Only cross validation is currently implemented. Put all training data as fold1 and use cv=1 instead.")
 
-        self.datatype_load = get_datatype_load(datalist[0]["image"]) # based on first image extenstion, get the load function.
+        # based on first image extenstion, get the load function.
+        self.datatype_load = get_datatype_load(datalist[0]["image"]) 
         if self.cache_data:
-            self.load_function = lambda img: img #If cached, no load function needed.
+            #If cached, no load function needed.
+            self.load_function = lambda img: img 
 
             for idx, data in enumerate(datalist):
 
                 interested_landmarks = np.rint(np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
                 expanded_image = np.expand_dims(normalize_cmr(self.datatype_load(data["image"]).resize( self.input_size)), axis=0)
 
-    
+               
 
                 self.images.append(expanded_image)
                 self.target_coordinates.append(interested_landmarks)
                 self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
                 self.image_paths.append(data["image"])
+                self.uids.append(data["id"])
 
             print("Cached all %s data in memory. Length of %s " % (self.split, len(self.images)))
         else:
@@ -274,6 +276,8 @@ class ASPIRELandmarks(data.Dataset):
                 self.target_coordinates.append(interested_landmarks)
                 self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
                 self.image_paths.append(data["image"])
+                self.uids.append(data["id"])
+
 
 
             print("Not caching %s image data in memory, will load on the fly. Length of %s " % (self.split, len(self.images)))
@@ -289,6 +293,7 @@ class ASPIRELandmarks(data.Dataset):
         full_res_coods = self.full_res_coordinates[index]
         im_path = self.image_paths[index]
         run_time_debug= False
+        this_uid = self.uids[index]
 
 
         #Do data augmentation
@@ -300,7 +305,7 @@ class ASPIRELandmarks(data.Dataset):
             heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, self.sigma,  self.num_res_supervisions, self.hm_lambda_scale))  
 
             sample = {"image":normalize_cmr(transformed_sample[0], to_tensor=True) , "label":heatmaps, "target_coords": trans_kps, 
-                "full_res_coords": full_res_coods, "image_path": im_path  }
+                "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
 
             # print("kpcs, trans kps ", kps, "   AND  ", trans_kps)
             # print("transformed sample: ", transformed_sample)
@@ -309,24 +314,12 @@ class ASPIRELandmarks(data.Dataset):
                 print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
                 run_time_debug = True
 
-            # if self.debug or run_time_debug:
-            #     from utils.heatmap_manipulation import get_coords
-            #     print("before coords: ", coords[:,:2], " and len of non coords[:,;2] n  coords: ", np.array(coords[:,2]).shape, np.array(coords).shape)
-            #     print("og image sahpe: ", image.shape, "trans image shape", sample["image"].shape, "trans targ coords: ", sample["target_coords"])
-            #     print("len of hetamps ", len(heatmaps), " and shape: ", heatmaps[-1].shape, " and hm exp shape ", np.expand_dims(heatmaps[-1], axis=0).shape)
-            #     landmarks_from_label = get_coords(torch.from_numpy(np.expand_dims(heatmaps[-1], axis=0)))
-            #     print("landmarks reverse engineered from heatmap label: ", landmarks_from_label)
-
-            #     # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
-            #     # visualize_heat_pred_coords(np.squeeze(image), sample["target_coords"], sample["target_coords"])
-            #     visualize_image_trans_coords(image[0], sample["image"][0] , coords)
+        
 
         #Don't do data augmentation
         else:
-            # print("no data aug")
-            #TODO: need to test cache/no cache with no data augmentation hyere.
             label = self.heatmaps_to_tensor(generate_heatmaps(coords, self.input_size, self.sigma,  self.num_res_supervisions, self.hm_lambda_scale))
-            sample = {"image": torch.from_numpy(image), "label": label,  "target_coords": coords, "full_res_coords": full_res_coods, "image_path": im_path}
+            sample = {"image": torch.from_numpy(image), "label": label,  "target_coords": coords, "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
 
         if self.debug or run_time_debug:
             from utils.heatmap_manipulation import get_coords
