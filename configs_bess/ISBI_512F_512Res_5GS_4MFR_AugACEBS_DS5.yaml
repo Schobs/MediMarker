@@ -1,5 +1,5 @@
 
-OUTPUT_DIR: "/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2/ISBI_512F_512Res_3GS_4MFR_AugAC_DS5"
+OUTPUT_DIR: "/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2/ISBI_512F_512Res_5GS_4MFR_AugACEBS_DS5"
 # OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
 
 SOLVER:
@@ -11,13 +11,13 @@ SOLVER:
 
 
 MODEL:
-  GAUSS_SIGMA: 3
+  GAUSS_SIGMA: 5
   MAX_FEATURES: 512
   MIN_FEATURE_RESOLUTION: 4
 
 DATASET:
   # DEBUG: True
-  DATA_AUG: 'AffineComplex'
+  DATA_AUG: 'AffineComplexElasticBlurSharp'
   ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
   SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"

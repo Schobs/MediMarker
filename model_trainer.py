@@ -23,7 +23,7 @@ class UnetTrainer():
         
         #early stopping
 
-        self.early_stop_patience = 150
+        self.early_stop_patience = 250
         self.epochs_wo_val_improv = 0
 
         #config variable
@@ -257,7 +257,7 @@ class UnetTrainer():
 
                 l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True)
 
-                # print("return", iter_b, torch.cuda.memory_allocated(0))
+                print("mem: ", iter_b, torch.cuda.memory_allocated(0))
                 # print("1 iter time: ", time()-e)
                 # print(".", l, end= "")
 
@@ -614,7 +614,7 @@ class UnetTrainer():
         if self.model_config.DATASET.DEBUG:
             num_workers_cfg=1
         else:
-            num_workers_cfg=12
+            num_workers_cfg=3
         # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, worker_init_fn=UnetTrainer.worker_init_fn )
         # self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, worker_init_fn=UnetTrainer.worker_init_fn )
         self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, num_workers=num_workers_cfg,persistent_workers=True, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )

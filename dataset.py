@@ -223,6 +223,8 @@ class ASPIRELandmarks(data.Dataset):
         self.normalize = normalize
         self.debug = debug
         self.input_size = input_size
+        
+
 
         self.original_image_size = original_image_size
         self.num_res_supervisions = num_res_supervisions

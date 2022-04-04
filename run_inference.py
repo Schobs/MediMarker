@@ -23,6 +23,7 @@ from evaluation.localization_evaluation import success_detection_rate, generate_
 from utils.argument_utils import get_evaluation_mode
 from visualisation import visualize_predicted_heatmaps, visualize_image_multiscaleheats_pred_coords, visualize_heat_pred_coords
 import csv
+from utils.comet_logging.logging_utils import save_comet_html
 
 
 
@@ -83,12 +84,20 @@ def main():
     # model_names = [ "model_best_valid_loss", "model_ep_949", "model_ep_249"] 
     # model_names = ["model_best_valid_coord_error", "model_best_valid_loss", "model_ep_949", "model_ep_749"] 
     model_names = ["model_best_valid_coord_error_fold" +fold  ] 
-
+    
+    all_summmaries = {}
+    all_individuals = {}
     for name in model_names:
         model_paths.append(os.path.join(cfg.OUTPUT_DIR, (name+ ".model")))
 
     for i in range(len(model_paths)):
-        run_inference_model(writer, cfg, model_paths[i], model_names[i])
+        summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i])
+        print("Summary Results: \n ", summary_results)
+        all_summmaries[model_names[i]] = summary_results 
+        all_individuals[model_names[i]] = ind_results 
+
+    html_to_log = save_comet_html(all_summmaries, all_individuals)
+    writer.log_html(html_to_log)
 
 
 
@@ -96,7 +105,7 @@ def main():
 
 def run_inference_model(logger, cfg, model_path, model_name):
 
-
+    print("Running inference")
     test_dataset = ASPIRELandmarks(
         annotation_path =cfg.DATASET.SRC_TARGETS,
         landmarks = cfg.DATASET.LANDMARKS,
