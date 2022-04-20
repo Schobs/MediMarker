@@ -576,10 +576,11 @@ class UnetTrainer():
             normalize=True,
             num_res_supervisions = self.num_res_supervision,
             debug=self.model_config.DATASET.DEBUG ,
-            data_augmentation =self.model_config.DATASET.DATA_AUG,
             original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
             input_size =  self.model_config.DATASET.INPUT_SIZE,
             hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
+            data_augmentation_strategy = self.model_config.DATASET.DATA_AUG,
+            data_augmentation_package = self.model_config.DATASET.DATA_AUG_PACKAGE,
 
  
         )
@@ -599,7 +600,7 @@ class UnetTrainer():
                 normalize=True,
                 num_res_supervisions = self.num_res_supervision,
                 debug=self.model_config.DATASET.DEBUG,
-                data_augmentation =None,
+                data_augmentation_strategy =None,
                 original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
                 input_size =  self.model_config.DATASET.INPUT_SIZE,
                 hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
@@ -614,7 +615,7 @@ class UnetTrainer():
         if self.model_config.DATASET.DEBUG:
             num_workers_cfg=1
         else:
-            num_workers_cfg=3
+            num_workers_cfg=12
         # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, worker_init_fn=UnetTrainer.worker_init_fn )
         # self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, worker_init_fn=UnetTrainer.worker_init_fn )
         self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, num_workers=num_workers_cfg,persistent_workers=True, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )

@@ -27,6 +27,8 @@ _C.DATASET.SCALE_LMS_TO_INPUT_SIZE = True
 
 _C.DATASET.DEBUG = False
 _C.DATASET.DATA_AUG = None
+_C.DATASET.DATA_AUG_PACKAGE = 'imgaug' #['imgaug', 'albumentations']
+
 
 
 # U:\tale2\Shared\data\CMRI\ASPIRE\4CH_labels

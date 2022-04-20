@@ -92,7 +92,7 @@ def main():
         model_paths.append(os.path.join(cfg.OUTPUT_DIR, (name+ ".model")))
 
     for i in range(len(model_paths)):
-        summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i])
+        summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i], "testing")
         print("Summary Results: \n ", summary_results)
         all_summmaries[model_names[i]] = summary_results 
         all_individuals[model_names[i]] = ind_results 
@@ -104,13 +104,13 @@ def main():
 
 
 
-def run_inference_model(logger, cfg, model_path, model_name):
+def run_inference_model(logger, cfg, model_path, model_name, split):
 
     print("Running inference")
     test_dataset = ASPIRELandmarks(
         annotation_path =cfg.DATASET.SRC_TARGETS,
         landmarks = cfg.DATASET.LANDMARKS,
-        split = "testing",
+        split = split,
         root_path = cfg.DATASET.ROOT,
         sigma = cfg.MODEL.GAUSS_SIGMA,
         cv = cfg.TRAINER.FOLD,

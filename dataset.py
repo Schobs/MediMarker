@@ -1,26 +1,31 @@
-import torch
-from torchvision import transforms
-import numpy as np
-import nibabel as nib
-
-from torch.utils import data
+import os
 from pathlib import Path
 from typing import List
-import os
 
-from transformations import normalize_cmr, ToTensor, NormalizeZScore, HeatmapsToTensor
-from visualisation import visualize_image_target, visualize_image_trans_target, visualize_image_trans_coords, visualize_heat_pred_coords
-from load_data import load_aspire_datalist, get_datatype_load
+import imgaug as ia
+import imgaug.augmenters as iaa
+import nibabel as nib
+import numpy as np
+import torch
+from imgaug.augmentables import Keypoint, KeypointsOnImage
 from PIL import Image
-from generate_labels import generate_heatmaps, get_downsampled_heatmaps
+from torch.utils import data
+from torchvision import transforms
+from transforms.transformations import (HeatmapsToTensor, NormalizeZScore, ToTensor,
+                             normalize_cmr)
+from transforms.dataloader_transforms import get_aug_package_loader
+
+from transforms.generate_labels import generate_heatmaps, get_downsampled_heatmaps
+from load_data import get_datatype_load, load_aspire_datalist
+from visualisation import (visualize_heat_pred_coords, visualize_image_target,
+                           visualize_image_trans_coords,
+                           visualize_image_trans_target)
 
 # import albumentations as A
 # import albumentations.augmentations.functional as F
 # from albumentations.pytorch import ToTensorV2
 
-import imgaug as ia
-import imgaug.augmenters as iaa
-from imgaug.augmentables import Keypoint, KeypointsOnImage
+
 
 class ASPIRELandmarks(data.Dataset):
     """
@@ -55,162 +60,33 @@ class ASPIRELandmarks(data.Dataset):
         input_size=  [512,512],
         original_image_size = [512,512],
         num_res_supervisions: int = 5,
-        data_augmentation: str = None,
+        data_augmentation_strategy: str = None,
+        data_augmentation_package: str = None,
         ):
         
  
         super(ASPIRELandmarks, self).__init__()
 
-        self.data_augmentation = data_augmentation
+        self.data_augmentation_strategy = data_augmentation_strategy
         self.hm_lambda_scale = hm_lambda_scale
+        self.data_augmentation_package = data_augmentation_package
 
-        # self.sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+        # if self.data_augmentation_strategy != None:
+
+        if self.data_augmentation_strategy == None:
+            print("WARNING: No data Augmentation.")
+        else:
+            #Get data augmentor for the correct package
+            self.aug_package_loader = get_aug_package_loader(data_augmentation_package)
+            #Get specific data augmentation strategy
+            self.transform = self.aug_package_loader(self.data_augmentation_strategy)
+            print("Using data augmentation package %s and strategy %s." % (data_augmentation_package, self.data_augmentation_strategy) )
+
 
         self.heatmaps_to_tensor = transforms.Compose([
                 HeatmapsToTensor()
             ])
-        if self.data_augmentation == None:
-            print("WARNING: No data Augmentation.")
-            # self.transform = transforms.Compose([
-            # ])
-            
-
-        elif self.data_augmentation =="AffineSimple":
- 
-            self.transform = iaa.Sequential([
-                iaa.Sometimes(
-                    0.75,
-                    iaa.Affine(
-                        rotate=(-45,45),
-                        scale=(0.8, 1.2),
-                    ),
-                ),
-                iaa.flip.Flipud(p=0.5),
-            ])
-
-        elif self.data_augmentation =="AffineComplex":
-            self.transform = iaa.Sequential([
-                iaa.Sometimes(
-                    0.5,
-                    iaa.Affine(
-                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
-                        rotate=(-45, 45),
-                        shear=(-16, 16),
-                        order=[0, 1],
-                    )
-                ),
-                iaa.flip.Flipud(p=0.5),
-
-            ])
-        elif self.data_augmentation == "AffineComplexElastic":
-            self.transform = iaa.Sequential([
-                iaa.Sometimes(
-                    0.5,
-                    iaa.Affine(
-                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
-                        rotate=(-45, 45),
-                        shear=(-16, 16),
-                        order=[0, 1],
-                    )
-                ),
-                iaa.flip.Flipud(p=0.5),
-                iaa.Sometimes(
-                    0.5,
-                    iaa.ElasticTransformation(alpha=(0,200), sigma=(9,13))
-                ),
-
-            ])
-        elif self.data_augmentation == "AffineComplexElasticLight":
-            self.transform = iaa.Sequential([
-                iaa.Sometimes(
-                    0.5,
-                    iaa.Affine(
-                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
-                        rotate=(-45, 45),
-                        shear=(-16, 16),
-                        order=[0, 1],
-                    )
-                ),
-                iaa.flip.Flipud(p=0.5),
-                iaa.Sometimes(
-                    0.5,
-                    iaa.ElasticTransformation(alpha=(0,50), sigma=(5,10))
-                ),
-
-            ])
-        elif self.data_augmentation == "AffineComplexElasticBlur":
-            self.transform = iaa.Sequential([
-                iaa.Sometimes(
-                    0.5,
-                    iaa.Affine(
-                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
-                        rotate=(-45, 45),
-                        shear=(-16, 16),
-                        order=[0, 1],
-                    )
-                ),
-                iaa.flip.Flipud(p=0.5),
-                iaa.Sometimes(
-                    0.5,
-                    iaa.ElasticTransformation(alpha=(0, 50), sigma=(2,5))
-                ),
-
-                iaa.Sometimes(
-                    0.5,
-                    iaa.OneOf([
-                        iaa.GaussianBlur((0, 0.2)),
-                        iaa.AverageBlur(k=(3, 5)),
-                        iaa.MedianBlur(k=(3, 5)),
-                        iaa.AveragePooling(2)
-                    ])
-                ),
-
-            ])
-        elif self.data_augmentation == "AffineComplexElasticBlurSharp":
-            self.transform = iaa.Sequential([
-                iaa.Sometimes(
-                    0.5,
-                    iaa.Affine(
-                        scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
-                        rotate=(-45, 45),
-                        shear=(-16, 16),
-                        order=[0, 1],
-                    )
-                ),
-                iaa.flip.Flipud(p=0.5),
-                iaa.Sometimes(
-                    0.5,
-                    iaa.ElasticTransformation(alpha=(0, 50), sigma=(2,5))
-                ),
-
-                iaa.Sometimes(
-                    0.5,
-                    iaa.OneOf([
-                        iaa.GaussianBlur((0, 0.2)),
-                        iaa.AverageBlur(k=(3, 5)),
-                        iaa.MedianBlur(k=(3, 5)),
-                        iaa.AveragePooling(2)
-                    ])
-                ),
-                iaa.Sometimes(
-                    0.5,
-                    iaa.SomeOf(
-                        (0,3), 
-                        [
-                            iaa.Sharpen(alpha=(0, 0.75), lightness=(0, 0.5)),
-                            iaa.Emboss(alpha=(0, 0.5), strength=(0, 1)),
-                            iaa.LinearContrast((0.4, 1.6))                            
-                        ]
-                    )
-                )
-            ])
-        else:
-            raise ValueError("transformations mode for dataaugmentation not recognised, try None, V1, V2, V3 or V4")
+        
 
         self.root_path = Path(root_path)
         self.annotation_path = Path(annotation_path)
@@ -299,7 +175,7 @@ class ASPIRELandmarks(data.Dataset):
 
 
         #Do data augmentation
-        if self.data_augmentation != None:
+        if self.data_augmentation_strategy != None:
             
             kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in coords[:,:2]], shape=image[0].shape )
             transformed_sample = self.transform(image=image[0], keypoints=kps)

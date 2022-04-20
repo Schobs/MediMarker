@@ -7,12 +7,10 @@ import numpy as np
 import sys
 
 import torch
-from torch.utils.data import DataLoader
 
 from pytorch_lightning.utilities.seed import seed_everything
 from torch.utils.tensorboard import SummaryWriter
 
-from dataset import ASPIRELandmarks
 from config import get_cfg_defaults
 from model_trainer import UnetTrainer
 from visualisation import visualize_predicted_heatmaps
@@ -111,7 +109,7 @@ def main():
     all_model_individuals = {}
 
     for i in range(len(model_paths)):
-        summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i])
+        summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i], "testing")
         
         all_model_summaries[model_names[i]] = summary_results
         all_model_individuals[model_names[i]] = ind_results
