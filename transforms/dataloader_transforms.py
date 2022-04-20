@@ -171,6 +171,78 @@ def get_imgaug_transforms(data_augmentation):
                 )
             )
         ])
+    elif data_augmentation =="payer19":
+        transform = iaa.Sequential([
+            iaa.Affine(
+                translate_px=(-20,20),
+                rotate=(-15,15),
+                scale=(0.6,1.4),
+
+            ),
+            iaa.ElasticTransformation(alpha=(0, 50), sigma=(2,5)),
+            iaa.AddElementwise((-0.25, 0.25)),
+            iaa.MultiplyElementwise((0.75, 1.25))
+            
+        ])
+
+    elif data_augmentation =="thaler21":
+        transform = iaa.Sequential([
+            iaa.Affine(
+                translate_px=(-10,10),
+                rotate=(-15,15),
+                scale=(0.8,1.2),
+
+            ),
+            iaa.Affine(
+                scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+            ),
+            iaa.ElasticTransformation(alpha=(0, 50), sigma=(2,5)),
+
+            iaa.AddElementwise((-0.25, 0.25)),
+
+            iaa.MultiplyElementwise((0.75, 1.25))
+            
+        ])
+
+
+        #  [translation.InputCenterToOrigin(self.dim),
+        #                             translation.Random(self.dim, [10, 10]),  # uniform [-10, 10] for x and y dims
+        #                             rotation.Random(self.dim, [0.25]), #uniform [-0.25, 0.25] rotation in radians
+        #                             scale.RandomUniform(self.dim, 0.2), # uniform [1.0 -random_scale[i], 1.0 + random_scale[i])]. same for each dimension
+        #                             scale.Random(self.dim, [0.2, 0.2]), # uniform [1.0 -random_scale[i], 1.0 + random_scale[i])]. different scale for each dimension
+        #                             translation.OriginToOutputCenter(self.dim, self.image_size, self.image_spacing),
+        #                             deformation.Output(self.dim, [5, 5], 10, self.image_size, self.image_spacing) #params = dim, grid_nodes, deformation_value,  output_size, output_spacing=None, spline_order=3,
+        #                             ],
+
+        #  ShiftScaleClamp(shift=-128,
+        #                        scale=1/128,
+        #                        random_shift=0.25,
+        #                        random_scale=0.25,
+        #                        clamp_min=-1.0,
+        #                        clamp_max=1.0)(image)
+
+        #     Order of operations:
+        # image += shift
+        # image *= scale
+        # image += random.float_uniform(-random_shift, random_shift)
+        # image *= 1 + random.float_uniform(-random_scale, random_scale)
+        # image = np.clip(image, clamp_min, clamp_max)
+
+
+        # transform = iaa.Sequential([
+        #     iaa.Sometimes(
+        #         0.5,
+        #         iaa.Affine(
+        #             scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+        #             translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+        #             rotate=(-45, 45),
+        #             shear=(-16, 16),
+        #             order=[0, 1],
+        #         )
+        #     ),
+        #     iaa.flip.Flipud(p=0.5),
+
+        # ])
     else:
         raise ValueError("transformations mode for dataaugmentation not recognised.")
     

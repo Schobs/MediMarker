@@ -1,5 +1,5 @@
 # from __future__ import print_function, absolute_import
-import argparse
+from utils.setup.argument_utils import arg_parse
 import enum
 import os
 import numpy as np
@@ -20,7 +20,7 @@ from dataset import ASPIRELandmarks
 from config import get_cfg_defaults
 from model_trainer import UnetTrainer
 from evaluation.localization_evaluation import success_detection_rate, generate_summary_df
-from utils.argument_utils import get_evaluation_mode
+from utils.setup.argument_utils import get_evaluation_mode
 from visualisation import visualize_predicted_heatmaps, visualize_image_multiscaleheats_pred_coords, visualize_heat_pred_coords
 import csv
 from utils.comet_logging.logging_utils import save_comet_html
@@ -28,34 +28,18 @@ from utils.comet_logging.logging_utils import save_comet_html
 from inference.fit_gaussian import fit_gauss
 
 
-def arg_parse():
-    parser = argparse.ArgumentParser(description="PyTorch Landmark Localization U-Net")
-    parser.add_argument("--cfg", required=True, help="path to config file", type=str)
-    parser.add_argument(
-        "--gpus",
-        default=1,
-        help="gpu id(s) to use. None/int(0) for cpu. list[x,y] for xth, yth GPU."
-        "str(x) for the first x GPUs. str(-1)/int(-1) for all available GPUs",
-    )
-    parser.add_argument("--resume", default="", type=str)
-    args = parser.parse_args()
-    return args
+
 
 def main():
     """The main for this domain adaptation example, showing the workflow"""
-    args = arg_parse()
+    cfg = arg_parse()
 
 
     # ---- setup device ----
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("==> Using device " + device)
 
-    # ---- setup configs ----
-    cfg = get_cfg_defaults()
-    cfg.merge_from_file(args.cfg)
-    # cfg.freeze()
-    print(cfg)
-
+   
     # cfg.DATASET.DEBUG=False
     # cfg.INFERENCE.EVALUATION_MODE = "use_input_size"
 
@@ -72,33 +56,103 @@ def main():
         
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)  
 
-    writer.set_name("test" + cfg.OUTPUT_DIR.split('/')[-1])
-    writer.add_tag("test")
+    writer.set_name(cfg.OUTPUT_DIR.split('/')[-1])
+    writer.add_tag("aprilV2")
 
 
 
 
     fold = str(cfg.TRAINER.FOLD)
- #  Load Model
+    #Load Models that were saved.
     model_paths = []
-    # model_names = ["model_best_valid_loss", "model_ep_549", "model_best_valid_coord_error", "model_latest"] 
-    # model_names = [ "model_best_valid_loss", "model_ep_949", "model_ep_249"] 
-    # model_names = ["model_best_valid_coord_error", "model_best_valid_loss", "model_ep_949", "model_ep_749"] 
-    model_names = ["model_best_valid_coord_error_fold" +fold  ] 
-    
-    all_summmaries = {}
-    all_individuals = {}
+    model_names = []
+    for fname in os.listdir(cfg.OUTPUT_DIR):
+            if "fold"+fold in fname and ".model" in fname:
+                model_names.append(fname.split(".model")[0])
+
     for name in model_names:
         model_paths.append(os.path.join(cfg.OUTPUT_DIR, (name+ ".model")))
 
+
+    all_model_summaries = {}
+    all_model_individuals = {}
+
     for i in range(len(model_paths)):
         summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i], "testing")
-        print("Summary Results: \n ", summary_results)
-        all_summmaries[model_names[i]] = summary_results 
-        all_individuals[model_names[i]] = ind_results 
+        
+        all_model_summaries[model_names[i]] = summary_results
+        all_model_individuals[model_names[i]] = ind_results
 
-    html_to_log = save_comet_html(all_summmaries, all_individuals)
+
+        #Print results and Log to CometML
+        print("Results for Model: ", model_paths[i])
+        print("All Mean Error %s +/- %s" % (summary_results.loc["Error Mean", "All"], summary_results.loc["Error Std","All"]), end=" - ")
+        writer.log_metric(model_names[i].split("_fold")[0] + " Error All Mean", summary_results.loc["Error Mean", "All"])
+        writer.log_metric(model_names[i].split("_fold")[0] + " Error All Std", summary_results.loc["Error Std", "All"])
+
+        for k in summary_results.index.values:
+                if "SDR" in k:
+                    print(" %s : %s," % (k, summary_results.loc[k, "All"] ), end="")
+                    writer.log_metric(model_names[i].split("_fold")[0] + " " + k,summary_results.loc[k, "All"])
+
+        
+        print("\n Individual Results: \n")
+        for lm in range(len(cfg.DATASET.LANDMARKS)):
+            print("Landmark %s Mean Error %s +/- %s " % (lm, summary_results.loc["Error Mean","L"+str(lm)], summary_results.loc["Error Std","L"+str(lm)] ), end=", ")
+            for k in summary_results.index.values:
+                if "SDR" in k:
+                    print(" %s : %s," % (k, summary_results.loc[k,"L"+ str(lm)] ), end="")
+            print("\n")
+
+
+    #Now Save all model results to a spreadsheet
+
+    html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
     writer.log_html(html_to_log)
+    print("Logged all results to CometML.")
+
+    print("saving summary of results locally to: ", os.path.join(cfg.OUTPUT_DIR, "T_summary_results_fold"+fold +".xlsx"))
+    with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "T_summary_results_fold"+fold +".xlsx")) as writer:
+        for n, df in (all_model_summaries).items():
+            df.to_excel(writer, n)
+
+    print("saving individual sample results locally to: ", os.path.join(cfg.OUTPUT_DIR, "T_individual_results_fold"+fold +".xlsx"))
+    with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "T_individual_results_fold"+fold +".xlsx")) as writer:
+        for n, df in (all_model_individuals).items():
+            df.to_excel(writer, n)
+
+
+
+
+
+
+
+
+
+
+
+
+
+#  #  Load Model
+#     model_paths = []
+#     # model_names = ["model_best_valid_loss", "model_ep_549", "model_best_valid_coord_error", "model_latest"] 
+#     # model_names = [ "model_best_valid_loss", "model_ep_949", "model_ep_249"] 
+#     # model_names = ["model_best_valid_coord_error", "model_best_valid_loss", "model_ep_949", "model_ep_749"] 
+#     model_names = ["model_best_valid_coord_error_fold" +fold  ] 
+    
+#     all_summmaries = {}
+#     all_individuals = {}
+#     for name in model_names:
+#         model_paths.append(os.path.join(cfg.OUTPUT_DIR, (name+ ".model")))
+
+#     for i in range(len(model_paths)):
+#         summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i], "testing")
+#         print("Summary Results: \n ", summary_results)
+#         all_summmaries[model_names[i]] = summary_results 
+#         all_individuals[model_names[i]] = ind_results 
+
+#     html_to_log = save_comet_html(all_summmaries, all_individuals)
+#     writer.log_html(html_to_log)
 
 
 

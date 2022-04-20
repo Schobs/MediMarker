@@ -30,9 +30,5 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: False
-
-INFERENCE:
-  EVALUATION_MODE: "use_input_size" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
 
   #TODO: boolean for performing validation or not. its false in the isbi one because it is tested directly instead.

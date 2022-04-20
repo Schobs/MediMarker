@@ -1,7 +1,6 @@
 # from __future__ import print_function, absolute_import
 from comet_ml import Experiment
 
-import argparse
 import os
 import numpy as np
 import sys
@@ -16,41 +15,27 @@ from model_trainer import UnetTrainer
 from visualisation import visualize_predicted_heatmaps
 from run_inference import run_inference_model
 from pandas import ExcelWriter
+from utils.setup.argument_utils import arg_parse
 # from inference import run_inference_model
 import csv
 
 from utils.comet_logging.logging_utils import save_comet_html
 
 
-def arg_parse():
-    parser = argparse.ArgumentParser(description="PyTorch Landmark Localization U-Net")
-    parser.add_argument("--cfg", required=True, help="path to config file", type=str)
-    parser.add_argument(
-        "--gpus",
-        default=1,
-        help="gpu id(s) to use. None/int(0) for cpu. list[x,y] for xth, yth GPU."
-        "str(x) for the first x GPUs. str(-1)/int(-1) for all available GPUs",
-    )
-    parser.add_argument("--fold", default=0, type=int)
-    args = parser.parse_args()
-    return args
+
 
 def main():
     
     """The main for this domain adaptation example, showing the workflow"""
-    args = arg_parse()
+    cfg = arg_parse()
+    print("Config: \n ", cfg)
 
 
     # ---- setup device ----
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("==> Using device " + device)
 
-    # ---- setup configs ----
-    cfg = get_cfg_defaults()
-    cfg.merge_from_file(args.cfg)
-    cfg.TRAINER.FOLD = args.fold
-    # cfg.freeze()
-    print(cfg)
+
 
     seed = cfg.SOLVER.SEED
     seed_everything(seed)

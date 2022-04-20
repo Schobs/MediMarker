@@ -1,7 +1,7 @@
 
 from torch import nn
 import os
-from initialization import InitWeights_KaimingUniform
+from utils.setup.initialization import InitWeights_KaimingUniform
 from losses import HeatmapLoss, IntermidiateOutputLoss, AdaptiveWingLoss
 from models.UNet_Classic import UNet
 from visualisation import visualize_heat_pred_coords
@@ -10,7 +10,7 @@ import numpy as np
 from time import time
 from dataset import ASPIRELandmarks
 from torch.utils.data import DataLoader
-from utils.heatmap_manipulation import get_coords
+from utils.im_utils.heatmap_manipulation import get_coords
 from torch.cuda.amp import GradScaler, autocast
 import imgaug
 

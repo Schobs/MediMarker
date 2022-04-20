@@ -199,8 +199,9 @@ class ASPIRELandmarks(data.Dataset):
             label = self.heatmaps_to_tensor(generate_heatmaps(coords, self.input_size, self.sigma,  self.num_res_supervisions, self.hm_lambda_scale))
             sample = {"image": torch.from_numpy(image), "label": label,  "target_coords": coords, "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
 
-        if self.debug or run_time_debug:
-            from utils.heatmap_manipulation import get_coords
+        print(this_uid)
+        if (self.debug or run_time_debug):
+            from utils.im_utils.heatmap_manipulation import get_coords
             print("before coords: ", coords)
             print("og image sahpe: ", image.shape, "trans image shape", sample["image"].shape, "trans targ coords: ", sample["target_coords"])
             print("len of hetamps ", len(sample["label"]), " and shape: ", sample["label"][-1].shape, " and hm exp shape ", np.expand_dims(sample["label"][-1], axis=0).shape)
