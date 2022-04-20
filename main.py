@@ -68,8 +68,8 @@ def main():
     fold = str(cfg.TRAINER.FOLD)
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)  
-    writer.set_name("ISBIV2" + cfg.OUTPUT_DIR.split('/')[-1] +"_Fold"+fold)
-    writer.add_tag("ISBIV2")
+    writer.set_name(cfg.OUTPUT_DIR.split('/')[-1] +"_Fold"+fold)
+    writer.add_tag("april")
     writer.add_tag("fold" + str(cfg.TRAINER.FOLD))
 
 
@@ -120,13 +120,13 @@ def main():
         #Print results and Log to CometML
         print("Results for Model: ", model_paths[i])
         print("All Mean Error %s +/- %s" % (summary_results.loc["Error Mean", "All"], summary_results.loc["Error Std","All"]), end=" - ")
-        writer.log_metric(model_names[i] + " Error All Mean", summary_results.loc["Error Mean", "All"])
-        writer.log_metric(model_names[i] + " Error All Std", summary_results.loc["Error Std", "All"])
+        writer.log_metric(model_names[i].split("_fold")[0] + " Error All Mean", summary_results.loc["Error Mean", "All"])
+        writer.log_metric(model_names[i].split("_fold")[0] + " Error All Std", summary_results.loc["Error Std", "All"])
 
         for k in summary_results.index.values:
                 if "SDR" in k:
                     print(" %s : %s," % (k, summary_results.loc[k, "All"] ), end="")
-                    writer.log_metric(model_names[i] + " " + k,summary_results.loc[k, "All"])
+                    writer.log_metric(model_names[i].split("_fold")[0] + " " + k,summary_results.loc[k, "All"])
 
         
         print("\n Individual Results: \n")

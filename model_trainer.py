@@ -23,7 +23,7 @@ class UnetTrainer():
         
         #early stopping
 
-        self.early_stop_patience = 250
+        self.early_stop_patience = 150
         self.epochs_wo_val_improv = 0
 
         #config variable
@@ -257,7 +257,7 @@ class UnetTrainer():
 
                 l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True)
 
-                print("mem: ", iter_b, torch.cuda.memory_allocated(0))
+                # print("mem: ", iter_b, torch.cuda.memory_allocated(0))
                 # print("1 iter time: ", time()-e)
                 # print(".", l, end= "")
 

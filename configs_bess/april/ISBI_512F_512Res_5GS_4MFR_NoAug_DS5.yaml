@@ -1,34 +1,34 @@
 
-OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_256F_512Res_3GS_32MFR_AugAC_DS3"
+OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_NoAug_DS5"
 # OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
 
 SOLVER:
   DEEP_SUPERVISION: True
-  NUM_RES_SUPERVISIONS: 3
+  NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE: 12
 
 
 
 MODEL:
-  GAUSS_SIGMA: 3
-  MAX_FEATURES: 256
-  MIN_FEATURE_RESOLUTION: 32
+  GAUSS_SIGMA: 5
+  MAX_FEATURES: 512
+  MIN_FEATURE_RESOLUTION: 4
 
 DATASET:
   # DEBUG: True
-  DATA_AUG: 'AffineComplex'
+  # DATA_AUG: 'AffineComplex'
   ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
   SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
   ORIGINAL_IMAGE_SIZE : [1935,2400]
+  
   INPUT_SIZE : [512,512]
  
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-
 
   #TODO: boolean for performing validation or not. its false in the isbi one because it is tested directly instead.

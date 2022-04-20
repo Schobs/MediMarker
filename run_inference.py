@@ -25,6 +25,7 @@ from visualisation import visualize_predicted_heatmaps, visualize_image_multisca
 import csv
 from utils.comet_logging.logging_utils import save_comet_html
 
+from inference.fit_gaussian import fit_gauss
 
 
 def arg_parse():
@@ -160,6 +161,7 @@ def run_inference_model(logger, cfg, model_path, model_name):
         pred_coords = pred_coords.cpu().detach().numpy()
 
 
+
         #If we don't resize the heatmap first and we want to evaluate on full image size, we need to scale coordinates up.
         if use_full_res_coords and not resize_first :
             downscale_factor = [cfg.DATASET.ORIGINAL_IMAGE_SIZE[0]/cfg.DATASET.INPUT_SIZE[0], cfg.DATASET.ORIGINAL_IMAGE_SIZE[1]/cfg.DATASET.INPUT_SIZE[1]]
@@ -167,9 +169,13 @@ def run_inference_model(logger, cfg, model_path, model_name):
 
         coord_error = np.linalg.norm((pred_coords- targ_coords), axis=2)
 
-
+        # Fit the predicted heatmap into a Gaussian
+        # print("final pred heatmap shape : ", final_pred_heatmap.shape, " pred_coords shape", pred_coords.shape)
+        # for lm_ind in range(final_pred_heatmap.shape[1]):
+        #     # if lm_ind == 4:
+        #     fit_gauss(final_pred_heatmap[0][lm_ind].cpu().detach().numpy(), pred_coords[0][lm_ind], targ_coords = targ_coords[0][lm_ind], visualize=True)
          
-
+        # exit()
         for idx_c, sample in enumerate(coord_error):
 
             temp_results.append({"uid": data_dict["uid"][idx_c], "ind_errors": coord_error[idx_c]})
