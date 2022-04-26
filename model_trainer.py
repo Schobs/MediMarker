@@ -2,25 +2,54 @@
 from torch import nn
 import os
 from utils.setup.initialization import InitWeights_KaimingUniform
-from losses import HeatmapLoss, IntermidiateOutputLoss, AdaptiveWingLoss
+from losses import HeatmapLoss, IntermediateOutputLoss, AdaptiveWingLoss, SigmaLoss
 from models.UNet_Classic import UNet
 from visualisation import visualize_heat_pred_coords
 import torch
 import numpy as np
 from time import time
+# from dataset import ASPIRELandmarks
 from dataset import ASPIRELandmarks
+# import multiprocessing as mp
+import ctypes
+import copy
 from torch.utils.data import DataLoader
 from utils.im_utils.heatmap_manipulation import get_coords
 from torch.cuda.amp import GradScaler, autocast
 import imgaug
+import torch.multiprocessing as mp
+# from torch.multiprocessing import Pool, Process, set_start_method
 
+# torch.multiprocessing.set_start_method('spawn')# good solution !!!!
 from torchvision.transforms import Resize,InterpolationMode
 class UnetTrainer():
     """ Class for the u-net trainer stuff.
     """
 
     def __init__(self, model_config= None, output_folder=None, logger=None, profiler=None):
-        
+        #Device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        #multiprocessing 
+           # try:
+        #     print("spawning mp")
+        #     set_start_method('spawn')
+        # except RuntimeError:
+        #     pass
+        # mp.set_start_method('spawn', force=True)
+        # self.sigmas = GaussianSigmas(model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS), self.device)
+        # self.sigmas.share_memory_()
+        # for sig in self.sigmas.sigmas_list:
+        #     sig.share_memory_()
+        # try:
+        #     print("spawning mp")
+        #     set_start_method('spawn')
+        # except RuntimeError:
+        #     pass
+
+        # self.sigmas = [torch.tensor(x, dtype=float, device=self.device, requires_grad=True) for x in np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))]
+
+
         #early stopping
 
         self.early_stop_patience = 150
@@ -43,9 +72,7 @@ class UnetTrainer():
         self.output_folder = output_folder
         self.pin_memory = True
 
-        #Device
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+      
         #Dataloader info
         self.data_loader_batch_size = model_config.SOLVER.DATA_LOADER_BATCH_SIZE
         self.num_val_batches_per_epoch = 50
@@ -55,7 +82,23 @@ class UnetTrainer():
         self.max_num_epochs =  model_config.SOLVER.MAX_EPOCHS
         self.initial_lr = 1e-2
 
+        #Sigma for Gaussian heatmaps
+        self.regress_sigma = model_config.SOLVER.REGRESS_SIGMA
+        # self.sigmas = torch.repeat_interleave(torch.tensor(self.model_config.MODEL.GAUSS_SIGMA, dtype=torch.float),len(model_config.DATASET.LANDMARKS))
+        self.sigmas = [torch.tensor(x, dtype=float, device=self.device, requires_grad=True) for x in np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))]
+        # self.sigmas = torch.from_numpy(), requires_grad=True)
+            # torch.repeat_interleave(torch.tensor(, dtype=float, requires_grad=True),)
+        # self.sigmas = np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))
+        # self.sigmas = torch.tensor(self.sigmas, dtype=torch.float, device=self.device, requires_grad=True)
+        # self.sigmas = [nn.Parameter(torch.tensor(x, dtype=float, device=self.device, requires_grad=True)) for x in np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))]
 
+        #shared array stuff 
+        # shared_array_base = mp.Array(ctypes.c_float, len(self.sigmas))
+        # shared_array = mp.Array(shared_array_base.get_obj())
+
+        # self.sigmas = mp.Array(self.sigmas )
+        # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array_sigmas_base.get_obj()))
+        # self.shared_array_sigmas = sigmas
         #get validaiton para,s
         if model_config.INFERENCE.EVALUATION_MODE == 'use_input_size' or  model_config.DATASET.ORIGINAL_IMAGE_SIZE == model_config.DATASET.INPUT_SIZE:
             self.use_full_res_coords =False
@@ -81,7 +124,7 @@ class UnetTrainer():
         # self.num_resolution_layers = 8
         self.num_resolution_layers = UnetTrainer.get_resolution_layers(self.input_size,  self.min_feature_res)
 
-        print("num res layers = ", self.num_resolution_layers)
+        print("number of resolution layers = ", self.num_resolution_layers)
 
 
         self.num_input_channels = 1
@@ -115,18 +158,19 @@ class UnetTrainer():
         #Loss params
         loss_str = model_config.SOLVER.LOSS_FUNCTION
         if loss_str == "mse":
-            self.individual_loss = HeatmapLoss()
+            self.individual_hm_loss = HeatmapLoss()
         elif loss_str =="awl":
-            self.individual_loss = AdaptiveWingLoss(hm_lambda_scale=self.model_config.MODEL.HM_LAMBDA_SCALE)
+            self.individual_hm_loss = AdaptiveWingLoss(hm_lambda_scale=self.model_config.MODEL.HM_LAMBDA_SCALE)
         else:
             raise ValueError("the loss function %s is not implemented. Try mse or awl" % (loss_str))
 
-
+        # if self.regress_sigma:
+        #     self.sigma_loss = SigmaLoss()
 
       
 
         ################# Settings for saving checkpoints ##################################
-        self.save_every = 50
+        self.save_every = 25
         self.save_latest_only = model_config.TRAINER.SAVE_LATEST_ONLY  # if false it will not store/overwrite _latest but separate files each
         # time an intermediate checkpoint is created
         self.save_intermediate_checkpoints = True  # whether or not to save checkpoint_latest
@@ -178,11 +222,8 @@ class UnetTrainer():
             weight_initialization=self.weight_inititialiser, strided_convolution_kernels = self.pool_op_kernel_size, convolution_kernels= self.conv_op_kernel_size,
             convolution_config=self.conv_kwargs, upsample_operation=self.upsample_operation, max_features=self.max_features, deep_supervision=self.deep_supervision
         
-         )
-
-
-        if torch.cuda.is_available():
-            self.network.cuda()
+        )
+        self.network.to(self.device)
 
         # print("initialised network: ", self.network)
         # #Log network and initial weights
@@ -190,18 +231,26 @@ class UnetTrainer():
             self.logger.set_model_graph(str(self.network))
             print("Logged the model graph.")
 
-        #     print("Logging weights as histogram (before training)...")
-        #     # Log model weights
-        #     weights = []
-        #     for name in self.network.named_parameters():
-        #         if 'weight' in name[0]:
-        #             weights.extend(name[1].detach().cpu().numpy().tolist())
-        #     self.logger.log_histogram_3d(weights, step=0)
-        print("Initiailzed network architecture. #parameters: ", sum(p.numel() for p in self.network .parameters()))
+     
+        print("Initialized network architecture. #parameters: ", sum(p.numel() for p in self.network .parameters()))
 
     def initialize_optimizer_and_scheduler(self):
         assert self.network is not None, "self.initialize_network must be called first"
-        self.optimizer = self.optimizer(self.network.parameters(), **self.optimizer_kwargs)
+
+        # print("sigmas tensor representation: ", self.sigmas)
+        # print("Model and list model params ", self.network.parameters().is_leaf, list(self.network.parameters()).is_leaf)
+        self.learnable_params = list(self.network.parameters())
+        if self.regress_sigma:
+            # print("adding sigmas to Learnable params")
+            # self.sigmas.requires_grad_(True)
+            for sig in self.sigmas:
+                self.learnable_params.append(sig)
+        #     # self.optimizer.param_groups.append({'params': self.sigmas })
+
+        self.optimizer = self.optimizer(self.learnable_params, **self.optimizer_kwargs)
+
+   
+
         print("Initialised optimizer.")
 
 
@@ -212,10 +261,15 @@ class UnetTrainer():
             #[::-1] because we don't use bottleneck layer. reverse bc the high res ones are important
             loss_weights = np.array([1 / (2 ** i) for i in range(self.num_res_supervision)])[::-1] 
             loss_weights = (loss_weights / loss_weights.sum()) #Normalise to add to 1
-
-            self.loss = IntermidiateOutputLoss(self.individual_loss, loss_weights)
         else:
-            self.loss = IntermidiateOutputLoss(self.individual_loss, [1])
+            loss_weights = [1]
+
+        if self.regress_sigma:
+            self.loss = IntermediateOutputLoss(self.individual_hm_loss, loss_weights,sigma_loss=True, sigma_weight=self.model_config.SOLVER.REGRESS_SIGMA_LOSS_WEIGHT )
+        else:
+            self.loss = IntermediateOutputLoss(self.individual_hm_loss, loss_weights,sigma_loss=False )
+
+   
 
         print("initialized Loss function.")
 
@@ -250,7 +304,13 @@ class UnetTrainer():
             train_losses_epoch = []
 
             self.network.train()
+            # if self.regress_sigma:
+            #     self.sigmas.train()
+
+            # self.sigmas
             generator = iter(self.train_dataloader)
+            # generator.dataset.update_sigmas(self.sigmas)
+
 
             # Train for X number of batches per epoch e.g. 250
             for iter_b in range(self.num_batches_per_epoch):
@@ -277,11 +337,17 @@ class UnetTrainer():
             #Validate
             
             with torch.no_grad():
+
                 self.network.eval()
+                # if self.regress_sigma:
+                #     self.sigmas.eval()
+
                 # val_losses = []
                 val_coord_errors = []
                 val_losses_epoch = []
                 generator = iter(self.valid_dataloader)
+                # generator.dataset.update_sigmas(self.sigmas)
+
 
                 for iter_b in range(int(len(self.valid_dataloader.dataset)/self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE)):
 
@@ -293,6 +359,7 @@ class UnetTrainer():
                 self.all_valid_coords.append(np.mean(val_coord_errors))
             self.epoch_end_time = time()
             print("Epoch: ", self.epoch, " - train loss: ", np.mean(train_losses_epoch), " - val loss: ", self.all_valid_losses[-1], " - val coord error: ", self.all_valid_coords[-1], " -time: ",(self.epoch_end_time - self.epoch_start_time) )
+            print("sigmas: ", self.sigmas)
 
             # print("validation: ", time()-s)
             continue_training = self.on_epoch_end()
@@ -329,7 +396,7 @@ class UnetTrainer():
             output = self.network(data)
 
         
-        l = self.loss(output, target)
+        l = self.loss(output, target, self.sigmas)
 
         final_heatmap = output[-1]
         if resize_to_og:
@@ -354,12 +421,14 @@ class UnetTrainer():
         except StopIteration:
             # restart the generator if the previous generator is exhausted.
             generator = iter(dataloader)
+            # generator.dataset.update_sigmas(self.sigmas)
             data_dict = next(generator)
 
         
 
         # print("CUDA memory allocated: ",  torch.cuda.memory_allocated(0))
         data =(data_dict['image']).to( self.device )
+
         target = [x.to(self.device) for x in data_dict['label']]
         # print("gen data and to device ", time()-so,  torch.cuda.memory_allocated(0))
 
@@ -382,13 +451,17 @@ class UnetTrainer():
                 # print("forward" , time()-so,  torch.cuda.memory_allocated(0))
                 so = time()
                 del data
-                l = self.loss(output, target)
+                l = self.loss(output, target, self.sigmas)
             if backprop:
                 self.amp_grad_scaler.scale(l).backward()
                 self.amp_grad_scaler.unscale_(self.optimizer)
-                torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
+                # torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
+                # torch.nn.utils.clip_grad_norm_(self.sigmas, 12)
+                torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
                 self.amp_grad_scaler.step(self.optimizer)
                 self.amp_grad_scaler.update()
+                # if self.regress_sigma:
+                #     self.update_dataloader_sigmas(self.sigmas)
                 # print("backprop: ", time()-so,  torch.cuda.memory_allocated(0))
         else:
             if self.deep_supervision:
@@ -399,14 +472,22 @@ class UnetTrainer():
 
 
             del data
-            l = self.loss(output, target)
+            l = self.loss(output, target, self.sigmas)
         
             # s=time()
             if backprop:
                 l.backward()
-                torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
+                # torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
+                # torch.nn.utils.clip_grad_norm_(self.sigmas, 12)
+                torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
+
                 self.optimizer.step() 
 
+
+                # if self.regress_sigma:
+                #     self.update_dataloader_sigmas(self.sigmas)
+
+        # print("sigmas: ", self.sigmas)
 
         # print("itertime ", time()-so)
         if get_coord_error:
@@ -431,6 +512,7 @@ class UnetTrainer():
                 coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
                 coord_error_list.append(np.mean(coord_error.detach().cpu().numpy()))
 
+       
 
         if self.profiler:
             self.profiler.step()
@@ -474,6 +556,9 @@ class UnetTrainer():
 
         self.maybe_update_lr(epoch=self.epoch)
 
+        # if self.regress_sigma:
+        #     self.update_dataloader_sigmas(self.sigmas)
+
         if self.logger:
             self.logger.log_metric("training loss epoch", self.all_tr_losses[-1], self.epoch)
             self.logger.log_metric("validation loss", self.all_valid_losses[-1], self.epoch)
@@ -498,8 +583,10 @@ class UnetTrainer():
             if not self.save_latest_only:
                 self.save_checkpoint(os.path.join(self.output_folder, "model_ep_"+ str(self.epoch) + "_fold" + fold_str+ ".model" % ()))
             
-                if self.epoch >=249:
-                    self.save_every = 200
+                if self.epoch >=150:
+                    self.save_every = 50
+                if self.epoch >=250:
+                    self.save_every = 100
             self.save_checkpoint(os.path.join(self.output_folder, "model_latest_fold"+ (fold_str) +".model"))
             print("done")
         if new_best_valid_bool:
@@ -541,6 +628,13 @@ class UnetTrainer():
     def maybe_load_checkpoint(self):
         if self.continue_checkpoint:
             self.load_checkpoint(self.continue_checkpoint, True)
+    
+    def update_dataloader_sigmas(self, new_sigmas):
+        np_sigmas = [x.cpu().detach().numpy() for x in new_sigmas]
+        self.train_dataloader.dataset.update_sigmas(np_sigmas)
+        self.valid_dataloader.dataset.update_sigmas( np_sigmas)
+
+
 
     def load_checkpoint(self, model_path, training_bool):
         if not self.was_initialized:
@@ -564,13 +658,15 @@ class UnetTrainer():
         print("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch ))
 
     def set_training_dataloaders(self):
+
+        np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
     
         train_dataset = ASPIRELandmarks(
             annotation_path =self.model_config.DATASET.SRC_TARGETS,
             landmarks = self.model_config.DATASET.LANDMARKS,
             split = "training",
             root_path = self.model_config.DATASET.ROOT,
-            sigma = self.model_config.MODEL.GAUSS_SIGMA,
+            sigmas =  np_sigmas,
             cv = self.model_config.TRAINER.FOLD,
             cache_data = self.model_config.TRAINER.CACHE_DATA,
             normalize=True,
@@ -581,6 +677,7 @@ class UnetTrainer():
             hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
             data_augmentation_strategy = self.model_config.DATASET.DATA_AUG,
             data_augmentation_package = self.model_config.DATASET.DATA_AUG_PACKAGE,
+            regress_sigma = self.model_config.SOLVER.REGRESS_SIGMA
 
  
         )
@@ -594,7 +691,7 @@ class UnetTrainer():
                 landmarks = self.model_config.DATASET.LANDMARKS,
                 split = val_split,
                 root_path = self.model_config.DATASET.ROOT,
-                sigma = self.model_config.MODEL.GAUSS_SIGMA,
+                sigmas =  np_sigmas,
                 cv = self.model_config.TRAINER.FOLD,
                 cache_data = self.model_config.TRAINER.CACHE_DATA,
                 normalize=True,
@@ -604,6 +701,8 @@ class UnetTrainer():
                 original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
                 input_size =  self.model_config.DATASET.INPUT_SIZE,
                 hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
+                regress_sigma = self.model_config.SOLVER.REGRESS_SIGMA
+
             )
         else:
             val_split = "training"
@@ -615,7 +714,7 @@ class UnetTrainer():
         if self.model_config.DATASET.DEBUG:
             num_workers_cfg=1
         else:
-            num_workers_cfg=12
+            num_workers_cfg=4
         # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, worker_init_fn=UnetTrainer.worker_init_fn )
         # self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, worker_init_fn=UnetTrainer.worker_init_fn )
         self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, num_workers=num_workers_cfg,persistent_workers=True, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
@@ -632,3 +731,17 @@ class UnetTrainer():
     @staticmethod
     def worker_init_fn(worker_id):
         imgaug.seed(np.random.get_state()[1][0] + worker_id)
+
+
+# class GaussianSigmas():
+#     def __init__(self, init_sigma, num_landmarks, device):
+#         self.sigmas_list = [torch.tensor(x, dtype=float, device=device, requires_grad=True) for x in np.repeat(init_sigma, num_landmarks)]
+        
+#     def update_sigmas(self, new_sigmas):
+#         self.sigmas_list = new_sigmas
+
+#     def get_numpy_sigmas(self):
+#         return [x.cpu().detach().numpy() for x in copy.deepcopy(self.sigmas_list)]
+    
+    
+

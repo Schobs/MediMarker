@@ -69,8 +69,8 @@ def analyse_all_folds(root_path, name_of_exp, models_to_test, early_stop_strateg
         
     #For each fold load the results files
     for fold in folds:
-        summ_file_name = os.path.join(exp_path, "summary_results_fold"+str(fold) +".xlsx")
-        ind_file_name = os.path.join(exp_path, "individual_results_fold"+str(fold) +".xlsx")
+        summ_file_name = os.path.join(exp_path, "T_summary_results_fold"+str(fold) +".xlsx")
+        ind_file_name = os.path.join(exp_path, "T_individual_results_fold"+str(fold) +".xlsx")
 
         try:                                    
             summary_file = pd.ExcelFile(summ_file_name)
@@ -163,8 +163,9 @@ def analyse_all_folds(root_path, name_of_exp, models_to_test, early_stop_strateg
 
     return summary_dicts, False
 
-root_path = "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2"
-name_of_exp = "ISBI_256F_512Res_8GS_32MFR_AugACEL_DS3"
+# root_path = "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2"
+root_path = "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search"
+# name_of_exp = "ISBI_256F_512Res_8GS_32MFR_AugACEL_DS3"
 models_to_test = ["model_best_valid_coord_error", "model_best_valid_loss", "model_latest"]
 # models_to_test = ["model_best_valid_coord_error"]
 
@@ -180,6 +181,9 @@ folds= [0,1,2,3]
 #Walk through dir to get all exps
 all_exps =  [x for x in os.listdir(root_path) if "ISBI" in x]
 info_keys = ["Name","Dataset", "Max Features", "Resolution","Gauss Sigma",  "Min Feature Resolution","Aug", "Deep Supervision"]
+
+collation_location = os.path.join(root_path, "all_summaries")
+os.makedirs(collation_location, exist_ok=True)
 
 summary_of_summaries = {}
 failed_experiments = []
@@ -230,7 +234,8 @@ for failed_exp, info_dict in failed_experiments:
 
         summary_of_summaries[chkpt_key] = pd.concat([results, pd.DataFrame.from_dict([new_row])])
 
-collation_location = os.path.join(root_path, "all_summaries")
+
+
 
 with ExcelWriter(os.path.join(collation_location, "summary_of_summaries.xlsx")) as writer:
     for n, df in (summary_of_summaries).items():

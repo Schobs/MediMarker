@@ -112,19 +112,35 @@ class HeatmapLoss(nn.Module):
 
 #i need to think of a loss that normalises between 0-1
 
-class IntermidiateOutputLoss(nn.Module):
+
+class SigmaLoss(nn.Module):
+    """Loss for regressing sigmas. It is simply the L2 loss of the squared sigma 
+    i.e. make sigma as small as possible.
+
+    """
+    def __init__(self, loss_func=nn.MSELoss()):
+        super(SigmaLoss, self).__init__()
+
+        self.loss = loss_func
+        
+    def forward(self, sigmas):
+        return self.loss([x**2 for x in sigmas])
+
+
+class IntermediateOutputLoss(nn.Module):
     """
     use this if you have several outputs and ground truth (both list of same len) and the loss should be computed
     between them (x[0] and y[0], x[1] and y[1] etc)
 
     """
 
-    def __init__(self, loss, weights):
-        super(IntermidiateOutputLoss, self).__init__()
-        self.weights = weights
-        self.loss = loss
-
-    def forward(self, x, y):
+    def __init__(self, hm_loss, ds_weights, sigma_weight, sigma_loss=False):
+        super(IntermediateOutputLoss, self).__init__()
+        self.ds_weights = ds_weights
+        self.hm_loss = hm_loss
+        self.sigma_loss = sigma_loss
+        self.sigma_weight = sigma_weight
+    def forward(self, x, y, sigmas=None):
         # print("we have 7 outputs, 1 for each resolution,", len(x))
         # print(" each output has 20 (batchsize)", len(x[0]))
         # print("target len", len(y))
@@ -138,7 +154,66 @@ class IntermidiateOutputLoss(nn.Module):
 
         #     print(idx, ", inp shape", inp.detach().cpu().numpy().shape)
         #     print(idx, "targ shape: ", y[idx].detach().cpu().numpy().shape)
-        l = self.weights[0] * self.loss(x[0], y[0])
+        l = self.ds_weights[0] * self.hm_loss(x[0], y[0])
+
+        # print("the weights are: ", self.ds_weights)
+        # print(0, "pred shape %s and targ shape %s with weight %s  and loss %s and weighted loss %s" %(x[0].detach().cpu().numpy().shape, y[0].detach().cpu().numpy().shape, self.weights[0], self.loss(x[0], y[0]), l) )
+        for i in range(1, len(x)):
+            if self.ds_weights[i] != 0:
+                # print(i, "pred shape %s and targ shape %s with weight %s  and loss %s, and weighted loss: %s" %(x[i].detach().cpu().numpy().shape, y[i].detach().cpu().numpy().shape, self.weights[i], self.loss(x[i], y[i]), self.weights[i] * self.loss(x[i], y[i])) )
+
+                l += self.ds_weights[i] * self.hm_loss(x[i], y[i])
+
+        # print("is cuda? x,y, sigmas", x.is_cuda, y.is_cuda, sigmas.is_cuda )
+
+        if self.sigma_loss:
+            # sig_l = torch.mean([torch.square(x) for x in sigmas])
+            # sig_l = torch.mean()
+            sig_l = 0
+            for sig in sigmas:
+                sig_l += torch.square(sig)
+            sig_l = self.sigma_weight *(torch.sqrt(sig_l))
+            # sig_l = 0.005*torch.mean(torch.square((sigmas)))
+            # sig_l = torch.mean(torch.square((sigmas)))
+
+
+            print("Sigma loss: %s and HM loss %s " % (sig_l, l))
+            l += (sig_l)
+        # print("total loss: ", l)
+
+        return l
+
+
+
+class IntermediateOutputLossAndSigma(nn.Module):
+    """
+    use this if you have several outputs and ground truth (both list of same len) and the loss should be computed
+    between them (x[0] and y[0], x[1] and y[1] etc)
+
+    """
+
+    def __init__(self, hm_loss, weights):
+        super(IntermediateOutputLossAndSigma, self).__init__()
+        self.weights = weights
+        self.hm_loss = hm_loss
+        # self.sigma_loss = nn.MSELoss()
+      
+
+    def forward(self, x, y, sigmas):
+        # print("we have 7 outputs, 1 for each resolution,", len(x))
+        # print(" each output has 20 (batchsize)", len(x[0]))
+        # print("target len", len(y))
+        # print("in the multiple output loss the x ", torch.stack(x,dim=1).squeeze(0).cpu().numpy().shape)
+        # print(" and y shapes are:", torch.stack(y,dim=1).squeeze(0).cpu().numpy().shape)
+
+        # for idx, inp in enumerate(x):
+          
+        #     print(idx, " len inp", len(inp))
+
+
+        #     print(idx, ", inp shape", inp.detach().cpu().numpy().shape)
+        #     print(idx, "targ shape: ", y[idx].detach().cpu().numpy().shape)
+        l = self.weights[0] * self.hm_loss(x[0], y[0])
 
         # print("the weights are: ", self.weights)
         # print(0, "pred shape %s and targ shape %s with weight %s  and loss %s and weighted loss %s" %(x[0].detach().cpu().numpy().shape, y[0].detach().cpu().numpy().shape, self.weights[0], self.loss(x[0], y[0]), l) )
@@ -146,6 +221,13 @@ class IntermidiateOutputLoss(nn.Module):
             if self.weights[i] != 0:
                 # print(i, "pred shape %s and targ shape %s with weight %s  and loss %s, and weighted loss: %s" %(x[i].detach().cpu().numpy().shape, y[i].detach().cpu().numpy().shape, self.weights[i], self.loss(x[i], y[i]), self.weights[i] * self.loss(x[i], y[i])) )
 
-                l += self.weights[i] * self.loss(x[i], y[i])
+                l += self.weights[i] * self.hm_loss(x[i], y[i])
 
-        return l
+        sig_l = torch.mean(torch.square(sigmas))
+        
+        # torch.mean([x**2 for x in sigmas])
+
+        print("HM Loss: %s, sigma Loss: %s " % (l, sig_l))
+
+
+        return l + sig_l

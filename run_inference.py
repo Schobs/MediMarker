@@ -177,6 +177,8 @@ def run_inference_model(logger, cfg, model_path, model_name, split):
         original_image_size= cfg.DATASET.ORIGINAL_IMAGE_SIZE,
         input_size =  cfg.DATASET.INPUT_SIZE,
         hm_lambda_scale = cfg.MODEL.HM_LAMBDA_SCALE,
+        regress_sigma = cfg.SOLVER.REGRESS_SIGMA
+
 
  
 

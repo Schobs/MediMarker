@@ -52,7 +52,7 @@ def main():
 
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)  
     writer.set_name(cfg.OUTPUT_DIR.split('/')[-1] +"_Fold"+fold)
-    writer.add_tag("april")
+    writer.add_tag("testing")
     writer.add_tag("fold" + str(cfg.TRAINER.FOLD))
 
 

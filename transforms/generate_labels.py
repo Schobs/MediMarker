@@ -13,10 +13,10 @@ def generate_heatmaps(landmarks, image_size, sigma, num_res_levels, lambda_scale
 
     for size_f in resizing_factors:
         intermediate_heatmaps = []
-        for lm in landmarks:
+        for idx, lm in enumerate(landmarks):
             lm = np.round(lm / size_f)
             downsample_size = [image_size[0] / size_f[0], image_size[1] / size_f[1]]
-            down_sigma = sigma/ size_f[0]
+            down_sigma = sigma[idx]/ size_f[0]
             intermediate_heatmaps.append(gaussian_gen(lm, downsample_size, 1, down_sigma, dtype, lambda_scale))
         heatmap_list.append(np.array(intermediate_heatmaps))
 
@@ -62,7 +62,6 @@ def gaussian_gen(landmark, resolution, step_size, std, dtype=np.float32, lambda_
     # g = np.transpose(g)
     #add extra dimension for later calculations in Loss
     # g =  np.expand_dims(g, axis=0)
-
 
 
     return g

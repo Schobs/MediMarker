@@ -21,8 +21,6 @@ from visualisation import (visualize_heat_pred_coords, visualize_image_target,
                            visualize_image_trans_coords,
                            visualize_image_trans_target)
 
-import multiprocessing as mp
-import ctypes
 # import albumentations as A
 # import albumentations.augmentations.functional as F
 # from albumentations.pytorch import ToTensorV2
@@ -49,13 +47,12 @@ class ASPIRELandmarks(data.Dataset):
     def __init__(
         self,
         landmarks,
-        sigmas,
         hm_lambda_scale: float,
         annotation_path: str,
-        regress_sigma: bool, 
         image_modality: str= "CMRI",
         split: str ="training",
         root_path: str = "./data",
+        sigma: float = 3.0,
         cv: int = -1,
         cache_data: bool = False,
         normalize: bool = True,
@@ -70,18 +67,10 @@ class ASPIRELandmarks(data.Dataset):
  
         super(ASPIRELandmarks, self).__init__()
 
-        #set up shared array to update the sigmas during training among all the workers
-        # shared_array_sigmas_base = mp.Array(ctypes.c_float, len(sigmas))
-        # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array_sigmas_base.get_obj()))
-        # self.shared_array_sigmas = sigmas
-        # shared_array_sigmas_base = mp.Array(ctypes.c_float, len(sigmas))
-        # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array_sigmas_base.get_obj()))
-        # self.use_sigmas_cache = False
-
         self.data_augmentation_strategy = data_augmentation_strategy
         self.hm_lambda_scale = hm_lambda_scale
         self.data_augmentation_package = data_augmentation_package
-        self.regress_sigma = regress_sigma
+
         # if self.data_augmentation_strategy != None:
 
         if self.data_augmentation_strategy == None:
@@ -104,8 +93,7 @@ class ASPIRELandmarks(data.Dataset):
         self.image_modality = image_modality
         self.landmarks = landmarks
         self.split = split
-        self.sigmas= sigmas
-
+        self.sigma=sigma
         self.cv=cv
         self.cache_data = cache_data
         self.normalize = normalize
@@ -175,24 +163,9 @@ class ASPIRELandmarks(data.Dataset):
     def __len__(self):
         return len(self.images)
 
-    def set_use_cache(self, use_cache):
-        self.use_cache = use_cache
 
     def __getitem__(self, index):
         
-        #case where we are not regressing sigmas, so just use the sigmas we initialised with.
-        # if hm_sigmas == None:
-        #     hm_sigmas = self.sigmas
-
-        # if not self.use_cache:
-        #     print('Filling cache for index {}'.format(index))
-        #     # Add your loading logic here
-        #     self.shared_array[index] = torch.randn(c, h, w)
-
-        # print("given sigmas ", index)
-
-        # np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
-        np_sigmas = self.sigmas
         image = self.load_function(self.images[index])
         coords = self.target_coordinates[index]
         full_res_coods = self.full_res_coordinates[index]
@@ -207,9 +180,7 @@ class ASPIRELandmarks(data.Dataset):
             kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in coords[:,:2]], shape=image[0].shape )
             transformed_sample = self.transform(image=image[0], keypoints=kps)
             trans_kps = np.array([[coo.x_int, coo.y_int] for coo in transformed_sample[1]])
-
-            # print("sigmas for the hm genreation: ", self.sigmas)
-            heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, np_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
+            heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, self.sigma,  self.num_res_supervisions, self.hm_lambda_scale))  
 
             sample = {"image":normalize_cmr(transformed_sample[0], to_tensor=True) , "label":heatmaps, "target_coords": trans_kps, 
                 "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
@@ -225,7 +196,7 @@ class ASPIRELandmarks(data.Dataset):
 
         #Don't do data augmentation
         else:
-            label = self.heatmaps_to_tensor(generate_heatmaps(coords, self.input_size, np_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))
+            label = self.heatmaps_to_tensor(generate_heatmaps(coords, self.input_size, self.sigma,  self.num_res_supervisions, self.hm_lambda_scale))
             sample = {"image": torch.from_numpy(image), "label": label,  "target_coords": coords, "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
 
         if (self.debug or run_time_debug):
@@ -243,14 +214,13 @@ class ASPIRELandmarks(data.Dataset):
         return sample
 
 
-    def update_sigmas(self, new_sigmas):
+    def update_sigma(self, new_sigma):
         """Updates sigma for the generated heatmaps. Used when regressing sigma as part of the loss function.
 
         Args:
             new_sigma (float): updated sigma
         """
-        print("Updating from %s to %s" % (self.sigmas, new_sigmas))
-        self.sigmas = new_sigmas
+        self.sigma = new_sigma
 
 
 
