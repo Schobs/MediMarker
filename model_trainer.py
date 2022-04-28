@@ -101,15 +101,15 @@ class UnetTrainer():
         # shared_array = mp.Array(shared_array_base.get_obj())
         # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array.get_obj()))
 
-        shared_array_base = mp.Array(ctypes.c_float, len(self.sigmas))
-        print("initis 1", shared_array_base)
+        # shared_array_base = mp.Array(ctypes.c_float, len(self.sigmas))
+        # print("initis 1", shared_array_base)
 
-        self.shared_array_sigmas = np.ctypeslib.as_array(shared_array_base.get_obj())
-        print("initis 2 ", self.shared_array_sigmas)
+        # self.shared_array_sigmas = np.ctypeslib.as_array(shared_array_base.get_obj())
+        # print("initis 2 ", self.shared_array_sigmas)
 
-        self.shared_array_sigmas[:] = [x.cpu().detach().numpy() for x in self.sigmas]
+        # self.shared_array_sigmas[:] = [x.cpu().detach().numpy() for x in self.sigmas]
 
-        print("initis ", self.shared_array_sigmas)
+        # print("initis ", self.shared_array_sigmas)
         # self.sigmas = mp.Array(self.sigmas )
         # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array_sigmas_base.get_obj()))
         # self.shared_array_sigmas = sigmas
@@ -329,7 +329,7 @@ class UnetTrainer():
             # Train for X number of batches per epoch e.g. 250
             for iter_b in range(self.num_batches_per_epoch):
 
-                l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True)
+                l = self.run_iteration(generator, self.train_dataloader, backprop=True)
 
                 # print("mem: ", iter_b, torch.cuda.memory_allocated(0))
                 # print("1 iter time: ", time()-e)
@@ -365,7 +365,7 @@ class UnetTrainer():
 
                 for iter_b in range(int(len(self.valid_dataloader.dataset)/self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE)):
 
-                    l, generator = self.run_iteration(generator, self.valid_dataloader, False, True, val_coord_errors)
+                    l = self.run_iteration(generator, self.valid_dataloader, False, True, val_coord_errors)
                     val_losses_epoch.append(l)
                  
 
@@ -440,7 +440,7 @@ class UnetTrainer():
             # generator.dataset.update_sigmas(self.sigmas)
             data_dict = next(generator)
 
-        
+        # print("get data time: ", time()- so)
 
         # print("CUDA memory allocated: ",  torch.cuda.memory_allocated(0))
         data =(data_dict['image']).to( self.device )
@@ -539,7 +539,7 @@ class UnetTrainer():
 
         del output
         del target
-        return l.detach().cpu().numpy(), generator
+        return l.detach().cpu().numpy()
 
 
     def on_epoch_end(self):
@@ -585,7 +585,7 @@ class UnetTrainer():
             self.logger.log_metric("validation coord error", self.all_valid_coords[-1], self.epoch)
             self.logger.log_metric("epoch time", (self.epoch_end_time - self.epoch_start_time), self.epoch)
             self.logger.log_metric("Learning rate", self.optimizer.param_groups[0]['lr'] , self.epoch)
-            self.logger.log_metric("sigmas", self.sigmas.cpu().detach().numpy() , self.epoch)
+            self.logger.log_metric("first_sigma", self.sigmas[0].cpu().detach().numpy() , self.epoch)
 
         
        
@@ -687,7 +687,7 @@ class UnetTrainer():
             landmarks = self.model_config.DATASET.LANDMARKS,
             split = "training",
             root_path = self.model_config.DATASET.ROOT,
-            sigmas =  self.shared_array_sigmas,
+            sigmas =  np_sigmas,
             cv = self.model_config.TRAINER.FOLD,
             cache_data = self.model_config.TRAINER.CACHE_DATA,
             normalize=True,
@@ -712,7 +712,7 @@ class UnetTrainer():
                 landmarks = self.model_config.DATASET.LANDMARKS,
                 split = val_split,
                 root_path = self.model_config.DATASET.ROOT,
-                sigmas =  self.shared_array_sigmas,
+                sigmas =  np_sigmas,
                 cv = self.model_config.TRAINER.FOLD,
                 cache_data = self.model_config.TRAINER.CACHE_DATA,
                 normalize=True,

@@ -20,6 +20,7 @@ from load_data import get_datatype_load, load_aspire_datalist
 from visualisation import (visualize_heat_pred_coords, visualize_image_target,
                            visualize_image_trans_coords,
                            visualize_image_trans_target)
+from time import time
 
 import multiprocessing as mp
 import ctypes
@@ -85,7 +86,7 @@ class ASPIRELandmarks(data.Dataset):
         # if self.data_augmentation_strategy != None:
 
         if self.data_augmentation_strategy == None:
-            print("WARNING: No data Augmentation.")
+            print("No data Augmentation for %s split." % split)
         else:
             #Get data augmentor for the correct package
             self.aug_package_loader = get_aug_package_loader(data_augmentation_package)
@@ -190,6 +191,8 @@ class ASPIRELandmarks(data.Dataset):
         #     self.shared_array[index] = torch.randn(c, h, w)
 
         # print("given sigmas ", index)
+        soo = time()
+
         hm_sigmas = self.sigmas
         image = self.load_function(self.images[index])
         coords = self.target_coordinates[index]
@@ -197,17 +200,25 @@ class ASPIRELandmarks(data.Dataset):
         im_path = self.image_paths[index]
         run_time_debug= False
         this_uid = self.uids[index]
+        # print("load image time", time()- soo)
 
+        so = time()
 
         #Do data augmentation
         if self.data_augmentation_strategy != None:
-            
+
+
             kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in coords[:,:2]], shape=image[0].shape )
             transformed_sample = self.transform(image=image[0], keypoints=kps)
             trans_kps = np.array([[coo.x_int, coo.y_int] for coo in transformed_sample[1]])
 
-            print("sigmas for the hm genreation: ", self.sigmas[0])
+            # print("data aug", time()- so)
+            so = time()
+
             heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
+
+            # print("hm gen ", time()-so)
+            so = time()
 
             sample = {"image":normalize_cmr(transformed_sample[0], to_tensor=True) , "label":heatmaps, "target_coords": trans_kps, 
                 "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
@@ -237,6 +248,7 @@ class ASPIRELandmarks(data.Dataset):
             # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
             visualize_image_trans_coords(image[0], sample["image"][0] , sample["target_coords"])
 
+        # print("return total: ", time()-soo)
     
         return sample
 

@@ -74,6 +74,13 @@ def argument_checking(yaml_args):
             raise ValueError("Regressing sigmas (SOLVER.REGRESS_SIGMA=True) requires DATASET.NUM_WORKERS=0 due to multithreading issues with updating dataset object with new sigmas. You are attempting to use %s workers " % yaml_args.DATASET.NUM_WORKERS )
     except ValueError as e:
         all_errors.append(e)
+    
+
+    try:
+        if yaml_args.DATASET.DATA_AUG != None and yaml_args.DATASET.DATA_AUG_PACKAGE != "imgaug":
+            raise ValueError("Only the imgaug data augmentation package (DATASET.DATA_AUG_PACKAGE) is supported, you chose %s. Try \'imgaug\' or set DATASET.DATA_AUG to None for no data augmentation." % yaml_args.DATASET.DATA_AUG_PACKAGE )
+    except ValueError as e:
+        all_errors.append(e)
 
 
     #Warnings
