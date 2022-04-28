@@ -3,6 +3,7 @@
 import yaml
 import argparse
 from config import get_cfg_defaults
+import warnings
 
 def get_evaluation_mode(eval_mode, og_im_size, inp_size):
     """_summary_
@@ -52,17 +53,42 @@ def argument_checking(yaml_args):
     """
     all_errors = []
 
-    if yaml_args.MODEL.ARCHITECTURE != "U-Net" and yaml_args.SOLVER.DEEP_SUPERVISION:
-        all_errors.append(ValueError("Only MODEL.ARCHITECTURE U-Net can be used to deep supervision (SOLVER.DEEP_SUPERVISION is True). You are using ", yaml_args.MODEL.ARCHITECTURE ))
-
    
 
+    try:
+        if yaml_args.MODEL.ARCHITECTURE != "U-Net" and yaml_args.SOLVER.DEEP_SUPERVISION:
+            raise ValueError("Only MODEL.ARCHITECTURE U-Net can be used to deep supervision (SOLVER.DEEP_SUPERVISION is True). You are using ", yaml_args.MODEL.ARCHITECTURE )
+    except ValueError as e:
+        all_errors.append(e)
 
-    if yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[0] < yaml_args.DATASET.INPUT_SIZE[0] and yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[1] < yaml_args.DATASET.INPUT_SIZE[1]:
-        all_errors.append(ValueError("DATASET.ORIGINAL_IMAGE_SIZE is smaller than  than the input size to the network (DATASET.INPUT_SIZE). Change input size to equal or smaller size of original image."))
 
-    for er in all_errors:
-        raise ValueError(er)
+
+    try:
+        if yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[0] < yaml_args.DATASET.INPUT_SIZE[0] and yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[1] < yaml_args.DATASET.INPUT_SIZE[1]:
+            raise (ValueError("DATASET.ORIGINAL_IMAGE_SIZE is smaller than  than the input size to the network (DATASET.INPUT_SIZE). Change input size to equal or smaller size of original image."))
+    except ValueError as e:
+        all_errors.append(e)
+
+    try:
+        if yaml_args.DATASET.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
+            raise ValueError("Regressing sigmas (SOLVER.REGRESS_SIGMA=True) requires DATASET.NUM_WORKERS=0 due to multithreading issues with updating dataset object with new sigmas. You are attempting to use %s workers " % yaml_args.DATASET.NUM_WORKERS )
+    except ValueError as e:
+        all_errors.append(e)
+
+
+    #Warnings
+    if yaml_args.SOLVER.REGRESS_SIGMA and yaml_args.SOLVER.REGRESS_SIGMA_LOSS_WEIGHT <= 0:
+        warnings.warn('You are attempting to regress sigmas (yaml_args.SOLVER.REGRESS_SIGMA=True) but your yaml_args.REGRESS_SIGMA_LOSS_WEIGHT is <=0. \
+            This means the magnitude of sigma will not be penalized and could lead to trivial solution sigma -> inf. \
+                Consider this setting this to a positive float (e.g. 0.005). You are warned! ', stacklevel=2)
+
+    if yaml_args.DATASET.DATA_AUG == None:
+        warnings.warn('You are not using data augmentation (DATASET.DATA_AUG = None). Using a data augmentation scheme will improve your results.', stacklevel=2)
+
+
+    if all_errors:
+        print("I have identified some issues with your .yaml config file:")
+        raise ValueError(all_errors)
 
 
 def arg_parse():
@@ -87,6 +113,9 @@ def arg_parse():
     cfg.TRAINER.FOLD = args.fold
     # cfg.freeze()
     # print(cfg)
+
+    print("Config: \n ", cfg)
+
 
     argument_checking(cfg)
     return cfg

@@ -18,7 +18,7 @@ from utils.im_utils.heatmap_manipulation import get_coords
 from torch.cuda.amp import GradScaler, autocast
 import imgaug
 import torch.multiprocessing as mp
-# from torch.multiprocessing import Pool, Process, set_start_method
+from torch.multiprocessing import Pool, Process, set_start_method
 
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
 from torchvision.transforms import Resize,InterpolationMode
@@ -29,16 +29,17 @@ class UnetTrainer():
     def __init__(self, model_config= None, output_folder=None, logger=None, profiler=None):
         #Device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
         #multiprocessing 
-           # try:
+        # try:
         #     print("spawning mp")
         #     set_start_method('spawn')
         # except RuntimeError:
         #     pass
         # mp.set_start_method('spawn', force=True)
-        # self.sigmas = GaussianSigmas(model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS), self.device)
-        # self.sigmas.share_memory_()
+        # self.sigmas_shared = GaussianSigmas(model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS), self.device)
+        # self.sigmas_shared.sigmas_list.share_memory_()
+
+        # self.sigmas = self.sigmas_shared.get_torch_sigmas()
         # for sig in self.sigmas.sigmas_list:
         #     sig.share_memory_()
         # try:
@@ -86,6 +87,9 @@ class UnetTrainer():
         self.regress_sigma = model_config.SOLVER.REGRESS_SIGMA
         # self.sigmas = torch.repeat_interleave(torch.tensor(self.model_config.MODEL.GAUSS_SIGMA, dtype=torch.float),len(model_config.DATASET.LANDMARKS))
         self.sigmas = [torch.tensor(x, dtype=float, device=self.device, requires_grad=True) for x in np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))]
+        # self.sigmas_dataloaders = mp.Array([x.cpu().detach().numpy() for x in self.sigmas])
+
+        
         # self.sigmas = torch.from_numpy(), requires_grad=True)
             # torch.repeat_interleave(torch.tensor(, dtype=float, requires_grad=True),)
         # self.sigmas = np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))
@@ -95,7 +99,17 @@ class UnetTrainer():
         #shared array stuff 
         # shared_array_base = mp.Array(ctypes.c_float, len(self.sigmas))
         # shared_array = mp.Array(shared_array_base.get_obj())
+        # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array.get_obj()))
 
+        shared_array_base = mp.Array(ctypes.c_float, len(self.sigmas))
+        print("initis 1", shared_array_base)
+
+        self.shared_array_sigmas = np.ctypeslib.as_array(shared_array_base.get_obj())
+        print("initis 2 ", self.shared_array_sigmas)
+
+        self.shared_array_sigmas[:] = [x.cpu().detach().numpy() for x in self.sigmas]
+
+        print("initis ", self.shared_array_sigmas)
         # self.sigmas = mp.Array(self.sigmas )
         # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array_sigmas_base.get_obj()))
         # self.shared_array_sigmas = sigmas
@@ -420,6 +434,8 @@ class UnetTrainer():
             data_dict = next(generator)
         except StopIteration:
             # restart the generator if the previous generator is exhausted.
+
+            print("restarting generator")
             generator = iter(dataloader)
             # generator.dataset.update_sigmas(self.sigmas)
             data_dict = next(generator)
@@ -460,8 +476,12 @@ class UnetTrainer():
                 torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
                 self.amp_grad_scaler.step(self.optimizer)
                 self.amp_grad_scaler.update()
+                if self.regress_sigma:
+                    self.update_dataloader_sigmas(self.sigmas)
+
                 # if self.regress_sigma:
-                #     self.update_dataloader_sigmas(self.sigmas)
+                #     self.sigmas_dataloaders = [x.cpu().detach.numpy() for x in self.sigmas]
+                    # self.sigmas_shared.update_sigmas(self.sigmas)
                 # print("backprop: ", time()-so,  torch.cuda.memory_allocated(0))
         else:
             if self.deep_supervision:
@@ -565,6 +585,7 @@ class UnetTrainer():
             self.logger.log_metric("validation coord error", self.all_valid_coords[-1], self.epoch)
             self.logger.log_metric("epoch time", (self.epoch_end_time - self.epoch_start_time), self.epoch)
             self.logger.log_metric("Learning rate", self.optimizer.param_groups[0]['lr'] , self.epoch)
+            self.logger.log_metric("sigmas", self.sigmas.cpu().detach().numpy() , self.epoch)
 
         
        
@@ -631,8 +652,8 @@ class UnetTrainer():
     
     def update_dataloader_sigmas(self, new_sigmas):
         np_sigmas = [x.cpu().detach().numpy() for x in new_sigmas]
-        self.train_dataloader.dataset.update_sigmas(np_sigmas)
-        self.valid_dataloader.dataset.update_sigmas( np_sigmas)
+        self.train_dataloader.dataset.sigmas = (np_sigmas)
+        self.valid_dataloader.dataset.sigmas = (np_sigmas)
 
 
 
@@ -666,7 +687,7 @@ class UnetTrainer():
             landmarks = self.model_config.DATASET.LANDMARKS,
             split = "training",
             root_path = self.model_config.DATASET.ROOT,
-            sigmas =  np_sigmas,
+            sigmas =  self.shared_array_sigmas,
             cv = self.model_config.TRAINER.FOLD,
             cache_data = self.model_config.TRAINER.CACHE_DATA,
             normalize=True,
@@ -691,7 +712,7 @@ class UnetTrainer():
                 landmarks = self.model_config.DATASET.LANDMARKS,
                 split = val_split,
                 root_path = self.model_config.DATASET.ROOT,
-                sigmas =  np_sigmas,
+                sigmas =  self.shared_array_sigmas,
                 cv = self.model_config.TRAINER.FOLD,
                 cache_data = self.model_config.TRAINER.CACHE_DATA,
                 normalize=True,
@@ -711,14 +732,21 @@ class UnetTrainer():
 
 
 
-        if self.model_config.DATASET.DEBUG:
-            num_workers_cfg=1
+        #If debug use only main thread to load data bc we only want to show a single plot on screen.
+        #If num_workers=0 we are only using the main thread, so persist_workers = False.
+        if self.model_config.DATASET.DEBUG or self.model_config.DATASET.NUM_WORKERS == 0:
+            persist_workers = False
+            num_workers_cfg=0
         else:
-            num_workers_cfg=4
-        # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, worker_init_fn=UnetTrainer.worker_init_fn )
+            persist_workers = True
+            num_workers_cfg= self.model_config.DATASET.NUM_WORKERS    
+                # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, worker_init_fn=UnetTrainer.worker_init_fn )
         # self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, worker_init_fn=UnetTrainer.worker_init_fn )
-        self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, num_workers=num_workers_cfg,persistent_workers=True, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
-        self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, num_workers=num_workers_cfg,persistent_workers=True, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
+        # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE,shuffle=True,worker_init_fn=UnetTrainer.worker_init_fn )
+        # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
+
+        self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, num_workers=self.model_config.DATASET.NUM_WORKERS, persistent_workers=persist_workers, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
+        self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, num_workers=num_workers_cfg, persistent_workers=persist_workers, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
 
     @staticmethod
     def get_resolution_layers(input_size,  min_feature_res):
@@ -733,15 +761,5 @@ class UnetTrainer():
         imgaug.seed(np.random.get_state()[1][0] + worker_id)
 
 
-# class GaussianSigmas():
-#     def __init__(self, init_sigma, num_landmarks, device):
-#         self.sigmas_list = [torch.tensor(x, dtype=float, device=device, requires_grad=True) for x in np.repeat(init_sigma, num_landmarks)]
-        
-#     def update_sigmas(self, new_sigmas):
-#         self.sigmas_list = new_sigmas
 
-#     def get_numpy_sigmas(self):
-#         return [x.cpu().detach().numpy() for x in copy.deepcopy(self.sigmas_list)]
-    
-    
 

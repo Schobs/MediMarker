@@ -27,6 +27,7 @@ _C.DATASET.INPUT_SIZE = [512,512]
 _C.DATASET.DEBUG = False
 _C.DATASET.DATA_AUG = None
 _C.DATASET.DATA_AUG_PACKAGE = 'imgaug' #['imgaug', 'albumentations']
+_C.DATASET.NUM_WORKERS = 8
 
 
 

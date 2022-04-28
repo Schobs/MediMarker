@@ -28,7 +28,6 @@ def main():
     
     """The main for this domain adaptation example, showing the workflow"""
     cfg = arg_parse()
-    print("Config: \n ", cfg)
 
 
     # ---- setup device ----
