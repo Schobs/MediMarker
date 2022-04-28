@@ -15,7 +15,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 
 from dataset import ASPIRELandmarks
 from config import get_cfg_defaults
-from model_trainer import UnetTrainer
+from trainer.model_trainer_unet import UnetTrainer
 
 from visualisation import visualize_predicted_heatmaps
 import csv

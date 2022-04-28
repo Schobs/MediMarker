@@ -11,7 +11,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 from torch.utils.tensorboard import SummaryWriter
 
 from config import get_cfg_defaults
-from model_trainer import UnetTrainer
+from trainer.model_trainer_unet import UnetTrainer
 from visualisation import visualize_predicted_heatmaps
 from run_inference import run_inference_model
 from pandas import ExcelWriter

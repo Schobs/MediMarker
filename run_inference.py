@@ -18,7 +18,7 @@ import pandas as pd
 
 from dataset import ASPIRELandmarks
 from config import get_cfg_defaults
-from model_trainer import UnetTrainer
+from trainer.model_trainer_unet import UnetTrainer
 from evaluation.localization_evaluation import success_detection_rate, generate_summary_df
 from utils.setup.argument_utils import get_evaluation_mode
 from visualisation import visualize_predicted_heatmaps, visualize_image_multiscaleheats_pred_coords, visualize_heat_pred_coords

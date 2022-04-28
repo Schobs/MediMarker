@@ -17,46 +17,26 @@ from torch.utils.data import DataLoader
 from utils.im_utils.heatmap_manipulation import get_coords
 from torch.cuda.amp import GradScaler, autocast
 import imgaug
-import torch.multiprocessing as mp
-from torch.multiprocessing import Pool, Process, set_start_method
 
-# torch.multiprocessing.set_start_method('spawn')# good solution !!!!
+
 from torchvision.transforms import Resize,InterpolationMode
-class UnetTrainer():
+
+from model_trainer_base import NetworkTrainer
+
+class UnetTrainer(NetworkTrainer):
     """ Class for the u-net trainer stuff.
     """
 
     def __init__(self, model_config= None, output_folder=None, logger=None, profiler=None):
         #Device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        #multiprocessing 
-        # try:
-        #     print("spawning mp")
-        #     set_start_method('spawn')
-        # except RuntimeError:
-        #     pass
-        # mp.set_start_method('spawn', force=True)
-        # self.sigmas_shared = GaussianSigmas(model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS), self.device)
-        # self.sigmas_shared.sigmas_list.share_memory_()
-
-        # self.sigmas = self.sigmas_shared.get_torch_sigmas()
-        # for sig in self.sigmas.sigmas_list:
-        #     sig.share_memory_()
-        # try:
-        #     print("spawning mp")
-        #     set_start_method('spawn')
-        # except RuntimeError:
-        #     pass
-
-        # self.sigmas = [torch.tensor(x, dtype=float, device=self.device, requires_grad=True) for x in np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))]
-
 
         #early stopping
 
         self.early_stop_patience = 150
         self.epochs_wo_val_improv = 0
 
-        #config variable
+        #global config variable
         self.model_config = model_config
 
         #Trainer variables
@@ -85,35 +65,10 @@ class UnetTrainer():
 
         #Sigma for Gaussian heatmaps
         self.regress_sigma = model_config.SOLVER.REGRESS_SIGMA
-        # self.sigmas = torch.repeat_interleave(torch.tensor(self.model_config.MODEL.GAUSS_SIGMA, dtype=torch.float),len(model_config.DATASET.LANDMARKS))
         self.sigmas = [torch.tensor(x, dtype=float, device=self.device, requires_grad=True) for x in np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))]
-        # self.sigmas_dataloaders = mp.Array([x.cpu().detach().numpy() for x in self.sigmas])
 
         
-        # self.sigmas = torch.from_numpy(), requires_grad=True)
-            # torch.repeat_interleave(torch.tensor(, dtype=float, requires_grad=True),)
-        # self.sigmas = np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))
-        # self.sigmas = torch.tensor(self.sigmas, dtype=torch.float, device=self.device, requires_grad=True)
-        # self.sigmas = [nn.Parameter(torch.tensor(x, dtype=float, device=self.device, requires_grad=True)) for x in np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))]
-
-        #shared array stuff 
-        # shared_array_base = mp.Array(ctypes.c_float, len(self.sigmas))
-        # shared_array = mp.Array(shared_array_base.get_obj())
-        # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array.get_obj()))
-
-        # shared_array_base = mp.Array(ctypes.c_float, len(self.sigmas))
-        # print("initis 1", shared_array_base)
-
-        # self.shared_array_sigmas = np.ctypeslib.as_array(shared_array_base.get_obj())
-        # print("initis 2 ", self.shared_array_sigmas)
-
-        # self.shared_array_sigmas[:] = [x.cpu().detach().numpy() for x in self.sigmas]
-
-        # print("initis ", self.shared_array_sigmas)
-        # self.sigmas = mp.Array(self.sigmas )
-        # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array_sigmas_base.get_obj()))
-        # self.shared_array_sigmas = sigmas
-        #get validaiton para,s
+        #get validaiton params
         if model_config.INFERENCE.EVALUATION_MODE == 'use_input_size' or  model_config.DATASET.ORIGINAL_IMAGE_SIZE == model_config.DATASET.INPUT_SIZE:
             self.use_full_res_coords =False
             self.resize_first = False
@@ -125,7 +80,9 @@ class UnetTrainer():
             self.resize_first = False
         else:
             raise ValueError("value for cg.INFERENCE.EVALUATION_MODE not recognised. Choose from: scale_heatmap_first, scale_pred_coords, use_input_size")
-    
+
+        #Get the coordinate extraction method
+        # get_coords_pred = get_coord_function(model=self.)
 
         #get model config parameters
         self.num_out_heatmaps = len(model_config.DATASET.LANDMARKS)
@@ -135,14 +92,10 @@ class UnetTrainer():
         self.input_size = model_config.DATASET.INPUT_SIZE
         self.orginal_im_size = model_config.DATASET.ORIGINAL_IMAGE_SIZE
 
-        # self.num_resolution_layers = 8
+
+        #get arch config parameters
         self.num_resolution_layers = UnetTrainer.get_resolution_layers(self.input_size,  self.min_feature_res)
-
-        print("number of resolution layers = ", self.num_resolution_layers)
-
-
         self.num_input_channels = 1
-        # self.num_downsampling = self.num_resolution_layers - 1
         self.conv_per_stage = 2
         self.conv_operation = nn.Conv2d
         self.dropout_operation = nn.Dropout2d
@@ -178,8 +131,7 @@ class UnetTrainer():
         else:
             raise ValueError("the loss function %s is not implemented. Try mse or awl" % (loss_str))
 
-        # if self.regress_sigma:
-        #     self.sigma_loss = SigmaLoss()
+      
 
       
 
@@ -191,7 +143,7 @@ class UnetTrainer():
         self.save_best_checkpoint = True  # whether or not to save the best checkpoint according to self.best_val_eval_criterion_MA
         self.save_final_checkpoint = True  # whether or not to save the final checkpoint
 
-         #variables to save to.
+        #variables to save to.
         self.all_tr_losses = []
         self.all_valid_losses = []
         self.all_valid_coords = []
@@ -200,7 +152,6 @@ class UnetTrainer():
         self.epoch = 0
         self.best_valid_loss = 999999999999999999999999999
         self.best_valid_coord_error = 999999999999999999999999999
-
         self.best_valid_epoch = 0
 
 
@@ -239,8 +190,7 @@ class UnetTrainer():
         )
         self.network.to(self.device)
 
-        # print("initialised network: ", self.network)
-        # #Log network and initial weights
+        #Log network and initial weights
         if self.logger:
             self.logger.set_model_graph(str(self.network))
             print("Logged the model graph.")
@@ -251,20 +201,15 @@ class UnetTrainer():
     def initialize_optimizer_and_scheduler(self):
         assert self.network is not None, "self.initialize_network must be called first"
 
-        # print("sigmas tensor representation: ", self.sigmas)
-        # print("Model and list model params ", self.network.parameters().is_leaf, list(self.network.parameters()).is_leaf)
+      
         self.learnable_params = list(self.network.parameters())
         if self.regress_sigma:
-            # print("adding sigmas to Learnable params")
-            # self.sigmas.requires_grad_(True)
             for sig in self.sigmas:
                 self.learnable_params.append(sig)
-        #     # self.optimizer.param_groups.append({'params': self.sigmas })
 
         self.optimizer = self.optimizer(self.learnable_params, **self.optimizer_kwargs)
 
    
-
         print("Initialised optimizer.")
 
 
@@ -318,54 +263,39 @@ class UnetTrainer():
             train_losses_epoch = []
 
             self.network.train()
-            # if self.regress_sigma:
-            #     self.sigmas.train()
 
-            # self.sigmas
             generator = iter(self.train_dataloader)
-            # generator.dataset.update_sigmas(self.sigmas)
 
 
             # Train for X number of batches per epoch e.g. 250
             for iter_b in range(self.num_batches_per_epoch):
 
-                l = self.run_iteration(generator, self.train_dataloader, backprop=True)
-
-                # print("mem: ", iter_b, torch.cuda.memory_allocated(0))
-                # print("1 iter time: ", time()-e)
-                # print(".", l, end= "")
+                l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True)
 
                 train_losses_epoch.append(l)
 
                 if self.logger:
-                    self.logger.log_current_epoch(self.epoch )
                     self.logger.log_metric("training loss iteration", l, step)
+
                 step += 1
 
-            # print("training steps: ", time()-e )
             del generator
             self.all_tr_losses.append(np.mean(train_losses_epoch))
-            # s = time()
-
 
             #Validate
+            print("val")
             
             with torch.no_grad():
 
                 self.network.eval()
-                # if self.regress_sigma:
-                #     self.sigmas.eval()
+               
 
-                # val_losses = []
                 val_coord_errors = []
                 val_losses_epoch = []
                 generator = iter(self.valid_dataloader)
-                # generator.dataset.update_sigmas(self.sigmas)
-
-
                 for iter_b in range(int(len(self.valid_dataloader.dataset)/self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE)):
 
-                    l = self.run_iteration(generator, self.valid_dataloader, False, True, val_coord_errors)
+                    l, generator = self.run_iteration(generator, self.valid_dataloader, False, True, val_coord_errors)
                     val_losses_epoch.append(l)
                  
 
@@ -430,32 +360,21 @@ class UnetTrainer():
     def run_iteration(self, generator, dataloader, backprop, get_coord_error=False, coord_error_list=None):
         so = time()
         try:
-            # Samples the batch
             data_dict = next(generator)
         except StopIteration:
             # restart the generator if the previous generator is exhausted.
-
             print("restarting generator")
             generator = iter(dataloader)
-            # generator.dataset.update_sigmas(self.sigmas)
             data_dict = next(generator)
 
-        # print("get data time: ", time()- so)
 
-        # print("CUDA memory allocated: ",  torch.cuda.memory_allocated(0))
         data =(data_dict['image']).to( self.device )
 
         target = [x.to(self.device) for x in data_dict['label']]
-        # print("gen data and to device ", time()-so,  torch.cuda.memory_allocated(0))
-
-        so = time()
        
-      
         self.optimizer.zero_grad()
         from_which_level_supervision = self.num_res_supervision 
 
-        # print("from which level supervision:@ ", from_which_level_supervision)
-        # s= time()
 
         if self.auto_mixed_precision:
             with autocast():
@@ -463,53 +382,36 @@ class UnetTrainer():
                     output = self.network(data)[-from_which_level_supervision:]                
                 else:
                     output = self.network(data)
-
-                # print("forward" , time()-so,  torch.cuda.memory_allocated(0))
                 so = time()
                 del data
                 l = self.loss(output, target, self.sigmas)
             if backprop:
                 self.amp_grad_scaler.scale(l).backward()
                 self.amp_grad_scaler.unscale_(self.optimizer)
-                # torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
-                # torch.nn.utils.clip_grad_norm_(self.sigmas, 12)
                 torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
                 self.amp_grad_scaler.step(self.optimizer)
                 self.amp_grad_scaler.update()
                 if self.regress_sigma:
                     self.update_dataloader_sigmas(self.sigmas)
 
-                # if self.regress_sigma:
-                #     self.sigmas_dataloaders = [x.cpu().detach.numpy() for x in self.sigmas]
-                    # self.sigmas_shared.update_sigmas(self.sigmas)
-                # print("backprop: ", time()-so,  torch.cuda.memory_allocated(0))
         else:
             if self.deep_supervision:
                 output = self.network(data)[-from_which_level_supervision:]
             else:
-                #need to turn them from list into single tensor for loss function
                 output = self.network(data)
 
 
             del data
             l = self.loss(output, target, self.sigmas)
         
-            # s=time()
             if backprop:
                 l.backward()
-                # torch.nn.utils.clip_grad_norm_(self.network.parameters(), 12)
-                # torch.nn.utils.clip_grad_norm_(self.sigmas, 12)
                 torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
-
                 self.optimizer.step() 
+                if self.regress_sigma:
+                    self.update_dataloader_sigmas(self.sigmas)
 
 
-                # if self.regress_sigma:
-                #     self.update_dataloader_sigmas(self.sigmas)
-
-        # print("sigmas: ", self.sigmas)
-
-        # print("itertime ", time()-so)
         if get_coord_error:
             with torch.no_grad():
                 final_heatmap = output[-1]
@@ -539,7 +441,7 @@ class UnetTrainer():
 
         del output
         del target
-        return l.detach().cpu().numpy()
+        return l.detach().cpu().numpy(), generator
 
 
     def on_epoch_end(self):

@@ -134,7 +134,7 @@ class IntermediateOutputLoss(nn.Module):
 
     """
 
-    def __init__(self, hm_loss, ds_weights, sigma_weight, sigma_loss=False):
+    def __init__(self, hm_loss, ds_weights, sigma_loss=False, sigma_weight=0.005):
         super(IntermediateOutputLoss, self).__init__()
         self.ds_weights = ds_weights
         self.hm_loss = hm_loss
