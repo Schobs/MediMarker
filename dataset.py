@@ -53,13 +53,12 @@ class ASPIRELandmarks(data.Dataset):
         sigmas,
         hm_lambda_scale: float,
         annotation_path: str,
-        regress_sigma: bool, 
+        generate_hms_here: bool,
         image_modality: str= "CMRI",
         split: str ="training",
         root_path: str = "./data",
         cv: int = -1,
         cache_data: bool = False,
-        normalize: bool = True,
         debug: bool = False,
         input_size=  [512,512],
         original_image_size = [512,512],
@@ -71,18 +70,13 @@ class ASPIRELandmarks(data.Dataset):
  
         super(ASPIRELandmarks, self).__init__()
 
-        #set up shared array to update the sigmas during training among all the workers
-        # shared_array_sigmas_base = mp.Array(ctypes.c_float, len(sigmas))
-        # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array_sigmas_base.get_obj()))
-        # self.shared_array_sigmas = sigmas
-        # shared_array_sigmas_base = mp.Array(ctypes.c_float, len(sigmas))
-        # self.shared_array_sigmas = (np.ctypeslib.as_array(shared_array_sigmas_base.get_obj()))
-        # self.use_sigmas_cache = False
+     
 
         self.data_augmentation_strategy = data_augmentation_strategy
         self.hm_lambda_scale = hm_lambda_scale
         self.data_augmentation_package = data_augmentation_package
-        self.regress_sigma = regress_sigma
+
+        self.generate_hms_here = generate_hms_here
         # if self.data_augmentation_strategy != None:
 
         if self.data_augmentation_strategy == None:
@@ -109,7 +103,6 @@ class ASPIRELandmarks(data.Dataset):
 
         self.cv=cv
         self.cache_data = cache_data
-        self.normalize = normalize
         self.debug = debug
         self.input_size = input_size
         
@@ -211,14 +204,11 @@ class ASPIRELandmarks(data.Dataset):
             kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in coords[:,:2]], shape=image[0].shape )
             transformed_sample = self.transform(image=image[0], keypoints=kps)
             trans_kps = np.array([[coo.x_int, coo.y_int] for coo in transformed_sample[1]])
-
-            # print("data aug", time()- so)
-            so = time()
-
-            heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
-
-            # print("hm gen ", time()-so)
-            so = time()
+            
+            if self.generate_hms_here:
+                heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
+            else:
+                heatmaps = []
 
             sample = {"image":normalize_cmr(transformed_sample[0], to_tensor=True) , "label":heatmaps, "target_coords": trans_kps, 
                 "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
@@ -234,8 +224,11 @@ class ASPIRELandmarks(data.Dataset):
 
         #Don't do data augmentation
         else:
-            label = self.heatmaps_to_tensor(generate_heatmaps(coords, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))
-            sample = {"image": torch.from_numpy(image), "label": label,  "target_coords": coords, "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
+            if self.generate_hms_here:
+                heatmaps = self.heatmaps_to_tensor(generate_heatmaps(coords, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))
+            else:
+                heatmaps = []
+            sample = {"image": torch.from_numpy(image), "label": heatmaps,  "target_coords": coords, "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
 
         if (self.debug or run_time_debug):
             from utils.im_utils.heatmap_manipulation import get_coords
@@ -252,15 +245,10 @@ class ASPIRELandmarks(data.Dataset):
     
         return sample
 
+    def generate_labels(self, landmarks, sigmas):
+        return self.heatmaps_to_tensor(generate_heatmaps(landmarks, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
 
-    # def update_sigmas(self, new_sigmas):
-    #     """Updates sigma for the generated heatmaps. Used when regressing sigma as part of the loss function.
 
-    #     Args:
-    #         new_sigma (float): updated sigma
-    #     """
-    #     print("Updating from %s to %s" % (self.sigmas, new_sigmas))
-    #     self.sigmas = new_sigmas
 
 
 

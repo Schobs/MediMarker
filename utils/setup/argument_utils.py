@@ -1,9 +1,11 @@
 
 
+from calendar import c
 import yaml
 import argparse
 from config import get_cfg_defaults
 import warnings
+from yacs.config import CfgNode as CN
 
 def get_evaluation_mode(eval_mode, og_im_size, inp_size):
     """_summary_
@@ -41,7 +43,21 @@ def get_evaluation_mode(eval_mode, og_im_size, inp_size):
         raise ValueError("value for cg.INFERENCE.EVALUATION_MODE not recognised. Choose from: scale_heatmap_first, scale_pred_coords, use_input_size")
     return use_full_res_coords, resize_first
 
+def infer_additional_arguments(yaml_args):
+    yaml_args.INFERRED_ARGS = CN()
+    yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = False
 
+    #due to multithreading issue, we must genreate heatmap labels in the main thread rather than
+    # multi-thread dataloaders. To fix this in future.
+    if yaml_args.DATASET.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
+        yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = True
+
+    use_full_res_coords, resize_first = get_evaluation_mode(yaml_args.INFERENCE.EVALUATION_MODE, yaml_args.DATASET.ORIGINAL_IMAGE_SIZE, yaml_args.DATASET.INPUT_SIZE)
+    
+    yaml_args.INFERRED_ARGS.USE_FULL_RES_COORDS = use_full_res_coords
+    yaml_args.INFERRED_ARGS.RESIZE_FIRST = resize_first
+
+    return yaml_args
 def argument_checking(yaml_args):
     """ Checks on arguments to make sure wrong combination of arguments can not be input.
 
@@ -69,11 +85,11 @@ def argument_checking(yaml_args):
     except ValueError as e:
         all_errors.append(e)
 
-    try:
-        if yaml_args.DATASET.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
-            raise ValueError("Regressing sigmas (SOLVER.REGRESS_SIGMA=True) requires DATASET.NUM_WORKERS=0 due to multithreading issues with updating dataset object with new sigmas. You are attempting to use %s workers " % yaml_args.DATASET.NUM_WORKERS )
-    except ValueError as e:
-        all_errors.append(e)
+    # try:
+    #     if yaml_args.DATASET.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
+    #         raise ValueError("Regressing sigmas (SOLVER.REGRESS_SIGMA=True) requires DATASET.NUM_WORKERS=0 due to multithreading issues with updating dataset object with new sigmas. You are attempting to use %s workers " % yaml_args.DATASET.NUM_WORKERS )
+    # except ValueError as e:
+    #     all_errors.append(e)
     
 
     try:
@@ -119,9 +135,10 @@ def arg_parse():
     cfg.merge_from_file(args.cfg)
     cfg.TRAINER.FOLD = args.fold
     # cfg.freeze()
-    # print(cfg)
+    cfg = infer_additional_arguments(cfg)
 
     print("Config: \n ", cfg)
+
 
 
     argument_checking(cfg)

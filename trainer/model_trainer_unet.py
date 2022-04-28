@@ -57,6 +57,7 @@ class UnetTrainer(NetworkTrainer):
         self.data_loader_batch_size = model_config.SOLVER.DATA_LOADER_BATCH_SIZE
         self.num_val_batches_per_epoch = 50
         self.num_batches_per_epoch = model_config.SOLVER.MINI_BATCH_SIZE
+        self.gen_hms_in_mainthread = self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
 
         #Training params
         self.max_num_epochs =  model_config.SOLVER.MAX_EPOCHS
@@ -68,18 +69,11 @@ class UnetTrainer(NetworkTrainer):
 
         
         #get validaiton params
-        if model_config.INFERENCE.EVALUATION_MODE == 'use_input_size' or  model_config.DATASET.ORIGINAL_IMAGE_SIZE == model_config.DATASET.INPUT_SIZE:
-            self.use_full_res_coords =False
-            self.resize_first = False
-        elif model_config.INFERENCE.EVALUATION_MODE == 'scale_heatmap_first':
-            self.use_full_res_coords =True
-            self.resize_first = True
-        elif model_config.INFERENCE.EVALUATION_MODE == 'scale_pred_coords':
-            self.use_full_res_coords =True
-            self.resize_first = False
-        else:
-            raise ValueError("value for cg.INFERENCE.EVALUATION_MODE not recognised. Choose from: scale_heatmap_first, scale_pred_coords, use_input_size")
+        self.use_full_res_coords = model_config.INFERRED_ARGS.USE_FULL_RES_COORDS
+        self.resize_first = model_config.INFERRED_ARGS.RESIZE_FIRST 
 
+
+        
       
 
         #get model config parameters
@@ -279,9 +273,9 @@ class UnetTrainer(NetworkTrainer):
             split = "training",
             root_path = self.model_config.DATASET.ROOT,
             sigmas =  np_sigmas,
+            generate_hms_here = not self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD, 
             cv = self.model_config.TRAINER.FOLD,
             cache_data = self.model_config.TRAINER.CACHE_DATA,
-            normalize=True,
             num_res_supervisions = self.num_res_supervision,
             debug=self.model_config.DATASET.DEBUG ,
             original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
@@ -289,7 +283,6 @@ class UnetTrainer(NetworkTrainer):
             hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
             data_augmentation_strategy = self.model_config.DATASET.DATA_AUG,
             data_augmentation_package = self.model_config.DATASET.DATA_AUG_PACKAGE,
-            regress_sigma = self.model_config.SOLVER.REGRESS_SIGMA
 
  
         )
@@ -304,16 +297,15 @@ class UnetTrainer(NetworkTrainer):
                 split = val_split,
                 root_path = self.model_config.DATASET.ROOT,
                 sigmas =  np_sigmas,
+                generate_hms_here = not self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD, 
                 cv = self.model_config.TRAINER.FOLD,
                 cache_data = self.model_config.TRAINER.CACHE_DATA,
-                normalize=True,
                 num_res_supervisions = self.num_res_supervision,
                 debug=self.model_config.DATASET.DEBUG,
                 data_augmentation_strategy =None,
                 original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
                 input_size =  self.model_config.DATASET.INPUT_SIZE,
                 hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
-                regress_sigma = self.model_config.SOLVER.REGRESS_SIGMA
 
             )
         else:

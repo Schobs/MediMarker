@@ -90,6 +90,8 @@ class NetworkTrainer():
         self.loss = None
      
         self.train_dataloader = self.valid_dataloader = None
+
+        self.gen_hms_in_mainthread = False
       
 
         ################# Settings for saving checkpoints ##################################
@@ -306,8 +308,59 @@ class NetworkTrainer():
 
         data =(data_dict['image']).to( self.device )
 
+        #This happens when we regress sigma with >0 workers due to multithreading issues.
+        if self.gen_hms_in_mainthread:
+            batch_hms = []
+            # print("generating heatmaps in the main thread instead.")
+            np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
+            # print("targ coordinates shape ", data_dict["target_coords"].shape)
+
+            #b_ is 12,5, x, x but should be 5 long list of tensors: torch.Size([12, 19, X, X])
+
+            b_= [dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"].detach().numpy()]
+
+            for x in b_:
+                if batch_hms == []:
+                    batch_hms = [[y] for y in x]
+                else:
+                    for hm_idx, hm in enumerate(x):
+                        # print(hm_idx, hm.shape   )
+                        batch_hms[hm_idx].append(hm)
+
+            batch_hms = [torch.stack(x) for x in batch_hms]
+
+            
+            data_dict['label'] = batch_hms   
+            # data_dict['label'] = list(map(list, zip(*[dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"].detach().numpy()])))
+            
+        
+            # b_= [dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"].detach().numpy()]
+
+            # print(len(batch_hms), len(batch_hms[0]), )
+            # print("FS: ",batch_hms[0][0].shape)
+            # print("FS: ",batch_hms[0][1].shape)
+            # print("FS: ",batch_hms[0][2].shape)
+            # print("FS: ",batch_hms[0][3].shape)
+            # print("FS: ",batch_hms[0][4].shape)
+
+
+
+
+            # print(b_[0].shape)
+            # data_dict['label'] = torch.stack(b_, 0, out=None)
+            
+            # print("label shape", len(data_dict['label']), data_dict['label'][0].shape)
+            # data_dict['label'] = dataloader.dataset.generate_labels(data_dict["target_coords"], np_sigmas)
+
+        # print("the data dict" , data_dict['label'])
+        # print("data_dict['label'] shape ", len(data_dict['label']))
+        # print("data_dict['label'] shape ", len(data_dict['label'][0]))
+        # print("data_dict['label'] shape ", (data_dict['label'][0]).shape)
+
+        # exit()
+
         target = [x.to(self.device) for x in data_dict['label']]
-       
+
         self.optimizer.zero_grad()
         from_which_level_supervision = self.num_res_supervision 
 
@@ -351,13 +404,6 @@ class NetworkTrainer():
             with torch.no_grad():
 
                 pred_coords = self.get_coords_from_model_output(output)
-
-                # final_heatmap = output[-1]
-                # if self.resize_first:
-                #     #torch resize does HxW so need to flip the diemsions
-                #     final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
-                # pred_coords = get_coords(final_heatmap)
-                # del final_heatmap
                
                 if self.use_full_res_coords:
                     target_coords =data_dict['full_res_coords'].to( self.device )
