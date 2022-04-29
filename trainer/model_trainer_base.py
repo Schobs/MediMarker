@@ -1,26 +1,12 @@
 
-from torch import nn
 import os
-from utils.setup.initialization import InitWeights_KaimingUniform
-from losses import HeatmapLoss, IntermediateOutputLoss, AdaptiveWingLoss, SigmaLoss
-from models.UNet_Classic import UNet
-from visualisation import visualize_heat_pred_coords
 import torch
 import numpy as np
 from time import time
-# from dataset import ASPIRELandmarks
-from dataset import ASPIRELandmarks
 # import multiprocessing as mp
-import ctypes
-import copy
-from torch.utils.data import DataLoader
 from utils.im_utils.heatmap_manipulation import get_coords
 from torch.cuda.amp import GradScaler, autocast
-import imgaug
-import torch.multiprocessing as mp
-from torch.multiprocessing import Pool, Process, set_start_method
 
-# torch.multiprocessing.set_start_method('spawn')# good solution !!!!
 from torchvision.transforms import Resize,InterpolationMode
 
 

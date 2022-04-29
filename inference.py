@@ -13,7 +13,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 # import kale.utils.logger as logging
 
 
-from dataset import ASPIRELandmarks
+from datasets.dataset_unet import ASPIRELandmarks
 from config import get_cfg_defaults
 from trainer.model_trainer_unet import UnetTrainer
 

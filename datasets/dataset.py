@@ -30,9 +30,9 @@ import ctypes
 
 
 
-class ASPIRELandmarks(data.Dataset):
+class DatasetBase(data.Dataset):
     """
-    A custom dataset for loading and processing the ASPIRE Cardiac landmark dataset [1]
+    A custom dataset superclass for loading landmark localization data
 
     Args:
         name (str): Dataset name.
@@ -51,6 +51,7 @@ class ASPIRELandmarks(data.Dataset):
         self,
         landmarks,
         sigmas,
+        LabelGenerator,
         hm_lambda_scale: float,
         annotation_path: str,
         generate_hms_here: bool,
@@ -68,16 +69,15 @@ class ASPIRELandmarks(data.Dataset):
         ):
         
  
-        super(ASPIRELandmarks, self).__init__()
+        super(DatasetBase, self).__init__()
 
-     
+        self.LabelGenerator = LabelGenerator
 
         self.data_augmentation_strategy = data_augmentation_strategy
         self.hm_lambda_scale = hm_lambda_scale
         self.data_augmentation_package = data_augmentation_package
 
         self.generate_hms_here = generate_hms_here
-        # if self.data_augmentation_strategy != None:
 
         if self.data_augmentation_strategy == None:
             print("No data Augmentation for %s split." % split)
@@ -173,19 +173,26 @@ class ASPIRELandmarks(data.Dataset):
         self.use_cache = use_cache
 
     def __getitem__(self, index):
+        """ Implement method to get a data sample. Also give an option to debug here.
+            
+
+
+        Args:
+            index (_type_): _description_
+
+        Returns:
+            It must return a dictionary with the keys: 
+            sample = {
+            "image": torch.from_numpy(image) - torch tensor of the image 
+            "label": heatmaps,  - if self.generate_hms_here bool -> (torch tensor of heatmaps); else -> [] 
+            "target_coords": list of target coords of for landmarks, same scale as input to network , 
+            "full_res_coords": original list of coordinates, same scale as original image (may be same as target_coords)
+            "image_path": im_path: string to orignal image path 
+            "uid":this_uid : string of sample's unique id
+             }
+        """
         
-        #case where we are not regressing sigmas, so just use the sigmas we initialised with.
-        # if hm_sigmas == None:
-        #     hm_sigmas = self.sigmas
-
-        # if not self.use_cache:
-        #     print('Filling cache for index {}'.format(index))
-        #     # Add your loading logic here
-        #     self.shared_array[index] = torch.randn(c, h, w)
-
-        # print("given sigmas ", index)
-        soo = time()
-
+    
         hm_sigmas = self.sigmas
         image = self.load_function(self.images[index])
         coords = self.target_coordinates[index]
@@ -202,54 +209,47 @@ class ASPIRELandmarks(data.Dataset):
 
 
             kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in coords[:,:2]], shape=image[0].shape )
-            transformed_sample = self.transform(image=image[0], keypoints=kps)
-            trans_kps = np.array([[coo.x_int, coo.y_int] for coo in transformed_sample[1]])
-            
-            if self.generate_hms_here:
-                heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
-            else:
-                heatmaps = []
+            transformed_sample = self.transform(image=image[0], keypoints=kps) #list where [0] is image and [1] are coords.
+            input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
+            input_coords = np.array([[coo.x_int, coo.y_int] for coo in transformed_sample[1]])
+        
+        else:
+            input_coords = coords
+            input_image = torch.from_numpy(image)
 
-            sample = {"image":normalize_cmr(transformed_sample[0], to_tensor=True) , "label":heatmaps, "target_coords": trans_kps, 
-                "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
+        if self.generate_hms_here:
+            label = self.LabelGenerator.generate_labels(input_coords, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
+            # heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
+        else:
+            label = []
 
-            # print("kpcs, trans kps ", kps, "   AND  ", trans_kps)
-            # print("transformed sample: ", transformed_sample)
-            #If coordinates are cutoff by augmentation throw a run time error. 
-            if len(np.array(transformed_sample[1])) <len(coords):
-                print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
-                run_time_debug = True
+        sample = {"image":input_image , "label":label, "target_coords": input_coords, 
+            "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
+
+        #If coordinates are cutoff by augmentation throw a run time error. 
+        if len(np.array(input_coords)) <len(coords):
+            print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
+            run_time_debug = True
 
         
 
-        #Don't do data augmentation
-        else:
-            if self.generate_hms_here:
-                heatmaps = self.heatmaps_to_tensor(generate_heatmaps(coords, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))
-            else:
-                heatmaps = []
-            sample = {"image": torch.from_numpy(image), "label": heatmaps,  "target_coords": coords, "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
-
         if (self.debug or run_time_debug):
-            from utils.im_utils.heatmap_manipulation import get_coords
-            print("before coords: ", coords)
-            print("og image sahpe: ", image.shape, "trans image shape", sample["image"].shape, "trans targ coords: ", sample["target_coords"])
-            print("len of hetamps ", len(sample["label"]), " and shape: ", sample["label"][-1].shape, " and hm exp shape ", np.expand_dims(sample["label"][-1], axis=0).shape)
-            landmarks_from_label = get_coords(torch.from_numpy(np.expand_dims(sample["label"][-1], axis=0)))
-            print("landmarks reverse engineered from heatmap label: ", landmarks_from_label)
-
-            # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
-            visualize_image_trans_coords(image[0], sample["image"][0] , sample["target_coords"])
-
-        # print("return total: ", time()-soo)
+            self.LabelGenerator.debug_sample(sample, coords, image)
+          
     
         return sample
 
     def generate_labels(self, landmarks, sigmas):
-        return self.heatmaps_to_tensor(generate_heatmaps(landmarks, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
+        """ Generate heatmap labels using same method as in _get_item__ 
+
+        Args:
+            landmarks (_type_): _description_
+            sigmas (_type_): _description_
+
+        Returns:
+
+        """
 
 
-
-
-
-    
+        return self.LabelGenerator.generate_labels(landmarks, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
+        

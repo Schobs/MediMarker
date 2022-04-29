@@ -12,11 +12,11 @@ from pytorch_lightning.utilities.seed import seed_everything
 import kale.utils.logger as logging
 from inference.predict import get_coords
 
-from dataset import ASPIRELandmarks
+from datasets.dataset_unet import ASPIRELandmarks
 
 import csv
 
-def predict(model_path)
+# def predict(model_path)
 
 
 def arg_parse():

@@ -9,7 +9,7 @@ import torch
 import numpy as np
 from time import time
 # from dataset import ASPIRELandmarks
-from dataset import ASPIRELandmarks
+from datasets.dataset import DatasetBase
 # import multiprocessing as mp
 import ctypes
 import copy
@@ -24,6 +24,7 @@ from torch.multiprocessing import Pool, Process, set_start_method
 from torchvision.transforms import Resize,InterpolationMode
 from trainer.model_trainer_base import NetworkTrainer
 
+from transforms.generate_labels import UNetLandmarkGenerator
 class UnetTrainer(NetworkTrainer):
     """ Class for the u-net trainer stuff.
     """
@@ -58,6 +59,7 @@ class UnetTrainer(NetworkTrainer):
         self.num_val_batches_per_epoch = 50
         self.num_batches_per_epoch = model_config.SOLVER.MINI_BATCH_SIZE
         self.gen_hms_in_mainthread = self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
+        self.label_generator = UNetLandmarkGenerator()
 
         #Training params
         self.max_num_epochs =  model_config.SOLVER.MAX_EPOCHS
@@ -267,9 +269,10 @@ class UnetTrainer(NetworkTrainer):
 
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
     
-        train_dataset = ASPIRELandmarks(
+        train_dataset = DatasetBase(
             annotation_path =self.model_config.DATASET.SRC_TARGETS,
             landmarks = self.model_config.DATASET.LANDMARKS,
+            LabelGenerator = self.label_generator,
             split = "training",
             root_path = self.model_config.DATASET.ROOT,
             sigmas =  np_sigmas,
@@ -291,9 +294,10 @@ class UnetTrainer(NetworkTrainer):
         if self.perform_validation:
             val_split= "validation"
             
-            valid_dataset = ASPIRELandmarks(
+            valid_dataset = DatasetBase(
                 annotation_path =self.model_config.DATASET.SRC_TARGETS,
                 landmarks = self.model_config.DATASET.LANDMARKS,
+                LabelGenerator = self.label_generator,
                 split = val_split,
                 root_path = self.model_config.DATASET.ROOT,
                 sigmas =  np_sigmas,
