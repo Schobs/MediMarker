@@ -6,13 +6,17 @@ import matplotlib.pyplot as plt
 from utils.im_utils.heatmap_manipulation import get_coords
 from visualisation import visualize_image_trans_coords
 import torch
+from abc import ABC, abstractmethod
 
-class LabelGenerator():
+class LabelGenerator(ABC):
     """ Super class that defines some methods for generating landmark labels.
     """
+
+    @abstractmethod
     def __init__(self):
         pass
 
+    @abstractmethod
     def generate_labels(self, landmarks, input_size, hm_sigmas, num_res_supervisions, hm_lambda_scale):
         """ generates heatmaps for given landmarks of size input_size, using sigma hm_sigmas.
             Generates int(num_res_supervisions) heatmaps, each half the size as previous.
@@ -26,7 +30,7 @@ class LabelGenerator():
             hm_lambda_scale float: value to scale heatmaps by.
 
         """
-
+    @abstractmethod
     def debug_sample(self, sample_dict, landmarks, image):
         """ Visually debug a sample. Provide logging and visualisation of the sample.
 
@@ -68,6 +72,8 @@ class UNetLandmarkGenerator(LabelGenerator):
                 all_seg_labels.append(torch.from_numpy(maps).float())
 
             hm_list = all_seg_labels
+
+
         return hm_list
 
     def debug_sample(self, sample_dict, landmarks, image):

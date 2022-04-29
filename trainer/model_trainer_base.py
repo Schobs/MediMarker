@@ -9,12 +9,12 @@ from torch.cuda.amp import GradScaler, autocast
 
 from torchvision.transforms import Resize,InterpolationMode
 
+from abc import ABC, abstractmethod
 
-
-class NetworkTrainer():
+class NetworkTrainer(ABC):
     """ Super class for trainers. I extend this for trainers for U-Net and PHD-Net. They share some functions.y
     """
-
+    @abstractmethod
     def __init__(self):
         #Device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -100,7 +100,6 @@ class NetworkTrainer():
         self.best_valid_loss_epoch = 0
         self.epochs_wo_val_improv = 0
 
-
     def initialize(self, training_bool=True):
         '''
         Initialize profiler, comet logger, training/val dataloaders, network, optimizer, loss, automixed precision
@@ -127,14 +126,14 @@ class NetworkTrainer():
 
         self.maybe_load_checkpoint() 
 
-
+    @abstractmethod
     def initialize_network(self):
         '''
         Initialize the network here!
         
         '''
       
-
+    @abstractmethod
     def initialize_optimizer_and_scheduler(self):
 
         '''
@@ -142,7 +141,7 @@ class NetworkTrainer():
         
         '''
 
-
+    @abstractmethod
     def initialize_loss_function(self):
         '''
         Initialize the loss function here!
@@ -151,8 +150,6 @@ class NetworkTrainer():
 
 
    
-
-        print("initialized Loss function.")
 
     def maybe_update_lr(self, epoch=None, exponent=0.9):
         """
@@ -170,11 +167,13 @@ class NetworkTrainer():
 
         self.optimizer.param_groups[0]['lr'] =poly_lr_update
 
+
     def _maybe_init_amp(self):
         if self.auto_mixed_precision and self.amp_grad_scaler is None:
             self.amp_grad_scaler = GradScaler()
         print("initialized auto mixed precision.")
 
+    @abstractmethod
     def get_coords_from_model_output(self, model_output):
 
         """
@@ -317,33 +316,7 @@ class NetworkTrainer():
 
             
             data_dict['label'] = batch_hms   
-            # data_dict['label'] = list(map(list, zip(*[dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"].detach().numpy()])))
-            
-        
-            # b_= [dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"].detach().numpy()]
-
-            # print(len(batch_hms), len(batch_hms[0]), )
-            # print("FS: ",batch_hms[0][0].shape)
-            # print("FS: ",batch_hms[0][1].shape)
-            # print("FS: ",batch_hms[0][2].shape)
-            # print("FS: ",batch_hms[0][3].shape)
-            # print("FS: ",batch_hms[0][4].shape)
-
-
-
-
-            # print(b_[0].shape)
-            # data_dict['label'] = torch.stack(b_, 0, out=None)
-            
-            # print("label shape", len(data_dict['label']), data_dict['label'][0].shape)
-            # data_dict['label'] = dataloader.dataset.generate_labels(data_dict["target_coords"], np_sigmas)
-
-        # print("the data dict" , data_dict['label'])
-        # print("data_dict['label'] shape ", len(data_dict['label']))
-        # print("data_dict['label'] shape ", len(data_dict['label'][0]))
-        # print("data_dict['label'] shape ", (data_dict['label'][0]).shape)
-
-        # exit()
+          
 
         target = [x.to(self.device) for x in data_dict['label']]
 
@@ -555,7 +528,9 @@ class NetworkTrainer():
 
         print("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch ))
 
+    @abstractmethod
     def set_training_dataloaders(self):
         """
         set train_dataset, valid_dataset and train_dataloader and valid_dataloader here.
         """
+
