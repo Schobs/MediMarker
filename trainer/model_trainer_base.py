@@ -49,6 +49,7 @@ class NetworkTrainer(ABC):
         #Dataloader info
         self.data_loader_batch_size = 12
         self.num_batches_per_epoch = 150
+        self.sample_patches = False
 
         #Training params
         self.max_num_epochs =  1000
@@ -271,7 +272,7 @@ class NetworkTrainer(ABC):
             data_dict = next(generator)
         except StopIteration:
             # restart the generator if the previous generator is exhausted.
-            print("restarting generator")
+            # print("restarting generator")
             generator = iter(dataloader)
             data_dict = next(generator)
 
@@ -281,25 +282,15 @@ class NetworkTrainer(ABC):
         #This happens when we regress sigma with >0 workers due to multithreading issues.
         if self.gen_hms_in_mainthread:
             batch_hms = []
-            # print("generating heatmaps in the main thread instead.")
             np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
-            # print("targ coordinates shape ", data_dict["target_coords"].shape)
-
-            #b_ is 12,5, x, x but should be 5 long list of tensors: torch.Size([12, 19, X, X])
-
             b_= [dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"].detach().numpy()]
-
             for x in b_:
                 if batch_hms == []:
                     batch_hms = [[y] for y in x]
                 else:
                     for hm_idx, hm in enumerate(x):
-                        # print(hm_idx, hm.shape   )
                         batch_hms[hm_idx].append(hm)
-
             batch_hms = [torch.stack(x) for x in batch_hms]
-
-            
             data_dict['label'] = batch_hms   
           
 
@@ -358,7 +349,7 @@ class NetworkTrainer(ABC):
                 if self.use_full_res_coords and not self.resize_first :
                     downscale_factor = [self.model_config.DATASET.ORIGINAL_IMAGE_SIZE[0]/self.model_config.SAMPLER.INPUT_SIZE[0], self.model_config.DATASET.ORIGINAL_IMAGE_SIZE[1]/self.model_config.SAMPLER.INPUT_SIZE[1]]
                     pred_coords = torch.rint(pred_coords * downscale_factor)
-
+                    
                 coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
                 coord_error_list.append(np.mean(coord_error.detach().cpu().numpy()))
 

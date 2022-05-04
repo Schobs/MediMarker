@@ -85,8 +85,8 @@ class DatasetBase(data.Dataset):
         self.sample_patch_size = sample_patch_size
         self.sample_patch_bias = sample_patch_bias
 
-        #if we're sampling patches w/o aug we still need to center crop so change the aug strategy
-        if self.sample_patches and self.data_augmentation_strategy == None:
+        #if we're sampling patches during training w/o aug we still need to center crop so change the aug strategy
+        if self.sample_patches and self.data_augmentation_strategy == None and split == "training":
             self.data_augmentation_package = "imgaug"
             self.data_augmentation_strategy = "CenterCropOnly"
             print("Only Augmentation is CenterCropOnly after patch sample for %s split." % split)
@@ -99,7 +99,7 @@ class DatasetBase(data.Dataset):
             self.aug_package_loader = get_aug_package_loader(self.data_augmentation_package)
             #Get specific data augmentation strategy
             self.transform = self.aug_package_loader(self.data_augmentation_strategy, input_size)
-            print("Using data augmentation package %s and strategy %s." % (data_augmentation_package, self.data_augmentation_strategy) )
+            print("Using data augmentation package %s and strategy %s for %s split." % (data_augmentation_package, self.data_augmentation_strategy, split) )
 
 
         self.heatmaps_to_tensor = transforms.Compose([
@@ -232,6 +232,8 @@ class DatasetBase(data.Dataset):
 
             untransformed_im = image
             untransformed_coords = coords[:,:2]
+
+            #If sampling patches we first sample the patch with a little wiggle room, normalize the lms. The transform center crops it back.
             if self.sample_patches:
                 untransformed_im, untransformed_coords, landmarks_in_indicator = self.sample_patch(untransformed_im, untransformed_coords)
           
@@ -252,20 +254,20 @@ class DatasetBase(data.Dataset):
             untransformed_coords = coords
             input_coords = coords
             input_image = torch.from_numpy(image)
+            landmarks_in_indicator = [1 for xy in input_coords  ]
 
-            if self.sample_patches:
-                untransformed_im, untransformed_coords, landmarks_in_indicator = self.sample_patch(untransformed_im, untransformed_coords)
-                input_coords = np.array(untransformed_coords)
-                input_image = normalize_cmr(untransformed_im, to_tensor=True)
-        
+            #If sampling patches and validation we need to patchify them. We get a list inputs for each sample.
+            if self.sample_patches and self.split == "validation":
+                image_patchified = self.patchify_image(input_image)
+                input_image = torch.stack([normalize_cmr(x, to_tensor=True) for x in image_patchified])
+
         if self.generate_hms_here:
             
             label = self.LabelGenerator.generate_labels(input_coords, landmarks_in_indicator,  self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
-            # heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
         else:
             label = []
 
-        sample = {"image":input_image , "label":label, "target_coords": input_coords, 
+        sample = {"image":input_image , "label":label, "target_coords": input_coords, "landmarks_in_indicator": landmarks_in_indicator,
             "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
 
         #If coordinates are cutoff by augmentation throw a run time error. 
@@ -343,3 +345,38 @@ class DatasetBase(data.Dataset):
         cropped_image_padded = image[:, safe_crop_y[0]:safe_crop_y[1], safe_crop_x[0]:safe_crop_x[1]]
 
         return cropped_image_padded, normalized_landmarks, landmarks_in_indicator
+
+
+    def patchify_image(self, image):
+        """Breaks up an input image into patches, where each patch overlaps with the next by 50% in x,y.
+
+        Args:
+            image (_type_): _description_
+        Returns
+
+        """
+        all_image_patches = []
+       
+        break_x = break_y = False
+        for x in range(0, int(self.original_image_size[0]), int(self.sample_patch_size[0]/2)):
+            for y in range(0, int(self.original_image_size[1]), int(self.sample_patch_size[1]/2)):
+                break_y = False
+                # Ensure we do not go past the boundaries of the image
+                if x > self.original_image_size[0]-self.sample_patch_size[0]:
+                    x = self.original_image_size[0]-self.sample_patch_size[0]
+                    break_x = True
+                if y > self.original_image_size[1]-self.sample_patch_size[1]:
+                    y = self.original_image_size[1]-self.sample_patch_size[1]
+                    break_y = True
+
+                #torch loads images y-x so swap axis here
+                patch = image[:, y:y+self.sample_patch_size[1], x:x+self.sample_patch_size[0]  ]
+                all_image_patches.append(patch)
+
+                if break_y:
+                    break
+            if break_x:
+                break
+        
+        all_image_patches = torch.stack(all_image_patches)
+        return all_image_patches
