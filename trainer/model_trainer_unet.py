@@ -24,7 +24,7 @@ from torch.multiprocessing import Pool, Process, set_start_method
 from torchvision.transforms import Resize,InterpolationMode
 from trainer.model_trainer_base import NetworkTrainer
 
-from transforms.generate_labels import UNetLandmarkGenerator
+from transforms.generate_labels import UNetLabelGenerator
 class UnetTrainer(NetworkTrainer):
     """ Class for the u-net trainer stuff.
     """
@@ -59,7 +59,7 @@ class UnetTrainer(NetworkTrainer):
         self.num_val_batches_per_epoch = 50
         self.num_batches_per_epoch = model_config.SOLVER.MINI_BATCH_SIZE
         self.gen_hms_in_mainthread = self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
-        self.label_generator = UNetLandmarkGenerator()
+        self.label_generator = UNetLabelGenerator()
 
         #Training params
         self.max_num_epochs =  model_config.SOLVER.MAX_EPOCHS
@@ -83,7 +83,7 @@ class UnetTrainer(NetworkTrainer):
         self.base_num_features = model_config.MODEL.UNET.INIT_FEATURES
         self.min_feature_res = model_config.MODEL.UNET.MIN_FEATURE_RESOLUTION
         self.max_features = model_config.MODEL.UNET.MAX_FEATURES
-        self.input_size = model_config.DATASET.INPUT_SIZE
+        self.input_size = model_config.SAMPLER.INPUT_SIZE
         self.orginal_im_size = model_config.DATASET.ORIGINAL_IMAGE_SIZE
 
 
@@ -266,71 +266,9 @@ class UnetTrainer(NetworkTrainer):
     
 
     def set_training_dataloaders(self):
-
-        np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
-    
-        train_dataset = DatasetBase(
-            annotation_path =self.model_config.DATASET.SRC_TARGETS,
-            landmarks = self.model_config.DATASET.LANDMARKS,
-            LabelGenerator = self.label_generator,
-            split = "training",
-            root_path = self.model_config.DATASET.ROOT,
-            sigmas =  np_sigmas,
-            generate_hms_here = not self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD, 
-            cv = self.model_config.TRAINER.FOLD,
-            cache_data = self.model_config.TRAINER.CACHE_DATA,
-            num_res_supervisions = self.num_res_supervision,
-            debug=self.model_config.DATASET.DEBUG ,
-            original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
-            input_size =  self.model_config.DATASET.INPUT_SIZE,
-            hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
-            data_augmentation_strategy = self.model_config.DATASET.DATA_AUG,
-            data_augmentation_package = self.model_config.DATASET.DATA_AUG_PACKAGE,
-
- 
-        )
+        super(UnetTrainer, self).set_training_dataloaders()
 
 
-        if self.perform_validation:
-            val_split= "validation"
-            
-            valid_dataset = DatasetBase(
-                annotation_path =self.model_config.DATASET.SRC_TARGETS,
-                landmarks = self.model_config.DATASET.LANDMARKS,
-                LabelGenerator = self.label_generator,
-                split = val_split,
-                root_path = self.model_config.DATASET.ROOT,
-                sigmas =  np_sigmas,
-                generate_hms_here = not self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD, 
-                cv = self.model_config.TRAINER.FOLD,
-                cache_data = self.model_config.TRAINER.CACHE_DATA,
-                num_res_supervisions = self.num_res_supervision,
-                debug=self.model_config.DATASET.DEBUG,
-                data_augmentation_strategy =None,
-                original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
-                input_size =  self.model_config.DATASET.INPUT_SIZE,
-                hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
-
-            )
-        else:
-            val_split = "training"
-            valid_dataset = train_dataset
-            print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
-
-
-
-        #If debug use only main thread to load data bc we only want to show a single plot on screen.
-        #If num_workers=0 we are only using the main thread, so persist_workers = False.
-        if self.model_config.DATASET.DEBUG or self.model_config.DATASET.NUM_WORKERS == 0:
-            persist_workers = False
-            num_workers_cfg=0
-        else:
-            persist_workers = True
-            num_workers_cfg= self.model_config.DATASET.NUM_WORKERS    
-       
-
-        self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, num_workers=self.model_config.DATASET.NUM_WORKERS, persistent_workers=persist_workers, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
-        self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, num_workers=num_workers_cfg, persistent_workers=persist_workers, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
 
     @staticmethod
     def get_resolution_layers(input_size,  min_feature_res):
@@ -340,9 +278,7 @@ class UnetTrainer(NetworkTrainer):
             input_size = [x/2 for x in input_size]
         return counter
 
-    @staticmethod
-    def worker_init_fn(worker_id):
-        imgaug.seed(np.random.get_state()[1][0] + worker_id)
+
 
 
 

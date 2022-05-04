@@ -18,7 +18,8 @@ MODEL:
 DATASET:
   DEBUG: False
   INPUT_SIZE: [512,512]
-  DATA_AUG: 'V1'
+  SAMPLER: 
+    DATA_AUG: 'V1'
   ROOT: '/home/acq19las/data/ASPIRE'
   SRC_TARGETS: '/home/acq19las/data/ASPIRE/cardiac4ch_labels_VPnC_CV'
   

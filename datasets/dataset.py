@@ -15,7 +15,7 @@ from transforms.transformations import (HeatmapsToTensor, NormalizeZScore, ToTen
                              normalize_cmr)
 from transforms.dataloader_transforms import get_aug_package_loader
 
-from transforms.generate_labels import generate_heatmaps, get_downsampled_heatmaps
+from transforms.generate_labels import LabelGenerator, generate_heatmaps, get_downsampled_heatmaps
 from load_data import get_datatype_load, load_aspire_datalist
 from visualisation import (visualize_heat_pred_coords, visualize_image_target,
                            visualize_image_trans_coords,
@@ -55,6 +55,7 @@ class DatasetBase(data.Dataset):
         hm_lambda_scale: float,
         annotation_path: str,
         generate_hms_here: bool,
+        sample_patches: bool,
         image_modality: str= "CMRI",
         split: str ="training",
         root_path: str = "./data",
@@ -62,6 +63,8 @@ class DatasetBase(data.Dataset):
         cache_data: bool = False,
         debug: bool = False,
         input_size=  [512,512],
+        sample_patch_size = [512, 512],
+        sample_patch_bias = 0.66,
         original_image_size = [512,512],
         num_res_supervisions: int = 5,
         data_augmentation_strategy: str = None,
@@ -78,14 +81,24 @@ class DatasetBase(data.Dataset):
         self.data_augmentation_package = data_augmentation_package
 
         self.generate_hms_here = generate_hms_here
+        self.sample_patches = sample_patches
+        self.sample_patch_size = sample_patch_size
+        self.sample_patch_bias = sample_patch_bias
+
+        #if we're sampling patches w/o aug we still need to center crop so change the aug strategy
+        if self.sample_patches and self.data_augmentation_strategy == None:
+            self.data_augmentation_package = "imgaug"
+            self.data_augmentation_strategy = "CenterCropOnly"
+            print("Only Augmentation is CenterCropOnly after patch sample for %s split." % split)
+
 
         if self.data_augmentation_strategy == None:
             print("No data Augmentation for %s split." % split)
         else:
             #Get data augmentor for the correct package
-            self.aug_package_loader = get_aug_package_loader(data_augmentation_package)
+            self.aug_package_loader = get_aug_package_loader(self.data_augmentation_package)
             #Get specific data augmentation strategy
-            self.transform = self.aug_package_loader(self.data_augmentation_strategy)
+            self.transform = self.aug_package_loader(self.data_augmentation_strategy, input_size)
             print("Using data augmentation package %s and strategy %s." % (data_augmentation_package, self.data_augmentation_strategy) )
 
 
@@ -104,13 +117,20 @@ class DatasetBase(data.Dataset):
         self.cv=cv
         self.cache_data = cache_data
         self.debug = debug
-        self.input_size = input_size
         
+        self.input_size = input_size
+
+        #If we are sampling patches we want to load in the full resolution image.
+        if self.sample_patches:
+            self.load_im_size = original_image_size
+            self.downscale_factor = 1
+        else:
+            self.load_im_size = input_size
+            self.downscale_factor = [original_image_size[0]/input_size[0], original_image_size[1]/input_size[1]]
 
 
         self.original_image_size = original_image_size
         self.num_res_supervisions = num_res_supervisions
-        self.downscale_factor = [original_image_size[0]/input_size[0], original_image_size[1]/input_size[1]]
 
 
         #Lists to save the image paths (or images if caching), target coordinates (scaled to input size), and full resolution coords.
@@ -138,8 +158,8 @@ class DatasetBase(data.Dataset):
 
             for idx, data in enumerate(datalist):
 
-                interested_landmarks = np.rint(np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
-                expanded_image = np.expand_dims(normalize_cmr(self.datatype_load(data["image"]).resize( self.input_size)), axis=0)
+                interested_landmarks = (np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
+                expanded_image = np.expand_dims(normalize_cmr(self.datatype_load(data["image"]).resize( self.load_im_size)), axis=0)
 
                
 
@@ -151,11 +171,11 @@ class DatasetBase(data.Dataset):
 
             print("Cached all %s data in memory. Length of %s " % (self.split, len(self.images)))
         else:
-            self.load_function = lambda pth_: np.expand_dims(normalize_cmr(self.datatype_load(pth_).resize(self.input_size)), axis=0)
+            self.load_function = lambda pth_: np.expand_dims(normalize_cmr(self.datatype_load(pth_).resize(self.load_im_size)), axis=0)
 
             for idx, data in enumerate(datalist):
 
-                interested_landmarks = np.rint(np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
+                interested_landmarks = (np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
                 self.images.append(data["image"]) #just appends the path, the load_function will load it later.
                 self.target_coordinates.append(interested_landmarks)
                 self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
@@ -204,21 +224,43 @@ class DatasetBase(data.Dataset):
 
         so = time()
 
+        # if self.sample_input_patch()
+
         #Do data augmentation
         if self.data_augmentation_strategy != None:
 
 
-            kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in coords[:,:2]], shape=image[0].shape )
-            transformed_sample = self.transform(image=image[0], keypoints=kps) #list where [0] is image and [1] are coords.
+            untransformed_im = image
+            untransformed_coords = coords[:,:2]
+            if self.sample_patches:
+                untransformed_im, untransformed_coords, landmarks_in_indicator = self.sample_patch(untransformed_im, untransformed_coords)
+          
+
+            kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords], shape=untransformed_im[0].shape )
+
+            transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps) #list where [0] is image and [1] are coords.
             input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
             input_coords = np.array([[coo.x_int, coo.y_int] for coo in transformed_sample[1]])
-        
+            
+            #Recalculate indicators incase transform pushed out/in coords.
+            landmarks_in_indicator = [1 if ((0 <= xy[0] <= self.input_size[0] ) and (0 <= xy[1] <= self.input_size[1] )) else 0 for xy in input_coords  ]
+            
         else:
+            # if self.sample_patches:
+            #     raise NotImplementedError("need to implement sampling patches without data augmentation.")
+            untransformed_im = image
+            untransformed_coords = coords
             input_coords = coords
             input_image = torch.from_numpy(image)
 
+            if self.sample_patches:
+                untransformed_im, untransformed_coords, landmarks_in_indicator = self.sample_patch(untransformed_im, untransformed_coords)
+                input_coords = np.array(untransformed_coords)
+                input_image = normalize_cmr(untransformed_im, to_tensor=True)
+        
         if self.generate_hms_here:
-            label = self.LabelGenerator.generate_labels(input_coords, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
+            
+            label = self.LabelGenerator.generate_labels(input_coords, landmarks_in_indicator,  self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
             # heatmaps = self.heatmaps_to_tensor(generate_heatmaps(trans_kps, self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale))  
         else:
             label = []
@@ -234,7 +276,7 @@ class DatasetBase(data.Dataset):
         
 
         if (self.debug or run_time_debug):
-            self.LabelGenerator.debug_sample(sample, coords, image)
+            self.LabelGenerator.debug_sample(sample,untransformed_im, untransformed_coords)
           
     
         return sample
@@ -253,3 +295,51 @@ class DatasetBase(data.Dataset):
 
         return self.LabelGenerator.generate_labels(landmarks, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
         
+
+    def sample_patch(self, image, landmarks):
+        
+        z_rand = np.random.uniform(0, 1)
+        landmarks_in_indicator = []
+
+        if z_rand >= (1-self.sample_patch_bias):         
+            while 1 not in landmarks_in_indicator:
+                landmarks_in_indicator = []
+
+                y_rand = np.random.randint(0, self.original_image_size[1]-self.sample_patch_size[1])
+                x_rand = np.random.randint(0, self.original_image_size[0] -self.sample_patch_size[0])
+
+                for lm in landmarks:
+                    landmark_in = 0
+                    # if y_rand <= lm[1]-4 and y_rand+self.sample_patch_size[1]  <= lm[1]+4 :
+                    #     if x_rand <= lm[0]-4 and  lm[0]-4 <= x_rand + self.sample_patch_size[0]:
+
+                    if y_rand  <= lm[1]<= y_rand+self.sample_patch_size[1]:
+                        if x_rand <= lm[0] <= x_rand +self.sample_patch_size[0]:
+                            landmark_in = 1
+                    
+                    landmarks_in_indicator.append(landmark_in)
+
+        else:
+            y_rand = np.random.randint(0, self.original_image_size[1]-self.sample_patch_size[1])
+            x_rand = np.random.randint(0, self.original_image_size[0] -self.sample_patch_size[0])
+
+            for lm in landmarks:
+                landmark_in = 0
+                if y_rand <= lm[1]<= y_rand+self.sample_patch_size[1]:
+                    if x_rand <= lm[0] <= x_rand +self.sample_patch_size[0]:
+                        landmark_in = 1
+                landmarks_in_indicator.append(landmark_in)
+
+
+        # print("y and x rands@ ", y_rand, x_rand)
+        normalized_landmarks = [[lm[0]-x_rand, lm[1]-y_rand] for lm in landmarks]
+
+        #Adding some padding to allow data augmentations and then center crop the desired size afterwards.
+        safe_crop_y = [max(0,y_rand-16), min(self.original_image_size[1], y_rand+self.sample_patch_size[1]+16)]
+        safe_crop_x = [max(0,x_rand-16), min(self.original_image_size[0], x_rand+self.sample_patch_size[0]+16)]
+
+        # print("safe crops: ", safe_crop_y, safe_crop_x)
+        #Pytorch has loaded the images y-x axis way round
+        cropped_image_padded = image[:, safe_crop_y[0]:safe_crop_y[1], safe_crop_x[0]:safe_crop_x[1]]
+
+        return cropped_image_padded, normalized_landmarks, landmarks_in_indicator

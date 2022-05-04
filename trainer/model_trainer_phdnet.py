@@ -4,12 +4,13 @@ import os
 from utils.setup.initialization import InitWeights_KaimingUniform
 from losses import HeatmapLoss, IntermediateOutputLoss, AdaptiveWingLoss, SigmaLoss
 from models.UNet_Classic import UNet
+from models.PHD_Net import PHDNet
 from visualisation import visualize_heat_pred_coords
 import torch
 import numpy as np
 from time import time
 # from dataset import ASPIRELandmarks
-from dataset import ASPIRELandmarks
+from datasets.dataset import ASPIRELandmarks
 # import multiprocessing as mp
 import ctypes
 import copy
@@ -22,8 +23,9 @@ import imgaug
 from torchvision.transforms import Resize,InterpolationMode
 
 from model_trainer_base import NetworkTrainer
+from transforms.generate_labels import PHDNetLabelGenerator
 
-class UnetTrainer(NetworkTrainer):
+class PHDNetTrainer(NetworkTrainer):
     """ Class for the u-net trainer stuff.
     """
 
@@ -123,17 +125,18 @@ class UnetTrainer(NetworkTrainer):
 
 
         #Loss params
-        loss_str = model_config.SOLVER.LOSS_FUNCTION
-        if loss_str == "mse":
-            self.individual_hm_loss = HeatmapLoss()
-        elif loss_str =="awl":
-            self.individual_hm_loss = AdaptiveWingLoss(hm_lambda_scale=self.model_config.MODEL.HM_LAMBDA_SCALE)
+        self.loss_str = model_config.SOLVER.LOSS_FUNCTION
+        if self.loss_str == "patch_disp_gauss":
+            # self.individual_hm_loss = HeatmapLoss()
+            # raise NotImplementedError()
+            print("loss not imp yet")
         else:
-            raise ValueError("the loss function %s is not implemented. Try mse or awl" % (loss_str))
+            raise ValueError("the loss function %s is not implemented. Try patch_disp_gauss" % (self.loss_str))
 
       
 
-      
+        self.label_generator = PHDNetLabelGenerator()
+
 
         ################# Settings for saving checkpoints ##################################
         self.save_every = 25
@@ -181,13 +184,7 @@ class UnetTrainer(NetworkTrainer):
     def initialize_network(self):
 
         # Let's make the network
-        self.network = UNet(input_channels=self.num_input_channels, base_num_features=self.base_num_features, num_out_heatmaps=self.num_out_heatmaps,
-            num_resolution_levels= self.num_resolution_layers, conv_operation=self.conv_operation, normalization_operation=self.normalization_operation,
-            normalization_operation_config=self.norm_op_kwargs, activation_function= self.activation_function, activation_func_config= self.activation_kwargs,
-            weight_initialization=self.weight_inititialiser, strided_convolution_kernels = self.pool_op_kernel_size, convolution_kernels= self.conv_op_kernel_size,
-            convolution_config=self.conv_kwargs, upsample_operation=self.upsample_operation, max_features=self.max_features, deep_supervision=self.deep_supervision
-        
-        )
+        self.network = PHDNet(self.loss_str)
         self.network.to(self.device)
 
         #Log network and initial weights
@@ -581,87 +578,7 @@ class UnetTrainer(NetworkTrainer):
         print("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch ))
 
     def set_training_dataloaders(self):
+        super(PHDNetTrainer, self).set_training_dataloaders()
 
-        np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
-    
-        train_dataset = ASPIRELandmarks(
-            annotation_path =self.model_config.DATASET.SRC_TARGETS,
-            landmarks = self.model_config.DATASET.LANDMARKS,
-            split = "training",
-            root_path = self.model_config.DATASET.ROOT,
-            sigmas =  np_sigmas,
-            cv = self.model_config.TRAINER.FOLD,
-            cache_data = self.model_config.TRAINER.CACHE_DATA,
-            normalize=True,
-            num_res_supervisions = self.num_res_supervision,
-            debug=self.model_config.DATASET.DEBUG ,
-            original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
-            input_size =  self.model_config.DATASET.INPUT_SIZE,
-            hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
-            data_augmentation_strategy = self.model_config.DATASET.DATA_AUG,
-            data_augmentation_package = self.model_config.DATASET.DATA_AUG_PACKAGE,
-            regress_sigma = self.model_config.SOLVER.REGRESS_SIGMA
-
- 
-        )
-
-
-        if self.perform_validation:
-            val_split= "validation"
-            
-            valid_dataset = ASPIRELandmarks(
-                annotation_path =self.model_config.DATASET.SRC_TARGETS,
-                landmarks = self.model_config.DATASET.LANDMARKS,
-                split = val_split,
-                root_path = self.model_config.DATASET.ROOT,
-                sigmas =  np_sigmas,
-                cv = self.model_config.TRAINER.FOLD,
-                cache_data = self.model_config.TRAINER.CACHE_DATA,
-                normalize=True,
-                num_res_supervisions = self.num_res_supervision,
-                debug=self.model_config.DATASET.DEBUG,
-                data_augmentation_strategy =None,
-                original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
-                input_size =  self.model_config.DATASET.INPUT_SIZE,
-                hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
-                regress_sigma = self.model_config.SOLVER.REGRESS_SIGMA
-
-            )
-        else:
-            val_split = "training"
-            valid_dataset = train_dataset
-            print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
-
-
-
-        #If debug use only main thread to load data bc we only want to show a single plot on screen.
-        #If num_workers=0 we are only using the main thread, so persist_workers = False.
-        if self.model_config.DATASET.DEBUG or self.model_config.DATASET.NUM_WORKERS == 0:
-            persist_workers = False
-            num_workers_cfg=0
-        else:
-            persist_workers = True
-            num_workers_cfg= self.model_config.DATASET.NUM_WORKERS    
-                # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, worker_init_fn=UnetTrainer.worker_init_fn )
-        # self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, worker_init_fn=UnetTrainer.worker_init_fn )
-        # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE,shuffle=True,worker_init_fn=UnetTrainer.worker_init_fn )
-        # self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
-
-        self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, num_workers=self.model_config.DATASET.NUM_WORKERS, persistent_workers=persist_workers, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
-        self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, num_workers=num_workers_cfg, persistent_workers=persist_workers, worker_init_fn=UnetTrainer.worker_init_fn, pin_memory=True )
-
-    @staticmethod
-    def get_resolution_layers(input_size,  min_feature_res):
-        counter=1
-        while input_size[0] and input_size[1] >= min_feature_res*2:
-            counter+=1
-            input_size = [x/2 for x in input_size]
-        return counter
-
-    @staticmethod
-    def worker_init_fn(worker_id):
-        imgaug.seed(np.random.get_state()[1][0] + worker_id)
-
-
-
+       
 

@@ -28,7 +28,7 @@ def get_evaluation_mode(eval_mode, og_im_size, inp_size):
         resize_first = False
     # Force "use_input_size" settings if the input size and og image size are the same
     elif og_im_size == inp_size: 
-        print("your DATASET.ORIGINAL_IMAGE_SIZE == DATASET.INPUT_SIZE, therefore defaulting evaluation mode to \"use_input_size\"")
+        print("your DATASET.ORIGINAL_IMAGE_SIZE == SAMPLER.INPUT_SIZE, therefore defaulting evaluation mode to \"use_input_size\"")
         use_full_res_coords =False
         resize_first = False
     # Scale model predicted sized heatmap up to full resolution and then obtain coordinates (recommended)
@@ -49,10 +49,10 @@ def infer_additional_arguments(yaml_args):
 
     #due to multithreading issue, we must genreate heatmap labels in the main thread rather than
     # multi-thread dataloaders. To fix this in future.
-    if yaml_args.DATASET.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
+    if yaml_args.SAMPLER.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
         yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = True
 
-    use_full_res_coords, resize_first = get_evaluation_mode(yaml_args.INFERENCE.EVALUATION_MODE, yaml_args.DATASET.ORIGINAL_IMAGE_SIZE, yaml_args.DATASET.INPUT_SIZE)
+    use_full_res_coords, resize_first = get_evaluation_mode(yaml_args.INFERENCE.EVALUATION_MODE, yaml_args.DATASET.ORIGINAL_IMAGE_SIZE, yaml_args.SAMPLER.INPUT_SIZE)
     
     yaml_args.INFERRED_ARGS.USE_FULL_RES_COORDS = use_full_res_coords
     yaml_args.INFERRED_ARGS.RESIZE_FIRST = resize_first
@@ -69,7 +69,16 @@ def argument_checking(yaml_args):
     """
     all_errors = []
 
-   
+    try:
+        if yaml_args.SAMPLER.SAMPLE_PATCH == True and yaml_args.SAMPLER.SAMPLE_PATCH_SIZE != yaml_args.SAMPLER.INPUT_SIZE:
+            raise ValueError("You want to train the model by sampling patches from the full res image (yaml_args.SAMPLER.SAMPLE_PATCH=True)\
+                but your SAMPLER.SAMPLE_PATCH_SIZE (%s) does not match your newtwork input size SAMPLER.INPUT_SIZE (%s). Either set \
+                these to the same if you want to use patch sampling training scheme or set SAMPLER.SAMPLE_PATCH =False and the full res image will be \
+                resized to SAMPLER.INPUT_SIZE (%s) for full image, lower res training. I enforce using seperate parameters here to ensure you don't \
+                unintentionally run the wrong scheme." %  ( yaml_args.SAMPLER.SAMPLE_PATCH, yaml_args.SAMPLER.INPUT_SIZE, yaml_args.SAMPLER.INPUT_SIZE) )
+    except ValueError as e:
+        all_errors.append(e)
+
 
     try:
         if yaml_args.MODEL.ARCHITECTURE != "U-Net" and yaml_args.SOLVER.DEEP_SUPERVISION:
@@ -80,8 +89,8 @@ def argument_checking(yaml_args):
 
 
     try:
-        if yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[0] < yaml_args.DATASET.INPUT_SIZE[0] and yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[1] < yaml_args.DATASET.INPUT_SIZE[1]:
-            raise (ValueError("DATASET.ORIGINAL_IMAGE_SIZE is smaller than  than the input size to the network (DATASET.INPUT_SIZE). Change input size to equal or smaller size of original image."))
+        if yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[0] < yaml_args.SAMPLER.INPUT_SIZE[0] and yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[1] < yaml_args.SAMPLER.INPUT_SIZE[1]:
+            raise (ValueError("DATASET.ORIGINAL_IMAGE_SIZE is smaller than  than the input size to the network (SAMPLER.INPUT_SIZE). Change input size to equal or smaller size of original image."))
     except ValueError as e:
         all_errors.append(e)
 
@@ -93,8 +102,8 @@ def argument_checking(yaml_args):
     
 
     try:
-        if yaml_args.DATASET.DATA_AUG != None and yaml_args.DATASET.DATA_AUG_PACKAGE != "imgaug":
-            raise ValueError("Only the imgaug data augmentation package (DATASET.DATA_AUG_PACKAGE) is supported, you chose %s. Try \'imgaug\' or set DATASET.DATA_AUG to None for no data augmentation." % yaml_args.DATASET.DATA_AUG_PACKAGE )
+        if yaml_args.SAMPLER.DATA_AUG != None and yaml_args.SAMPLER.DATA_AUG_PACKAGE != "imgaug":
+            raise ValueError("Only the imgaug data augmentation package (SAMPLER.DATA_AUG_PACKAGE) is supported, you chose %s. Try \'imgaug\' or set SAMPLER.DATA_AUG to None for no data augmentation." % yaml_args.SAMPLER.DATA_AUG_PACKAGE )
     except ValueError as e:
         all_errors.append(e)
 
@@ -105,8 +114,8 @@ def argument_checking(yaml_args):
             This means the magnitude of sigma will not be penalized and could lead to trivial solution sigma -> inf. \
                 Consider this setting this to a positive float (e.g. 0.005). You are warned! ', stacklevel=2)
 
-    if yaml_args.DATASET.DATA_AUG == None:
-        warnings.warn('You are not using data augmentation (DATASET.DATA_AUG = None). Using a data augmentation scheme will improve your results.', stacklevel=2)
+    if yaml_args.SAMPLER.DATA_AUG == None:
+        warnings.warn('You are not using data augmentation (SAMPLER.DATA_AUG = None). Using a data augmentation scheme will improve your results.', stacklevel=2)
 
 
     if all_errors:

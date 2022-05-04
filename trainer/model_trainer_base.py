@@ -8,8 +8,11 @@ from utils.im_utils.heatmap_manipulation import get_coords
 from torch.cuda.amp import GradScaler, autocast
 
 from torchvision.transforms import Resize,InterpolationMode
+from datasets.dataset import DatasetBase
+from torch.utils.data import DataLoader
 
 from abc import ABC, abstractmethod
+import imgaug
 
 class NetworkTrainer(ABC):
     """ Super class for trainers. I extend this for trainers for U-Net and PHD-Net. They share some functions.y
@@ -251,33 +254,15 @@ class NetworkTrainer(ABC):
 
 
 
-
+    @abstractmethod
     def predict_heatmaps_and_coordinates(self, data_dict,  return_all_layers = False, resize_to_og=False,):
-        data =(data_dict['image']).to( self.device )
-        target = [x.to(self.device) for x in data_dict['label']]
-        from_which_level_supervision = self.num_res_supervision 
+        """ For inference. Predict heatmap and coordinates directly.
 
-        if self.deep_supervision:
-            output = self.network(data)[-from_which_level_supervision:]
-        else:
-            output = self.network(data)
-
-        
-        l = self.loss(output, target, self.sigmas)
-
-        final_heatmap = output[-1]
-        if resize_to_og:
-            #torch resize does HxW so need to flip the dimesions for resize
-            final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
-
-        predicted_coords = get_coords(final_heatmap)
-
-        heatmaps_return = output
-        if not return_all_layers:
-            heatmaps_return = output[-1] #only want final layer
-
-
-        return heatmaps_return, final_heatmap, predicted_coords, l.detach().cpu().numpy()
+        Args:
+            data_dict (_type_): _description_
+            return_all_layers (bool, optional): _description_. Defaults to False.
+            resize_to_og (bool, optional): _description_. Defaults to False.
+        """
 
 
     def run_iteration(self, generator, dataloader, backprop, get_coord_error=False, coord_error_list=None):
@@ -371,7 +356,7 @@ class NetworkTrainer(ABC):
 
 
                 if self.use_full_res_coords and not self.resize_first :
-                    downscale_factor = [self.model_config.DATASET.ORIGINAL_IMAGE_SIZE[0]/self.model_config.DATASET.INPUT_SIZE[0], self.model_config.DATASET.ORIGINAL_IMAGE_SIZE[1]/self.model_config.DATASET.INPUT_SIZE[1]]
+                    downscale_factor = [self.model_config.DATASET.ORIGINAL_IMAGE_SIZE[0]/self.model_config.SAMPLER.INPUT_SIZE[0], self.model_config.DATASET.ORIGINAL_IMAGE_SIZE[1]/self.model_config.SAMPLER.INPUT_SIZE[1]]
                     pred_coords = torch.rint(pred_coords * downscale_factor)
 
                 coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
@@ -528,9 +513,84 @@ class NetworkTrainer(ABC):
 
         print("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch ))
 
-    @abstractmethod
+    # @abstractmethod
     def set_training_dataloaders(self):
         """
         set train_dataset, valid_dataset and train_dataloader and valid_dataloader here.
         """
+
+        np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
+    
+        train_dataset = DatasetBase(
+            annotation_path =self.model_config.DATASET.SRC_TARGETS,
+            landmarks = self.model_config.DATASET.LANDMARKS,
+            LabelGenerator = self.label_generator,
+            split = "training",
+            sample_patches = self.model_config.SAMPLER.SAMPLE_PATCH,
+            sample_patch_size = self.model_config.SAMPLER.SAMPLE_PATCH_SIZE,
+            sample_patch_bias = self.model_config.SAMPLER.SAMPLER_BIAS,
+            root_path = self.model_config.DATASET.ROOT,
+            sigmas =  np_sigmas,
+            generate_hms_here = not self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD, 
+            cv = self.model_config.TRAINER.FOLD,
+            cache_data = self.model_config.TRAINER.CACHE_DATA,
+            num_res_supervisions = self.num_res_supervision,
+            debug=self.model_config.SAMPLER.DEBUG ,
+            original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
+            input_size =  self.model_config.SAMPLER.INPUT_SIZE,
+            hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
+            data_augmentation_strategy = self.model_config.SAMPLER.DATA_AUG,
+            data_augmentation_package = self.model_config.SAMPLER.DATA_AUG_PACKAGE,
+
+ 
+        )
+
+
+        if self.perform_validation:
+            val_split= "validation"
+            
+            valid_dataset = DatasetBase(
+                annotation_path =self.model_config.DATASET.SRC_TARGETS,
+                landmarks = self.model_config.DATASET.LANDMARKS,
+                LabelGenerator = self.label_generator,
+                split = val_split,
+                sample_patches = self.model_config.SAMPLER.SAMPLE_PATCH,
+                sample_patch_size = self.model_config.SAMPLER.SAMPLE_PATCH_SIZE,
+                sample_patch_bias = self.model_config.SAMPLER.SAMPLER_BIAS,
+                root_path = self.model_config.DATASET.ROOT,
+                sigmas =  np_sigmas,
+                generate_hms_here = not self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD, 
+                cv = self.model_config.TRAINER.FOLD,
+                cache_data = self.model_config.TRAINER.CACHE_DATA,
+                num_res_supervisions = self.num_res_supervision,
+                debug=self.model_config.SAMPLER.DEBUG,
+                data_augmentation_strategy =None,
+                original_image_size= self.model_config.DATASET.ORIGINAL_IMAGE_SIZE,
+                input_size =  self.model_config.SAMPLER.INPUT_SIZE,
+                hm_lambda_scale = self.model_config.MODEL.HM_LAMBDA_SCALE,
+
+            )
+        else:
+            val_split = "training"
+            valid_dataset = train_dataset
+            print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
+
+
+
+        #If debug use only main thread to load data bc we only want to show a single plot on screen.
+        #If num_workers=0 we are only using the main thread, so persist_workers = False.
+        if self.model_config.SAMPLER.DEBUG or self.model_config.SAMPLER.NUM_WORKERS == 0:
+            persist_workers = False
+            num_workers_cfg=0
+        else:
+            persist_workers = True
+            num_workers_cfg= self.model_config.SAMPLER.NUM_WORKERS    
+       
+
+        self.train_dataloader = DataLoader(train_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=True, num_workers=num_workers_cfg, persistent_workers=persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
+        self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.model_config.SOLVER.DATA_LOADER_BATCH_SIZE, shuffle=False, num_workers=num_workers_cfg, persistent_workers=persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
+    
+    @staticmethod
+    def worker_init_fn(worker_id):
+        imgaug.seed(np.random.get_state()[1][0] + worker_id)
 

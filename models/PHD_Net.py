@@ -13,7 +13,7 @@ import torch.nn.functional as F
 
 class PHDNet(nn.Module):
 
-    def __init__(self, branch_scheme, is_train, ):
+    def __init__(self, branch_scheme):
         self.branch_scheme = branch_scheme
         super(PHDNet, self).__init__()
      #   k_size = 3
@@ -122,14 +122,14 @@ class PHDNet(nn.Module):
         x = self.layer6(x)
         # print(x.shape)
 
-        if self.branch_scheme == 'multi' or 'displacement_only':
+        if self.branch_scheme == 'patch_disp_gauss' or 'displacement_only':
 
             x_reg = self.layer_reg(x)
             # print("reg, ", x_reg.shape)
             out_reg = self.outReg(x_reg) 
             # print(out_reg.shape)
 
-        if self.branch_scheme == 'multi' or 'class_only':
+        if self.branch_scheme == 'patch_disp_gauss' or 'class_only':
 
             x_class = self.layer_class(x)
             # print("class, ", x_class.shape)
@@ -147,7 +147,7 @@ class PHDNet(nn.Module):
       #  print(out_class.shape)
 
        # out.append([out_class, out_reg])
-        if self.branch_scheme == 'multi': 
+        if self.branch_scheme == 'patch_disp_gauss': 
             return [out_class, out_reg]
         elif self.branch_scheme == 'class_only':
             return out_class

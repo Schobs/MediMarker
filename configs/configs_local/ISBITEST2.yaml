@@ -8,10 +8,10 @@ SOLVER:
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE: 12
   MAX_EPOCHS: 1000
-  REGRESS_SIGMA: True
+  REGRESS_SIGMA: False
   REGRESS_SIGMA_LOSS_WEIGHT: 0.005
   AUTO_MIXED_PRECISION: True
-  MINI_BATCH_SIZE: 5
+  MINI_BATCH_SIZE: 150
 
 
 # /mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2/ISBI_512F_512Res_3GS_4MFR_AugACEBS_DS5
@@ -24,17 +24,23 @@ MODEL:
 
 DATASET:
   # DEBUG: True
-  DATA_AUG: 'AffineComplex'
+  
   ROOT: '/mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
   SRC_TARGETS: '/mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
   ORIGINAL_IMAGE_SIZE : [1935,2400]
-  # NUM_WORKERS: 0
 
+
+SAMPLER:
+  DATA_AUG: 'AffineComplex'
   INPUT_SIZE : [512,512]
- 
+  SAMPLE_PATCH: True
+  NUM_WORKERS: 0
+  # DEBUG: True
+
+
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False

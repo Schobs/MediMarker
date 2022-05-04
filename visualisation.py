@@ -138,26 +138,58 @@ def visualize_heat_pred_coords(og_image, pred_coords, targ_coords):
     plt.close()
 
 
-def visualize_image_trans_coords(og_image, trans_image, coords):
+def visualize_image_trans_coords(untrans_image, untrans_coords, trans_image, trans_coords):
     '''
-    visualize an image and the same image after it has been transformed. also shows the coordinates on the trans image
+    visualize an image and the same image after it has been transformed. also shows the coordinates on the trans image and untrans image
     
     '''
     fig, ax = plt.subplots(nrows=1, ncols=2, squeeze=False)
     
-    print("mean and std of OG image:", np.round(np.mean(og_image),5), np.round(np.std(og_image)), "and the image size@ ", og_image.shape)
+    print("og im shape@ ", untrans_image.shape)
+   
+    print("mean and std of OG image:", np.round(np.mean(untrans_image),5), np.round(np.std(untrans_image)), "and the image size@ ", untrans_image.shape)
     print("mean and std of trans image:", np.round(np.mean(trans_image.cpu().numpy()),5), np.round(np.std(trans_image.cpu().numpy())), "and the image size@ ", trans_image.shape)
-    print("Num coords:", len(coords))
+    print("Num coords:", len(untrans_coords))
 
-    ax[0,0].imshow(og_image, cmap='gray')
+    ax[0,0].imshow(untrans_image, cmap='gray')
     ax[0,1].imshow(trans_image, cmap='gray')
     # ax[0,2].imshow(trans_image, cmap='gray')
-    for co in coords:
+    for co in untrans_coords:
+        rect1 = patches.Rectangle((int(co[0]), int(co[1])),3,3,linewidth=2,edgecolor='r',facecolor='none')
+        ax[0,0].add_patch(rect1)
+        
+    for co in trans_coords:
+        rect2 = patches.Rectangle((int(co[0]), int(co[1])),3,3,linewidth=2,edgecolor='g',facecolor='none')
+        ax[0,1].add_patch(rect2)
+
+
+
+
+    plt.show()
+    plt.close()
+
+
+def visualize_imageNcoords_cropped_imgNnormcoords(og_image, cropped_im, og_coords, norm_coords, lm_indicators):
+    '''
+    visualize an image, the cropped (with pad image), original coords and normalized coords to the crop.
+    
+    '''
+    fig, ax = plt.subplots(nrows=1, ncols=2, squeeze=False)
+    
+    # print("mean and std of OG image:", np.round(np.mean(og_image),5), np.round(np.std(og_image)), "and the image size@ ", og_image.shape)
+    # print("mean and std of trans image:", np.round(np.mean(trans_image.cpu().numpy()),5), np.round(np.std(trans_image.cpu().numpy())), "and the image size@ ", trans_image.shape)
+    # print("Num coords:", len(coords))
+
+    ax[0,0].imshow(og_image, cmap='gray')
+    ax[0,1].imshow(cropped_im, cmap='gray')
+    # ax[0,2].imshow(trans_image, cmap='gray')
+    for co in og_coords:
+        rect1 = patches.Rectangle((int(co[0]), int(co[1])),3,3,linewidth=2,edgecolor='r',facecolor='none')
+        ax[0,0].add_patch(rect1)
+
+    for co in norm_coords:
         rect1 = patches.Rectangle((int(co[0]), int(co[1])),3,3,linewidth=2,edgecolor='r',facecolor='none')
         ax[0,1].add_patch(rect1)
-        rect2 = patches.Rectangle((int(co[0]), int(co[1])),3,3,linewidth=2,edgecolor='g',facecolor='none')
-        ax[0,0].add_patch(rect2)
-
 
 
 
