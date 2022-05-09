@@ -19,7 +19,7 @@ from transforms.generate_labels import LabelGenerator, generate_heatmaps, get_do
 from load_data import get_datatype_load, load_aspire_datalist
 from visualisation import (visualize_heat_pred_coords, visualize_image_target,
                            visualize_image_trans_coords,
-                           visualize_image_trans_target)
+                           visualize_image_trans_target, visualize_patch)
 from time import time
 
 import multiprocessing as mp
@@ -65,6 +65,7 @@ class DatasetBase(data.Dataset):
         input_size=  [512,512],
         sample_patch_size = [512, 512],
         sample_patch_bias = 0.66,
+        
         original_image_size = [512,512],
         num_res_supervisions: int = 5,
         data_augmentation_strategy: str = None,
@@ -85,11 +86,36 @@ class DatasetBase(data.Dataset):
         self.sample_patch_size = sample_patch_size
         self.sample_patch_bias = sample_patch_bias
 
+        self.load_im_size = input_size
+
+        # different behaviour between training and validation for sampling patches.
+        # For patch based training, sampling size can be different to load_im_size size.
+        if self.sample_patches:
+            #Get the patches origin information. Use this for stitching together in valid/testing
+
+            self.patchified_idxs = self.get_patch_stitching_info(self.load_im_size, sample_patch_size )
+
+            #If training, always return patch-size inputs and labels, if valid/test, return full-size input/label.
+            if split == "training":
+                self.input_size = self.sample_patch_size
+            else:
+                self.input_size = self.load_im_size
+
+
+        else:
+            #  If not sample_patches then just 1 big patch!
+            self.patchified_idxs = [[0,0]]
+
+            #if not patch sampling, load_im_size same as input_size!
+            self.input_size = self.load_im_size
+
+        #ratio between original image and load_image size, to resize landmarks.
+        self.downscale_factor = [original_image_size[0]/self.load_im_size[0], original_image_size[1]/self.load_im_size[1]]
+
         #if we're sampling patches during training w/o aug we still need to center crop so change the aug strategy
         if self.sample_patches and self.data_augmentation_strategy == None and split == "training":
             self.data_augmentation_package = "imgaug"
             self.data_augmentation_strategy = "CenterCropOnly"
-            print("Only Augmentation is CenterCropOnly after patch sample for %s split." % split)
 
 
         if self.data_augmentation_strategy == None:
@@ -98,7 +124,7 @@ class DatasetBase(data.Dataset):
             #Get data augmentor for the correct package
             self.aug_package_loader = get_aug_package_loader(self.data_augmentation_package)
             #Get specific data augmentation strategy
-            self.transform = self.aug_package_loader(self.data_augmentation_strategy, input_size)
+            self.transform = self.aug_package_loader(self.data_augmentation_strategy, self.input_size )
             print("Using data augmentation package %s and strategy %s for %s split." % (data_augmentation_package, self.data_augmentation_strategy, split) )
 
 
@@ -118,15 +144,13 @@ class DatasetBase(data.Dataset):
         self.cache_data = cache_data
         self.debug = debug
         
-        self.input_size = input_size
 
         #If we are sampling patches we want to load in the full resolution image.
-        if self.sample_patches:
-            self.load_im_size = original_image_size
-            self.downscale_factor = 1
-        else:
-            self.load_im_size = input_size
-            self.downscale_factor = [original_image_size[0]/input_size[0], original_image_size[1]/input_size[1]]
+        # if self.sample_patches:
+        #     self.load_im_size = self.sampling_size
+        #     self.downscale_factor = 1
+        # else:
+        # self.load_im_size = self.sampling_size
 
 
         self.original_image_size = original_image_size
@@ -220,23 +244,22 @@ class DatasetBase(data.Dataset):
         im_path = self.image_paths[index]
         run_time_debug= False
         this_uid = self.uids[index]
-        # print("load image time", time()- soo)
+        heatmap_label_size = self.input_size
+        untransformed_im = image
+        untransformed_coords = coords
 
-        so = time()
+      
 
-        # if self.sample_input_patch()
+
 
         #Do data augmentation
         if self.data_augmentation_strategy != None:
 
 
-            untransformed_im = image
-            untransformed_coords = coords[:,:2]
 
-            #If sampling patches we first sample the patch with a little wiggle room, normalize the lms. The transform center crops it back.
+            #If sampling patches we first sample the patch with a little wiggle room, & normalize the lms. The transform center-crops it back.
             if self.sample_patches:
                 untransformed_im, untransformed_coords, landmarks_in_indicator = self.sample_patch(untransformed_im, untransformed_coords)
-          
 
             kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords], shape=untransformed_im[0].shape )
 
@@ -248,36 +271,39 @@ class DatasetBase(data.Dataset):
             landmarks_in_indicator = [1 if ((0 <= xy[0] <= self.input_size[0] ) and (0 <= xy[1] <= self.input_size[1] )) else 0 for xy in input_coords  ]
             
         else:
-            # if self.sample_patches:
-            #     raise NotImplementedError("need to implement sampling patches without data augmentation.")
-            untransformed_im = image
-            untransformed_coords = coords
+
             input_coords = coords
             input_image = torch.from_numpy(image)
             landmarks_in_indicator = [1 for xy in input_coords  ]
 
-            #If sampling patches and validation we need to patchify them. We get a list inputs for each sample.
-            if self.sample_patches and self.split == "validation":
-                image_patchified = self.patchify_image(input_image)
-                input_image = torch.stack([normalize_cmr(x, to_tensor=True) for x in image_patchified])
+        
+        # #If sampling patches and validation/testing we return the full res image and full res label.
+        # if self.sample_patches and (self.split == "validation" or self.split == "testing"):
+        #     image_patchified = self.patchify_image(input_image)
+        #     input_image = torch.stack([normalize_cmr(x, to_tensor=True) for x in image_patchified])
+        #     heatmap_label_size = self.load_im_size
+
 
         if self.generate_hms_here:
             
-            label = self.LabelGenerator.generate_labels(input_coords, landmarks_in_indicator,  self.input_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
+            label = self.LabelGenerator.generate_labels(input_coords, landmarks_in_indicator,  heatmap_label_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
         else:
             label = []
 
         sample = {"image":input_image , "label":label, "target_coords": input_coords, "landmarks_in_indicator": landmarks_in_indicator,
-            "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid  }
+            "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid }
 
         #If coordinates are cutoff by augmentation throw a run time error. 
-        if len(np.array(input_coords)) <len(coords):
-            print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
-            run_time_debug = True
+        # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
+        #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
+        #     run_time_debug = True
+        # else:
+        #     print("ok")
 
         
 
-        if (self.debug or run_time_debug):
+        if (self.debug or run_time_debug)  :
+            print("input coords: " , input_coords)
             self.LabelGenerator.debug_sample(sample,untransformed_im, untransformed_coords)
           
     
@@ -294,11 +320,12 @@ class DatasetBase(data.Dataset):
 
         """
 
+        landmarks_in_indicator = [1 for xy in landmarks  ]
 
-        return self.LabelGenerator.generate_labels(landmarks, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
+        return self.LabelGenerator.generate_labels(landmarks, landmarks_in_indicator, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
         
 
-    def sample_patch(self, image, landmarks):
+    def sample_patch(self, image, landmarks, lm_safe_region= 4, safe_padding=128):
         
         z_rand = np.random.uniform(0, 1)
         landmarks_in_indicator = []
@@ -307,76 +334,152 @@ class DatasetBase(data.Dataset):
             while 1 not in landmarks_in_indicator:
                 landmarks_in_indicator = []
 
-                y_rand = np.random.randint(0, self.original_image_size[1]-self.sample_patch_size[1])
-                x_rand = np.random.randint(0, self.original_image_size[0] -self.sample_patch_size[0])
+                y_rand = np.random.randint(safe_padding, self.load_im_size[1]-self.sample_patch_size[1])
+                x_rand = np.random.randint(safe_padding, self.load_im_size[0] -self.sample_patch_size[0])
 
                 for lm in landmarks:
                     landmark_in = 0
                     # if y_rand <= lm[1]-4 and y_rand+self.sample_patch_size[1]  <= lm[1]+4 :
                     #     if x_rand <= lm[0]-4 and  lm[0]-4 <= x_rand + self.sample_patch_size[0]:
 
-                    if y_rand  <= lm[1]<= y_rand+self.sample_patch_size[1]:
-                        if x_rand <= lm[0] <= x_rand +self.sample_patch_size[0]:
+                    if y_rand+lm_safe_region  <= lm[1]<= (y_rand+self.sample_patch_size[1])-lm_safe_region:
+                        if x_rand+lm_safe_region <= lm[0] <= (x_rand +self.sample_patch_size[0])-lm_safe_region:
                             landmark_in = 1
                     
                     landmarks_in_indicator.append(landmark_in)
 
+                # y_rand = self.load_im_size[1]-self.sample_patch_size[1]
+                # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
+                # y_rand = safe_padding
+                # x_rand = safe_padding
+                # y_rand = safe_padding
+                # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
+
         else:
-            y_rand = np.random.randint(0, self.original_image_size[1]-self.sample_patch_size[1])
-            x_rand = np.random.randint(0, self.original_image_size[0] -self.sample_patch_size[0])
+            y_rand = np.random.randint(safe_padding, self.load_im_size[1]-self.sample_patch_size[1])
+            x_rand = np.random.randint(safe_padding, self.load_im_size[0] -self.sample_patch_size[0])
 
             for lm in landmarks:
                 landmark_in = 0
-                if y_rand <= lm[1]<= y_rand+self.sample_patch_size[1]:
-                    if x_rand <= lm[0] <= x_rand +self.sample_patch_size[0]:
+                if y_rand+lm_safe_region <= lm[1]<= y_rand+self.sample_patch_size[1]-lm_safe_region:
+                    if x_rand+lm_safe_region <= lm[0] <= x_rand +self.sample_patch_size[0]-lm_safe_region:
                         landmark_in = 1
                 landmarks_in_indicator.append(landmark_in)
 
-
+       
         # print("y and x rands@ ", y_rand, x_rand)
-        normalized_landmarks = [[lm[0]-x_rand, lm[1]-y_rand] for lm in landmarks]
+
+        #TODO: i think this could mess up the normalized_landmarks here if x_rand,y_rand are near edges. 
+        # should i minus the safe crops instead here?
 
         #Adding some padding to allow data augmentations and then center crop the desired size afterwards.
-        safe_crop_y = [max(0,y_rand-16), min(self.original_image_size[1], y_rand+self.sample_patch_size[1]+16)]
-        safe_crop_x = [max(0,x_rand-16), min(self.original_image_size[0], x_rand+self.sample_patch_size[0]+16)]
+        # safe_crop_y = [max(0,y_rand-safe_padding), min(self.original_image_size[1], y_rand+self.sample_patch_size[1]+safe_padding)]
+        # safe_crop_x = [max(0,x_rand-safe_padding), min(self.original_image_size[0], x_rand+self.sample_patch_size[0]+safe_padding)]
 
         # print("safe crops: ", safe_crop_y, safe_crop_x)
+
+        #first pad the image by padding with zeros.
+        # padded_image = np.expand_dims(np.pad(image[0], (safe_padding,safe_padding)), axis=0)
         #Pytorch has loaded the images y-x axis way round
-        cropped_image_padded = image[:, safe_crop_y[0]:safe_crop_y[1], safe_crop_x[0]:safe_crop_x[1]]
+        # cropped_image_padded = image[:, safe_crop_y[0]:safe_crop_y[1], safe_crop_x[0]:safe_crop_x[1]]
 
-        return cropped_image_padded, normalized_landmarks, landmarks_in_indicator
+        #First pad image
+        padded_image =   np.expand_dims(np.pad(image[0], (safe_padding,safe_padding)), axis=0)
+        padded_patch_size = [x+ (2*safe_padding) for x in self.sample_patch_size]
+
+        y_rand_pad = y_rand- safe_padding
+        x_rand_pad = x_rand- safe_padding
+
+        cropped_padded_sample = padded_image[:, y_rand_pad:y_rand_pad+padded_patch_size[1], x_rand_pad:x_rand_pad+padded_patch_size[0]]
+        # padded_sample =  np.expand_dims(np.pad(cropped_sample[0], (safe_padding,safe_padding)), axis=0)
+
+        # x_rand_pad = x_rand+safe_padding
+        # y_rand_pad = y_rand+safe_padding 
+        normalized_landmarks = [[lm[0]-(x_rand_pad-safe_padding), lm[1]-(y_rand_pad-safe_padding)] for lm in landmarks]
+
+        if self.debug:
+            padded_lm = [[lm[0]+safe_padding, lm[1]+safe_padding] for lm in landmarks]
+
+            print("the min xy is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
+             and the normalized landmark is %s : " % 
+                (x_rand, y_rand, x_rand_pad, y_rand_pad, landmarks, padded_lm, normalized_landmarks ))
 
 
-    def patchify_image(self, image):
-        """Breaks up an input image into patches, where each patch overlaps with the next by 50% in x,y.
+            visualize_patch(image[0], landmarks[0], padded_image[0], padded_lm[0], cropped_padded_sample[0], normalized_landmarks[0], [x_rand_pad, y_rand_pad])
+        return cropped_padded_sample, normalized_landmarks, landmarks_in_indicator
+
+
+    def get_patch_stitching_info(self, image_size, patch_size):
+        """
+        Get stitching ingo for breaking up an input image into patches, 
+        where each patch overlaps with the next by 50% in x,y. The x,y, indicies are returned for each
+        patch so we know how to slice the full resolution image.
 
         Args:
             image (_type_): _description_
         Returns
+            patch_start_idxs ([[x,y]]) list of x,y indicies of where to slice for each patch
 
         """
-        all_image_patches = []
-       
+        patch_start_idxs = []
+
+     
         break_x = break_y = False
-        for x in range(0, int(self.original_image_size[0]), int(self.sample_patch_size[0]/2)):
-            for y in range(0, int(self.original_image_size[1]), int(self.sample_patch_size[1]/2)):
+        for x in range(0, int(image_size[0]), int(patch_size[0]/2)):
+            for y in range(0, int(image_size[1]), int(patch_size[1]/2)):
                 break_y = False
                 # Ensure we do not go past the boundaries of the image
-                if x > self.original_image_size[0]-self.sample_patch_size[0]:
-                    x = self.original_image_size[0]-self.sample_patch_size[0]
+                if x > image_size[0]-patch_size[0]:
+                    x = image_size[0]-patch_size[0]
                     break_x = True
-                if y > self.original_image_size[1]-self.sample_patch_size[1]:
-                    y = self.original_image_size[1]-self.sample_patch_size[1]
+                if y > image_size[1]-patch_size[1]:
+                    y = image_size[1]-patch_size[1]
                     break_y = True
-
                 #torch loads images y-x so swap axis here
-                patch = image[:, y:y+self.sample_patch_size[1], x:x+self.sample_patch_size[0]  ]
-                all_image_patches.append(patch)
+                patch_start_idxs.append([x,y])
+
 
                 if break_y:
                     break
             if break_x:
                 break
         
-        all_image_patches = torch.stack(all_image_patches)
-        return all_image_patches
+        return patch_start_idxs
+
+
+    # def patchify_image(self, image):
+    #     """Breaks up an input image into patches, where each patch overlaps with the next by 50% in x,y.
+
+    #     Args:
+    #         image (_type_): _description_
+    #     Returns
+
+    #     """
+    #     all_image_patches = []
+    #     patch_start_idxs = []
+
+       
+    #     break_x = break_y = False
+    #     for x in range(0, int(self.original_image_size[0]), int(self.sample_patch_size[0]/2)):
+    #         for y in range(0, int(self.original_image_size[1]), int(self.sample_patch_size[1]/2)):
+    #             break_y = False
+    #             # Ensure we do not go past the boundaries of the image
+    #             if x > self.original_image_size[0]-self.sample_patch_size[0]:
+    #                 x = self.original_image_size[0]-self.sample_patch_size[0]
+    #                 break_x = True
+    #             if y > self.original_image_size[1]-self.sample_patch_size[1]:
+    #                 y = self.original_image_size[1]-self.sample_patch_size[1]
+    #                 break_y = True
+    #             #torch loads images y-x so swap axis here
+    #             patch = image[:, y:y+self.sample_patch_size[1], x:x+self.sample_patch_size[0]  ]
+    #             all_image_patches.append(patch)
+    #             patch_start_idxs.append([x,y])
+
+
+    #             if break_y:
+    #                 break
+    #         if break_x:
+    #             break
+        
+    #     all_image_patches = torch.stack(all_image_patches)
+    #     return all_image_patches, patch_start_idxs

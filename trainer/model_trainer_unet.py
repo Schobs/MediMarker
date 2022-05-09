@@ -19,6 +19,7 @@ from torch.cuda.amp import GradScaler, autocast
 import imgaug
 import torch.multiprocessing as mp
 from torch.multiprocessing import Pool, Process, set_start_method
+import matplotlib.pyplot as plt
 
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
 from torchvision.transforms import Resize,InterpolationMode
@@ -231,7 +232,26 @@ class UnetTrainer(NetworkTrainer):
         return pred_coords
 
 
+    def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
+        '''
+        Use model outputs from a patchified image to stitch together a full resolution heatmap
+        
+        '''
 
+
+        full_heatmap = np.zeros((self.orginal_im_size[1], self.orginal_im_size[0]))
+        patch_size_x = patch_predictions[0].shape[0]
+        patch_size_y = patch_predictions[0].shape[1]
+
+        for idx, patch in enumerate(patch_predictions):
+            full_heatmap[stitching_info[idx][1]:stitching_info[idx][1]+patch_size_y, stitching_info[idx][0]:stitching_info[idx][0]+patch_size_x] += patch.detach.cpu().numpy()
+
+        plt.imshow(full_heatmap)
+        plt.show()
+
+
+
+        
 
     def predict_heatmaps_and_coordinates(self, data_dict,  return_all_layers = False, resize_to_og=False,):
         data =(data_dict['image']).to( self.device )

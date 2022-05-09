@@ -318,21 +318,24 @@ class NetworkTrainer(ABC):
                     self.update_dataloader_sigmas(self.sigmas)
 
         else:
-            if self.deep_supervision:
-                output = self.network(data)[-from_which_level_supervision:]
+            if self.sample_patches:
+                output = self.inference_patchified(data)
             else:
-                output = self.network(data)
+                if self.deep_supervision:
+                    output = self.network(data)[-from_which_level_supervision:]
+                else:
+                    output = self.network(data)
 
 
-            del data
-            l = self.loss(output, target, self.sigmas)
-        
-            if backprop:
-                l.backward()
-                torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
-                self.optimizer.step() 
-                if self.regress_sigma:
-                    self.update_dataloader_sigmas(self.sigmas)
+                del data
+                l = self.loss(output, target, self.sigmas)
+            
+                if backprop:
+                    l.backward()
+                    torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
+                    self.optimizer.step() 
+                    if self.regress_sigma:
+                        self.update_dataloader_sigmas(self.sigmas)
 
 
         if get_coord_error:
@@ -446,7 +449,25 @@ class NetworkTrainer(ABC):
            
 
 
+    def inference_patchified(self, samples_patchified, stitching_infos):
+        
+        all_hms = []
+        for idx, sample_patches in enumerate(samples_patchified):
+            stich_info = stitching_infos[idx]
+            patch_predictions = []
 
+            for patch in sample_patches:
+                output = self.network(patch)
+                patch_predictions.append(output)
+
+
+            final_hm = self.stitch_heatmap(patch_predictions, stich_info)
+            all_hms.append(torch.tensor(final_hm))
+
+        all_hms = torch.stack(all_hms)
+        print("hm patchified output len: ", all_hms.shape)
+        return all_hms
+      
 
 
 
@@ -547,7 +568,7 @@ class NetworkTrainer(ABC):
                 split = val_split,
                 sample_patches = self.model_config.SAMPLER.SAMPLE_PATCH,
                 sample_patch_size = self.model_config.SAMPLER.SAMPLE_PATCH_SIZE,
-                sample_patch_bias = self.model_config.SAMPLER.SAMPLER_BIAS,
+                sample_patch_bias = 1.0,
                 root_path = self.model_config.DATASET.ROOT,
                 sigmas =  np_sigmas,
                 generate_hms_here = not self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD, 

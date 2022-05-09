@@ -169,6 +169,42 @@ def visualize_image_trans_coords(untrans_image, untrans_coords, trans_image, tra
     plt.close()
 
 
+def visualize_patch(full_im, full_lm, padded_image, padded_lm, image_patch, landmarks, padding_slice):
+    '''
+    visualize a full image with a landmark, and the image patch along with the same landmark.
+    
+    '''
+    assert len(full_lm) == len(landmarks) == 2
+
+    fig, ax = plt.subplots(nrows=1, ncols=3, squeeze=False)
+
+    print("full im shape and patch shape: ", full_im.shape, image_patch.shape)
+   
+
+
+    ax[0,0].imshow(full_im, cmap='gray')
+    rect1 = patches.Rectangle((int(full_lm[0]), int(full_lm[1])),3,3,linewidth=2,edgecolor='r',facecolor='none')
+    ax[0,0].add_patch(rect1)
+
+    ax[0,1].imshow(padded_image, cmap='gray')
+    rect_patch = patches.Rectangle((int(padding_slice[0]), int(padding_slice[1])),image_patch.shape[0],image_patch.shape[1],linewidth=2,edgecolor='r',facecolor='none')
+    ax[0,1].add_patch(rect_patch)
+    rect_plm = patches.Rectangle((int(padded_lm[0]), int(padded_lm[1])),3,3,linewidth=2,edgecolor='r',facecolor='none')
+    ax[0,1].add_patch(rect_plm)
+
+    ax[0,2].imshow(image_patch, cmap='gray')
+
+    
+    rect2 = patches.Rectangle((int(landmarks[0]), int(landmarks[1])),3,3,linewidth=2,edgecolor='g',facecolor='none')
+    ax[0,2].add_patch(rect2)
+
+
+
+
+    plt.show()
+    plt.close()
+
+
 def visualize_imageNcoords_cropped_imgNnormcoords(og_image, cropped_im, og_coords, norm_coords, lm_indicators):
     '''
     visualize an image, the cropped (with pad image), original coords and normalized coords to the crop.

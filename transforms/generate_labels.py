@@ -15,9 +15,9 @@ class LabelGenerator(ABC):
     """ Super class that defines some methods for generating landmark labels.
     """
 
-    @abstractmethod
-    def __init__(self):
-        pass
+    def __init__(self, full_res_size, network_input_size):
+        self.full_res_size = full_res_size
+        self.network_input_size = network_input_size
 
     @abstractmethod
     def generate_labels(self, landmarks, landmarks_in_indicator, input_size, hm_sigmas, num_res_supervisions, hm_lambda_scale):
@@ -43,6 +43,12 @@ class LabelGenerator(ABC):
             image [float, float]: original input image before augmentation  (same as those in sample_dict if no aug used).
         """
 
+    @abstractmethod
+    def stitch_heatmap(self, patch_predictions, stitching_info):
+        '''
+        Use model outputs from a patchified image to stitch together a full resolution heatmap
+        
+        '''
 
 class UNetLabelGenerator(LabelGenerator):
     """ Generates target heatmaps for the U-Net network training scheme
@@ -84,6 +90,15 @@ class UNetLabelGenerator(LabelGenerator):
 
 
         return hm_list
+
+    def stitch_heatmap(self, patch_predictions, stitching_info):
+        '''
+        Use model outputs from a patchified image to stitch together a full resolution heatmap
+        
+        '''
+        
+
+    
 
     def debug_sample(self, sample_dict, untrans_image, untrans_coords):
         """ Visually debug a sample. Provide logging and visualisation of the sample.

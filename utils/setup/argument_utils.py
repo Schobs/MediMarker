@@ -58,6 +58,8 @@ def infer_additional_arguments(yaml_args):
     yaml_args.INFERRED_ARGS.RESIZE_FIRST = resize_first
 
     return yaml_args
+
+
 def argument_checking(yaml_args):
     """ Checks on arguments to make sure wrong combination of arguments can not be input.
 
@@ -68,16 +70,79 @@ def argument_checking(yaml_args):
         ValueError: Errors based on argument combinations.
     """
     all_errors = []
+    # if yaml_args.SAMPLER.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
+
 
     try:
-        if yaml_args.SAMPLER.SAMPLE_PATCH == True and yaml_args.SAMPLER.SAMPLE_PATCH_SIZE != yaml_args.SAMPLER.INPUT_SIZE:
-            raise ValueError("You want to train the model by sampling patches from the full res image (yaml_args.SAMPLER.SAMPLE_PATCH=True)\
-                but your SAMPLER.SAMPLE_PATCH_SIZE (%s) does not match your newtwork input size SAMPLER.INPUT_SIZE (%s). Either set \
-                these to the same if you want to use patch sampling training scheme or set SAMPLER.SAMPLE_PATCH =False and the full res image will be \
-                resized to SAMPLER.INPUT_SIZE (%s) for full image, lower res training. I enforce using seperate parameters here to ensure you don't \
-                unintentionally run the wrong scheme." %  ( yaml_args.SAMPLER.SAMPLE_PATCH, yaml_args.SAMPLER.INPUT_SIZE, yaml_args.SAMPLER.INPUT_SIZE) )
+        if yaml_args.SAMPLER.SAMPLE_PATCH == True and yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD:
+            raise ValueError("When patch-based training, no support for regressing sigma with SAMPLER.NUM_WORKERS > 0. You chose %s workers, set it to 0. \
+                Alteratively, you can regress sigma with full image training, or patch-based training with a fixed sigma using multiple workers." %  ( yaml_args.SAMPLER.NUM_WORKERS) )
     except ValueError as e:
         all_errors.append(e)
+
+
+    # try:
+    #     if yaml_args.SAMPLER.SAMPLE_PATCH == True and yaml_args.SAMPLER.SAMPLE_PATCH_SIZE != yaml_args.SAMPLER.INPUT_SIZE:
+    #         raise ValueError("You want to train the model by sampling patches from the full res image (yaml_args.SAMPLER.SAMPLE_PATCH=True)\
+    #             but your SAMPLER.SAMPLE_PATCH_SIZE (%s) does not match your newtwork input size SAMPLER.INPUT_SIZE (%s). Either set \
+    #             these to the same if you want to use patch sampling training scheme or set SAMPLER.SAMPLE_PATCH =False and the full res image will be \
+    #             resized to SAMPLER.INPUT_SIZE (%s) for full image, lower res training. I enforce using seperate parameters here to ensure you don't \
+    #             unintentionally run the wrong scheme." %  ( yaml_args.SAMPLER.SAMPLE_PATCH, yaml_args.SAMPLER.INPUT_SIZE, yaml_args.SAMPLER.INPUT_SIZE) )
+    # except ValueError as e:
+    #     all_errors.append(e)
+
+    #Patch sampling cases to cover:
+    # 1) General:
+    #   a) ensure patch size < input size
+    #2) NOT sample full resolution:
+    #   a) ensure full res >= input res 
+    #   b) WARN that full res are rescaled to input size before patch sampling occurs
+    # 3) YES sample full resolution:
+    #   a) ensure input size == original image size
+    if yaml_args.SAMPLER.SAMPLE_PATCH:
+        
+        #1a
+        try:
+            if yaml_args.SAMPLER.INPUT_SIZE[0] <= yaml_args.SAMPLER.SAMPLE_PATCH_SIZE[0] or yaml_args.SAMPLER.INPUT_SIZE[1] <= yaml_args.SAMPLER.SAMPLE_PATCH_SIZE[1]:
+                raise ValueError(
+                    "Your SAMPLER.SAMPLE_PATCH_SIZE >= SAMPLER.INPUT_SIZE (%s vs %s). The patch is being sampled from the image resized to SAMPLER.INPUT_SIZE."
+                    "Therefore, the SAMPLE_PATCH_SIZE must be smaller than the INPUT_SIZE! " %  
+                    ( yaml_args.SAMPLER.SAMPLE_PATCH_SIZE , yaml_args.SAMPLER.INPUT_SIZE) )
+        except ValueError as e:
+            all_errors.append(e)
+        #2a
+        if not yaml_args.SAMPLER.SAMPLE_FROM_FULLRES:
+            try:
+                if (yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[0] <= yaml_args.SAMPLER.INPUT_SIZE[0] or
+                (yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[1] <= yaml_args.SAMPLER.INPUT_SIZE[1])):
+                    raise ValueError(
+                        "You don't want to sample patches from full resolution (SAMPLER.SAMPLE_FROM_FULLRES==False ), but your" 
+                        " DATASET.ORIGINAL_IMAGE_SIZE is <= as SAMPLER.INPUT_SIZE (%s <= %s). The INPUT SIZE is the resolution we are " 
+                        "sampling from, so you are indicating you want to sample full res (or larger than full res). "
+                        " Please put SAMPLE_FROM_FULLRES to True if you want this, otherwise make INPUT_SIZE smaller than ORIGINAL_IMAGE_SIZE." %  
+                        ( yaml_args.DATASET.ORIGINAL_IMAGE_SIZE , yaml_args.SAMPLER.INPUT_SIZE) )
+            except ValueError as e:
+                all_errors.append(e)
+            
+            #2b
+            warnings.warn(f'SAMPLER.SAMPLE_FROM_FULLRES is False. You are resizing input images from {yaml_args.DATASET.ORIGINAL_IMAGE_SIZE} to {yaml_args.SAMPLER.INPUT_SIZE} \
+                and sampling {yaml_args.SAMPLER.SAMPLE_PATCH_SIZE} patches from the {yaml_args.SAMPLER.INPUT_SIZE} resolution image.', stacklevel=2)
+
+
+
+        if yaml_args.SAMPLER.SAMPLE_FROM_FULLRES:
+            try:
+                if yaml_args.DATASET.ORIGINAL_IMAGE_SIZE != yaml_args.SAMPLER.INPUT_SIZE:
+                    raise ValueError("You indicate you want to sample from full resolution images (SAMPLER.SAMPLE_FROM_FULLRES==True),"
+                        " but ORIGINAL_IMAGE_SIZE != SAMPLER.INPUT_SIZE (%s vs %s). Patches are sampled from the image resized to SAMPLER.INPUT_SIZE" 
+                        " Please configure INPUT_SIZE to the same as ORIGINAL_IMAGE_SIZE." %  
+                        ( yaml_args.DATASET.ORIGINAL_IMAGE_SIZE , yaml_args.SAMPLER.INPUT_SIZE) )
+            except ValueError as e:
+                all_errors.append(e)
+        
+       
+
+      
 
 
     try:
@@ -110,14 +175,14 @@ def argument_checking(yaml_args):
 
     #Warnings
     if yaml_args.SOLVER.REGRESS_SIGMA and yaml_args.SOLVER.REGRESS_SIGMA_LOSS_WEIGHT <= 0:
-        warnings.warn('You are attempting to regress sigmas (yaml_args.SOLVER.REGRESS_SIGMA=True) but your yaml_args.REGRESS_SIGMA_LOSS_WEIGHT is <=0. \
-            This means the magnitude of sigma will not be penalized and could lead to trivial solution sigma -> inf. \
-                Consider this setting this to a positive float (e.g. 0.005). You are warned! ', stacklevel=2)
+        warnings.warn("You are attempting to regress sigmas (yaml_args.SOLVER.REGRESS_SIGMA=True) but your yaml_args.REGRESS_SIGMA_LOSS_WEIGHT is <=0."
+            "This means the magnitude of sigma will not be penalized and could lead to trivial solution sigma -> inf."
+            "Consider this setting this to a positive float (e.g. 0.005). You are warned! ", stacklevel=2)
 
     if yaml_args.SAMPLER.DATA_AUG == None:
         warnings.warn('You are not using data augmentation (SAMPLER.DATA_AUG = None). Using a data augmentation scheme will improve your results.', stacklevel=2)
 
-
+   
     if all_errors:
         print("I have identified some issues with your .yaml config file:")
         raise ValueError(all_errors)
