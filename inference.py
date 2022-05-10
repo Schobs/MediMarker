@@ -13,7 +13,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 # import kale.utils.logger as logging
 
 
-from datasets.dataset_unet import ASPIRELandmarks
+from datasets.dataset import DatasetBase
 from config import get_cfg_defaults
 from trainer.model_trainer_unet import UnetTrainer
 
@@ -25,7 +25,7 @@ import csv
 
 def run_inference_model(logger, cfg, model_path, model_name):
 
-    test_dataset = ASPIRELandmarks(
+    test_dataset = DatasetBase(
         annotation_path =cfg.DATASET.SRC_TARGETS,
         landmarks = cfg.DATASET.LANDMARKS,
         split = "validation",

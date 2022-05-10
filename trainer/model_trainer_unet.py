@@ -61,7 +61,7 @@ class UnetTrainer(NetworkTrainer):
         self.num_batches_per_epoch = model_config.SOLVER.MINI_BATCH_SIZE
         self.gen_hms_in_mainthread = self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
         self.label_generator = UNetLabelGenerator()
-        self.sample_patches = self.model_config.SAMPLER.SAMPLE_PATCH
+        self.sampler_mode = self.model_config.SAMPLER.SAMPLE_MODE
 
         #Training params
         self.max_num_epochs =  model_config.SOLVER.MAX_EPOCHS

@@ -49,7 +49,7 @@ class NetworkTrainer(ABC):
         #Dataloader info
         self.data_loader_batch_size = 12
         self.num_batches_per_epoch = 150
-        self.sample_patches = False
+        self.sampler_mode = False
 
         #Training params
         self.max_num_epochs =  1000
@@ -279,6 +279,7 @@ class NetworkTrainer(ABC):
 
         data =(data_dict['image']).to( self.device )
 
+
         #This happens when we regress sigma with >0 workers due to multithreading issues.
         if self.gen_hms_in_mainthread:
             batch_hms = []
@@ -318,7 +319,7 @@ class NetworkTrainer(ABC):
                     self.update_dataloader_sigmas(self.sigmas)
 
         else:
-            if self.sample_patches:
+            if self.sampler_mode == "patch":
                 output = self.inference_patchified(data)
             else:
                 if self.deep_supervision:
@@ -538,9 +539,10 @@ class NetworkTrainer(ABC):
             landmarks = self.model_config.DATASET.LANDMARKS,
             LabelGenerator = self.label_generator,
             split = "training",
-            sample_patches = self.model_config.SAMPLER.SAMPLE_PATCH,
-            sample_patch_size = self.model_config.SAMPLER.SAMPLE_PATCH_SIZE,
-            sample_patch_bias = self.model_config.SAMPLER.SAMPLER_BIAS,
+            sample_mode = self.model_config.SAMPLER.SAMPLE_MODE,
+            sample_patch_size = self.model_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
+            sample_patch_bias = self.model_config.SAMPLER.PATCH.SAMPLER_BIAS,
+            sample_patch_from_resolution = self.model_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
             root_path = self.model_config.DATASET.ROOT,
             sigmas =  np_sigmas,
             generate_hms_here = not self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD, 
@@ -566,9 +568,10 @@ class NetworkTrainer(ABC):
                 landmarks = self.model_config.DATASET.LANDMARKS,
                 LabelGenerator = self.label_generator,
                 split = val_split,
-                sample_patches = self.model_config.SAMPLER.SAMPLE_PATCH,
-                sample_patch_size = self.model_config.SAMPLER.SAMPLE_PATCH_SIZE,
-                sample_patch_bias = 1.0,
+                sample_mode = "full",
+                sample_patch_size = self.model_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
+                sample_patch_bias = self.model_config.SAMPLER.PATCH.SAMPLER_BIAS,
+                sample_patch_from_resolution = self.model_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
                 root_path = self.model_config.DATASET.ROOT,
                 sigmas =  np_sigmas,
                 generate_hms_here = not self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD, 
