@@ -194,17 +194,11 @@ class NetworkTrainer(ABC):
         print("initialized auto mixed precision.")
 
     @abstractmethod
-    def get_coords_from_model_output(self, model_output):
+    def get_coords_from_heatmap(self, model_output):
 
         """
         Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
        """
-
-    # @abstractmethod
-    # def run_inference(self):
-    #     """ Function to run inference.
-    #     """
-
 
     def train(self):
         if not self.was_initialized:
@@ -415,16 +409,6 @@ class NetworkTrainer(ABC):
        
         return continue_training
 
-    def inference(self):
-        #1) need access to key list of variables to save
-        #2) should run using run_iteration
-        #3) need a way to deal with the key dictionary & combine all samples
-        #4) need to put evaluation methods in evluation function & import and ues key_dict for analysis
-
-        #1) instantitate test dataset and dataloader
-        #2) iterate dataloader and run_iteration each time to go through and save results.
-        #3) return individual results & do summary results.
-        x = 1
 
     def maybe_save_checkpoint(self, new_best_valid_bool, new_best_valid_coord_bool):
         """
@@ -478,12 +462,9 @@ class NetworkTrainer(ABC):
         #2) If log_coords, get coords from output. Then, check for the keys for what to log.
         if log_coords:
 
-            if self.sampler_mode == "patch":
-                pred_coords, extra_info = self.get_coords_from_model_output_patchified(output)
-
-            else:
-                pred_coords, extra_info = self.get_coords_from_model_output(output)
+            pred_coords, extra_info = self.get_coords_from_heatmap(output)
             
+            #Maybe rescale the coordinates based on evaluation settings.
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords, data_dict)
                 
             coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
@@ -517,6 +498,7 @@ class NetworkTrainer(ABC):
                         if "landmark_errors" in list(logged_vars.keys()):
                             logged_vars["all_landmark_errors"][idx].append(er)
 
+                    #any extra info returned by the child class when calculating coords from outputs.
                     for key_ in list(extra_info.keys()):
                         ind_dict[key_] = ((extra_info["key_"][idx].detach().cpu().numpy()))
 
@@ -573,33 +555,39 @@ class NetworkTrainer(ABC):
 
         return pred_coords, target_coords
 
-    @abstractmethod
-    def get_coords_from_model_output_patchified(self, output):
-        """
-        Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
-        """
 
-        # raise NotImplementedError()
+    @abstractmethod 
+    def patchify_and_predict(self, single_sample, logged_vars):
+        """Function that takens in a large input image, patchifies it and runs each patch through the model & stitches heatmap together
+
+        #1) should split up into patches of given patch-size.
+        #2) should run patches through in batches using run_iteration, NOT LOGGING ANYTHING but needs to return the OUTPUTS somehow. 
+            MUST ADD OPTION TO RETURN OUTPUTS in run_iteration?
+        #3) Need to use method to stitch patches together (future, phdnet will use patch size 512 512 for now).
+        #4) call log_key_variables function now with the final big heatmap as the "output". The logging should work as usual from that.
         
-        # all_hms = []
-        # for idx, sample_patches in enumerate(samples_patchified):
-        #     stich_info = stitching_infos[idx]
-        #     patch_predictions = []
-
-        #     for patch in sample_patches:
-        #         output = self.network(patch)
-        #         patch_predictions.append(output)
+        Returns:
+            _type_: _description_
+        """
 
 
-        #     final_hm = self.stitch_heatmap(patch_predictions, stich_info)
-        #     all_hms.append(torch.tensor(final_hm))
+    @abstractmethod 
+    def run_inference(self):
+        """ Function to run inference on a full sized input
 
-        # all_hms = torch.stack(all_hms)
-        # print("hm patchified output len: ", all_hms.shape)
-        # return all_hms
-      
+        #0) instantitate test dataset and dataloader
+        #1A) if FULL: 
+            i) iterate dataloader and run_iteration each time to go through and save results.
+            ii) should run using run_iteration with logged_vars to log
+        1B) if PATCHIFYING full_res_output  <- this can be fututre addition
+            i) use patchify_and_predict to stitch hm together with logged_vars to log
 
-
+        #2) need a way to deal with the key dictionary & combine all samples
+        #3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
+        #4) return individual results & do summary results.
+        """
+       
+        x = 1
 
     def save_checkpoint(self, path):
         state = {

@@ -189,7 +189,7 @@ class UnetTrainer(NetworkTrainer):
     #     """
     #     super(UnetTrainer, self).log_key_variables(self, output, loss, data_dict, logged_vars)
 
-    def get_coords_from_model_output(self, output):
+    def get_coords_from_heatmap(self, output):
         """ Gets x,y coordinates from a model output. Here we use the final layer prediction of the U-Net,
             maybe resize and get coords as the peak pixel. Also return value of peak pixel.
 
