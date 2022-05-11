@@ -7,11 +7,11 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE: 12
-  MAX_EPOCHS: 1000
-  REGRESS_SIGMA: False
+  MAX_EPOCHS: 5
+  # REGRESS_SIGMA: True
   REGRESS_SIGMA_LOSS_WEIGHT: 0.005
   AUTO_MIXED_PRECISION: True
-  MINI_BATCH_SIZE: 1
+  MINI_BATCH_SIZE: 5
 
 
 # /mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2/ISBI_512F_512Res_3GS_4MFR_AugACEBS_DS5
@@ -39,7 +39,7 @@ DATASET:
 SAMPLER:
   DATA_AUG: 'thaler21'
   INPUT_SIZE : [512,512]
-  SAMPLE_MODE: 'patch' # ['patch', 'full']
+  # SAMPLE_MODE: 'patch' # ['patch', 'full']
   NUM_WORKERS: 8
   # DEBUG: True
   PATCH:

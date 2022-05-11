@@ -309,6 +309,22 @@ class DatasetBase(data.Dataset):
         
 
     def sample_patch(self, image, landmarks, lm_safe_region=0, safe_padding=128):
+        """ Samples a patch from the image. It ensures a landmark is in a patch with a self.sample_patch_bias% chance.
+            The patch image is larger than the patch-size by safe_padding on every side for safer data augmentation. 
+            Therefore, the image is first padded with zeros on each side to stop out of bounds when sampling from the edges.
+
+        Args:
+            image (_type_): image to sample
+            landmarks (_type_): list of landmarks
+            lm_safe_region (int, optional): # pixels away from the edge the landmark must be to count as "in" the patch . Defaults to 0.
+            safe_padding (int, optional): How much bigger on each edge the patch should be for safer data augmentation . Defaults to 128.
+
+        Returns:
+            _type_: cropped padded sample
+            landmarks normalised to within the patch
+            binary indicator of which landmarks are in the patch.
+            
+        """
         
         z_rand = np.random.uniform(0, 1)
         landmarks_in_indicator = []

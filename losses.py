@@ -1,7 +1,7 @@
 from torch import nn
 import numpy as np
 import torch 
-
+import copy
 
 class AdaptiveWingLoss(nn.Module):
     def __init__(self,hm_lambda_scale, omega=14, theta=0.5, epsilon=1, alpha=1.1):
@@ -140,48 +140,55 @@ class IntermediateOutputLoss(nn.Module):
         self.hm_loss = hm_loss
         self.sigma_loss = sigma_loss
         self.sigma_weight = sigma_weight
+
+        self.loss_seperated_keys = ["hm_loss_all", "all_loss_all"] + ["hm_loss_level_"+str(i) for i in range(len(self.ds_weights))]
+        if self.sigma_loss:
+            self.loss_seperated_keys.append("sigma_loss")
+
     def forward(self, x, y, sigmas=None):
+
+        losses_seperated = {}
         # print("we have 7 outputs, 1 for each resolution,", len(x))
-        # print(" each output has 20 (batchsize)", len(x[0]))
-        # print("target len", len(y))
-        # print("in the multiple output loss the x ", torch.stack(x,dim=1).squeeze(0).cpu().numpy().shape)
-        # print(" and y shapes are:", torch.stack(y,dim=1).squeeze(0).cpu().numpy().shape)
-
-        # for idx, inp in enumerate(x):
-          
+        # print(" each output has 12 (batchsize)", len(x[0]))losses_seperated
+        # # print("in the multiple output loss the x ", torch.stack(x,dim=1).squeeze(0).cpu().numpy().shape)
+        # # print(" and y shapes are:", torch.stack(y,dim=1).squeeze(0).cpu().numpy().shape)
+        # #only slice the inputs we give weights to
+        # for idx, inp in enumerate(y):
         #     print(idx, " len inp", len(inp))
+        #     print(idx, ", targ shape", inp.detach().cpu().numpy().shape)
+        #     print(idx, "inp shape: ", x[idx].detach().cpu().numpy().shape)
 
-
-        #     print(idx, ", inp shape", inp.detach().cpu().numpy().shape)
-        #     print(idx, "targ shape: ", y[idx].detach().cpu().numpy().shape)
-        l = self.ds_weights[0] * self.hm_loss(x[0], y[0])
-
+        from_which_level_supervision = len(self.ds_weights)
+        x = x[-from_which_level_supervision:]
+        # l = self.ds_weights[0] * self.hm_loss(x[0], y[0])
+        # losses_seperated["hm_loss_level_0"] = l
+        l = 0
         # print("the weights are: ", self.ds_weights)
-        # print(0, "pred shape %s and targ shape %s with weight %s  and loss %s and weighted loss %s" %(x[0].detach().cpu().numpy().shape, y[0].detach().cpu().numpy().shape, self.weights[0], self.loss(x[0], y[0]), l) )
-        for i in range(1, len(x)):
-            if self.ds_weights[i] != 0:
-                # print(i, "pred shape %s and targ shape %s with weight %s  and loss %s, and weighted loss: %s" %(x[i].detach().cpu().numpy().shape, y[i].detach().cpu().numpy().shape, self.weights[i], self.loss(x[i], y[i]), self.weights[i] * self.loss(x[i], y[i])) )
+        # print(0, "pred shape %s and targ shape %s with weight %s  and loss %s and weighted loss %s" %(x[0].detach().cpu().numpy().shape, y[0].detach().cpu().numpy().shape, self.ds_weights[0], self.hm_loss(x[0], y[0]), l) )
+        for i in range(0, len(y)):
+            # print(i, "pred shape %s and targ shape %s with weight %s  and loss %s, and weighted loss: %s" %(x[i].detach().cpu().numpy().shape, y[i].detach().cpu().numpy().shape, self.ds_weights[i], self.hm_loss(x[i], y[i]), self.ds_weights[i] * self.hm_loss(x[i], y[i])) )
+            this_lvl_loss = self.ds_weights[i] * self.hm_loss(x[i], y[i])
+            l += this_lvl_loss
+            losses_seperated["hm_loss_level_"+str(i)] = this_lvl_loss
 
-                l += self.ds_weights[i] * self.hm_loss(x[i], y[i])
-
-        # print("is cuda? x,y, sigmas", x.is_cuda, y.is_cuda, sigmas.is_cuda )
+        losses_seperated["hm_loss_all"] = l.detach().clone()
 
         if self.sigma_loss:
-            # sig_l = torch.mean([torch.square(x) for x in sigmas])
-            # sig_l = torch.mean()
+
             sig_l = 0
             for sig in sigmas:
                 sig_l += torch.square(sig)
             sig_l = self.sigma_weight *(torch.sqrt(sig_l))
-            # sig_l = 0.005*torch.mean(torch.square((sigmas)))
-            # sig_l = torch.mean(torch.square((sigmas)))
-
-
-            print("Sigma loss: %s and HM loss %s " % (sig_l, l))
+            losses_seperated["sigma_loss"] = sig_l
+            # print("Sigma loss: %s and HM loss %s " % (sig_l, l))
             l += (sig_l)
-        # print("total loss: ", l)
 
-        return l
+        losses_seperated["all_loss_all"] = l.detach().clone()
+
+        # print("total loss: ", l)
+        # print("loss dict inner", losses_seperated)
+
+        return l, losses_seperated
 
 
 

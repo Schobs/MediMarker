@@ -30,63 +30,26 @@ class UnetTrainer(NetworkTrainer):
     """ Class for the u-net trainer stuff.
     """
 
-    def __init__(self, model_config= None, output_folder=None, logger=None, profiler=None):
+    def __init__(self, trainer_config= None, is_train=True, output_folder=None, logger=None, profiler=None):
 
 
-        super(UnetTrainer, self).__init__()
+        super(UnetTrainer, self).__init__(trainer_config, is_train, output_folder, logger, profiler)
 
-        #Device
-
-        #early stopping
-        self.early_stop_patience = 150
-
+      
         #global config variable
-        self.model_config = model_config
+        self.trainer_config = trainer_config
 
-        #Trainer variables
-        self.perform_validation = model_config.TRAINER.PERFORM_VALIDATION
 
-        self.continue_checkpoint = model_config.MODEL.CHECKPOINT
-        self.logger = logger
-        self.profiler = profiler
-        self.verbose_logging = model_config.OUTPUT.VERBOSE
-        self.auto_mixed_precision = model_config.SOLVER.AUTO_MIXED_PRECISION
-        self.fold= model_config.TRAINER.FOLD
-        self.output_folder = output_folder
-
-      
-        #Dataloader info
-        self.data_loader_batch_size = model_config.SOLVER.DATA_LOADER_BATCH_SIZE
-        self.num_val_batches_per_epoch = 50
-        self.num_batches_per_epoch = model_config.SOLVER.MINI_BATCH_SIZE
-        self.gen_hms_in_mainthread = self.model_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
+        #Label generator
         self.label_generator = UNetLabelGenerator()
-        self.sampler_mode = self.model_config.SAMPLER.SAMPLE_MODE
-
-        #Training params
-        self.max_num_epochs =  model_config.SOLVER.MAX_EPOCHS
-        self.initial_lr = 1e-2
-
-        #Sigma for Gaussian heatmaps
-        self.regress_sigma = model_config.SOLVER.REGRESS_SIGMA
-        self.sigmas = [torch.tensor(x, dtype=float, device=self.device, requires_grad=True) for x in np.repeat(self.model_config.MODEL.GAUSS_SIGMA, len(model_config.DATASET.LANDMARKS))]
-
-        
-        #get validaiton params
-        self.use_full_res_coords = model_config.INFERRED_ARGS.USE_FULL_RES_COORDS
-        self.resize_first = model_config.INFERRED_ARGS.RESIZE_FIRST 
-
-
-        
-      
 
         #get model config parameters
-        self.num_out_heatmaps = len(model_config.DATASET.LANDMARKS)
-        self.base_num_features = model_config.MODEL.UNET.INIT_FEATURES
-        self.min_feature_res = model_config.MODEL.UNET.MIN_FEATURE_RESOLUTION
-        self.max_features = model_config.MODEL.UNET.MAX_FEATURES
-        self.input_size = model_config.SAMPLER.INPUT_SIZE
-        self.orginal_im_size = model_config.DATASET.ORIGINAL_IMAGE_SIZE
+        self.num_out_heatmaps = len(self.trainer_config.DATASET.LANDMARKS)
+        self.base_num_features = self.trainer_config.MODEL.UNET.INIT_FEATURES
+        self.min_feature_res = self.trainer_config.MODEL.UNET.MIN_FEATURE_RESOLUTION
+        self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
+        self.input_size = self.trainer_config.SAMPLER.INPUT_SIZE
+        self.orginal_im_size = self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE
 
 
         #get arch config parameters
@@ -111,15 +74,15 @@ class UnetTrainer(NetworkTrainer):
         self.optimizer_kwargs =  {"lr": self.initial_lr, "momentum": 0.99, "weight_decay": 3e-5, "nesterov": True}
 
         #Deep supervision args
-        self.deep_supervision= model_config.SOLVER.DEEP_SUPERVISION
-        self.num_res_supervision = model_config.SOLVER.NUM_RES_SUPERVISIONS
+        self.deep_supervision= self.trainer_config.SOLVER.DEEP_SUPERVISION
+        self.num_res_supervision = self.trainer_config.SOLVER.NUM_RES_SUPERVISIONS
 
         if not self.deep_supervision:
             self.num_res_supervision = 1 #just incase not set in config properly
 
 
         #Loss params
-        loss_str = model_config.SOLVER.LOSS_FUNCTION
+        loss_str = self.trainer_config.SOLVER.LOSS_FUNCTION
         if loss_str == "mse":
             self.individual_hm_loss = HeatmapLoss()
         elif loss_str =="awl":
@@ -127,13 +90,16 @@ class UnetTrainer(NetworkTrainer):
         else:
             raise ValueError("the loss function %s is not implemented. Try mse or awl" % (loss_str))
 
-      
+
 
         ################# Settings for saving checkpoints ##################################
         self.save_every = 25
-        self.save_latest_only = model_config.TRAINER.SAVE_LATEST_ONLY  # if false it will not store/overwrite _latest but separate files each
+        # self.save_latest_only = self.trainer_config.TRAINER.SAVE_LATEST_ONLY  # if false it will not store/overwrite _latest but separate files each
 
-
+        #Add additional things to log
+        # self.logged_per_epoch["train_loss_hm"] = []
+        # for i in range(self.num_res_supervision):
+        #     self.logged_per_epoch["train_loss_hm_level"+str(i)]
 
 
     def initialize(self, training_bool=True):
@@ -188,13 +154,15 @@ class UnetTrainer(NetworkTrainer):
             loss_weights = [1]
 
         if self.regress_sigma:
-            self.loss = IntermediateOutputLoss(self.individual_hm_loss, loss_weights,sigma_loss=True, sigma_weight=self.model_config.SOLVER.REGRESS_SIGMA_LOSS_WEIGHT )
+            self.loss = IntermediateOutputLoss(self.individual_hm_loss, loss_weights,sigma_loss=True, sigma_weight=self.trainer_config.SOLVER.REGRESS_SIGMA_LOSS_WEIGHT )
         else:
             self.loss = IntermediateOutputLoss(self.individual_hm_loss, loss_weights,sigma_loss=False )
 
-   
-
         print("initialized Loss function.")
+
+    def initialize_keys_for_logging_epoch(self):
+        super(UnetTrainer, self).initialize_keys_for_logging_epoch()
+
 
     def maybe_update_lr(self, epoch=None, exponent=0.9):
 
@@ -210,10 +178,20 @@ class UnetTrainer(NetworkTrainer):
     def train(self):
         super(UnetTrainer, self).train()
 
-    
+    # def log_key_variables(self, output, loss, data_dict, logged_vars):
+    #     """Logs trainer specific variables. Also call's super method which logs base/generic variables.
+
+    #     Args:
+    #         output (_type_): _description_
+    #         loss (_type_): _description_
+    #         data_dict (_type_): _description_
+    #         logged_vars (_type_): _description_
+    #     """
+    #     super(UnetTrainer, self).log_key_variables(self, output, loss, data_dict, logged_vars)
+
     def get_coords_from_model_output(self, output):
         """ Gets x,y coordinates from a model output. Here we use the final layer prediction of the U-Net,
-            maybe resize and get coords as the peak pixel.
+            maybe resize and get coords as the peak pixel. Also return value of peak pixel.
 
         Args:
             output: model output - a stack of heatmaps
@@ -222,14 +200,21 @@ class UnetTrainer(NetworkTrainer):
             [int, int]: predicted coordinates
         """
 
-        final_heatmap = output[-1]
+        extra_info = {"hm_max": []}
+
+        #Get only the full resolution heatmap
+        output = output[-1]
+        final_heatmap = output
         if self.resize_first:
             #torch resize does HxW so need to flip the diemsions
             final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
-        pred_coords = get_coords(final_heatmap)
+        
+        pred_coords, max_values = get_coords(final_heatmap)
+        extra_info["hm_max"].append(max_values.cpu().detach().numpy())
+
         del final_heatmap
 
-        return pred_coords
+        return pred_coords, extra_info
 
 
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
@@ -264,14 +249,14 @@ class UnetTrainer(NetworkTrainer):
             output = self.network(data)
 
         
-        l = self.loss(output, target, self.sigmas)
+        l, loss_dict = self.loss(output, target, self.sigmas)
 
         final_heatmap = output[-1]
         if resize_to_og:
             #torch resize does HxW so need to flip the dimesions for resize
             final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
 
-        predicted_coords = get_coords(final_heatmap)
+        predicted_coords, max_values = get_coords(final_heatmap)
 
         heatmaps_return = output
         if not return_all_layers:
@@ -292,14 +277,14 @@ class UnetTrainer(NetworkTrainer):
             output = self.network(data)
 
         
-        l = self.loss(output, target, self.sigmas)
+        l, loss_dict = self.loss(output, target, self.sigmas)
 
         final_heatmap = output[-1]
         if resize_to_og:
             #torch resize does HxW so need to flip the dimesions for resize
             final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
 
-        predicted_coords = get_coords(final_heatmap)
+        predicted_coords, max_values= get_coords(final_heatmap)
 
         heatmaps_return = output
         if not return_all_layers:
@@ -310,8 +295,8 @@ class UnetTrainer(NetworkTrainer):
 
 
 
-    def run_iteration(self, generator, dataloader, backprop, get_coord_error=False, coord_error_list=None):
-        return super(UnetTrainer, self).run_iteration(generator, dataloader, backprop, get_coord_error, coord_error_list)
+    # def run_iteration(self, generator, dataloader, backprop, get_coord_error=False, coord_error_list=None):
+    #     return super(UnetTrainer, self).run_iteration(generator, dataloader, backprop, get_coord_error, coord_error_list)
 
     
 

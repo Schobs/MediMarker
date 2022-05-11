@@ -39,4 +39,4 @@ def get_coords(images):
     preds *= pred_mask
     # print("preds multiplied by mask: ", preds) #tensor([[[32., 35.], [32., 27.], [24., 33.]]])
     preds = torch.round(preds)
-    return preds
+    return preds, maxval

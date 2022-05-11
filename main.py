@@ -70,7 +70,7 @@ def main():
 
 
     #Trainer 
-    trainer = UnetTrainer(model_config= cfg, output_folder=cfg.OUTPUT_DIR, logger=writer)
+    trainer = UnetTrainer(trainer_config= cfg, is_train=True, output_folder=cfg.OUTPUT_DIR, logger=writer)
     trainer.initialize(training_bool=True)
 
     trainer.train()
