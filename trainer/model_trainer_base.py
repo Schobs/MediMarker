@@ -146,7 +146,7 @@ class NetworkTrainer(ABC):
             for sig in range(len(self.landmarks)):
                  self.logged_per_epoch["sigma_"+str(sig)] = []
 
-
+        #initialise keys for logging the multi-part losses.
         for key_ in self.loss.loss_seperated_keys:
             self.logged_per_epoch["training_" + key_] = []
             self.logged_per_epoch["validation_" + key_] = []
@@ -415,6 +415,16 @@ class NetworkTrainer(ABC):
        
         return continue_training
 
+    def inference(self):
+        #1) need access to key list of variables to save
+        #2) should run using run_iteration
+        #3) need a way to deal with the key dictionary & combine all samples
+        #4) need to put evaluation methods in evluation function & import and ues key_dict for analysis
+
+        #1) instantitate test dataset and dataloader
+        #2) iterate dataloader and run_iteration each time to go through and save results.
+        #3) return individual results & do summary results.
+        x = 1
 
     def maybe_save_checkpoint(self, new_best_valid_bool, new_best_valid_coord_bool):
         """
@@ -466,23 +476,15 @@ class NetworkTrainer(ABC):
             logged_vars[key_].append(value)
             
         #2) If log_coords, get coords from output. Then, check for the keys for what to log.
-        if log_coords:      
-            #Get coordinates from output heatmap, comparing to GT compared on arguments. Cases C:
-            # C1) resize heatmap, use full res coords
-            # C2) don't resize heatmap, use full res coords (already using full scale image)
-            # C3) don't resize heatmap, use downscaled coords
-            # C4) don't resize heatmap, but extract pred_coords and upscale them
-            pred_coords, extra_info = self.get_coords_from_model_output(output)
-            
-            if self.use_full_res_coords:
-                target_coords =data_dict['full_res_coords'].to( self.device ) #C1, C2, C4
-            else:
-                target_coords =data_dict['target_coords'].to( self.device ) #C3
+        if log_coords:
 
-            # C4
-            if self.use_full_res_coords and not self.resize_first :
-                upscale_factor = [self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[0]/self.trainer_config.SAMPLER.INPUT_SIZE[0], self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[1]/self.trainer_config.SAMPLER.INPUT_SIZE[1]]
-                pred_coords = torch.rint(pred_coords * upscale_factor)
+            if self.sampler_mode == "patch":
+                pred_coords, extra_info = self.get_coords_from_model_output_patchified(output)
+
+            else:
+                pred_coords, extra_info = self.get_coords_from_model_output(output)
+            
+            pred_coords, target_coords = self.maybe_rescale_coords(pred_coords, data_dict)
                 
             coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
             
@@ -494,48 +496,107 @@ class NetworkTrainer(ABC):
                 logged_vars["train_coord_error_mean" ].append(np.mean(coord_error.detach().cpu().numpy()))
 
 
+            #TODO: test this out from the testing stuff. use this in the run_inference. should work with a validaiton & testing split!
             #Logging any other extra info (e.g. heatmap max values), so check if the keys are requested in our logging dict.
             # In these cases we need to save each sample seperately
-            extra_logging_keys = ["coord_error_all", "predicted_coords", "target_coords", "uid"] + list(extra_info.keys())
-            if any(x in extra_logging_keys for x in list(logged_vars.keys()) ):
-                for idx, sample in enumerate(output):
-                    print("idx, sample shape", idx, sample.shape)
+            if "individual_results" in list(logged_vars.keys()):
+                for idx in range(len(pred_coords)):
+                    print("idx", idx)
                     print("coord error for 1 sample: ", coord_error[idx])
-                    if "coord_error_all" in list(logged_vars.keys()): 
-                        logged_vars["coord_error_all"].append((coord_error[idx].detach().cpu().numpy()))
-                    if "predicted_coords" in list(logged_vars.keys()): 
-                        logged_vars["predicted_coords"].append((pred_coords[idx].detach().cpu().numpy()))
-                    if "target_coords" in list(logged_vars.keys()): 
-                        logged_vars["target_coords"].append((target_coords[idx].detach().cpu().numpy()))
-                    if "uid" in list(logged_vars.keys()): 
-                        logged_vars["uid"].append((data_dict["uid"][idx].detach().cpu().numpy()))
+                    ind_dict = {}
+                    ind_dict["Error All Mean"] = (np.mean(coord_error[idx].detach().cpu().numpy()))
+                    ind_dict["Error All Std"] = (np.mean(coord_error[idx].detach().cpu().numpy()))
+                    ind_dict["ind_errors"] = ((coord_error[idx].detach().cpu().numpy()))
+                    ind_dict["predicted_coords"] = ((pred_coords[idx].detach().cpu().numpy()))
+                    ind_dict["target_coords"] = ((target_coords[idx].detach().cpu().numpy()))
+                    ind_dict["uid"] = ((data_dict["uid"][idx].detach().cpu().numpy()))
 
-                    # for extra_info, ensure key exists in user's logged_vars 
+                    for idx, er in enumerate(coord_error[idx]):
+                        ind_dict["L"+str(idx)] = er
+
+                        if "landmark_errors" in list(logged_vars.keys()):
+                            logged_vars["all_landmark_errors"][idx].append(er)
+
                     for key_ in list(extra_info.keys()):
-                        if key_ in list(logged_vars.keys()):
-                            logged_vars[key_].append((extra_info["key_"][idx].detach().cpu().numpy()))
+                        ind_dict[key_] = ((extra_info["key_"][idx].detach().cpu().numpy()))
+
+
+                    logged_vars["individual_results"].append(ind_dict)
+        
+            #extra_logging_keys = ["coord_error_all", "predicted_coords", "target_coords", "uid"] + list(extra_info.keys())
+            # if any(x in extra_logging_keys for x in list(logged_vars.keys()) ):
+            #     for idx in range(len(pred_coords)):
+            #         print("idx", idx)
+            #         print("coord error for 1 sample: ", coord_error[idx])
+                    # if "error_all_mean" in list(logged_vars.keys()):
+                    #     logged_vars["Error All Mean"].append(np.mean(coord_error[idx].detach().cpu().numpy()))
+                    # if "error_all_mean" in list(logged_vars.keys()):
+                    #     logged_vars["Error All Std"].append(np.mean(coord_error[idx].detach().cpu().numpy()))
+                    # # Error All Mean": np.mean(sample), "Error All Std
+                    # if "ind_errors" in list(logged_vars.keys()): 
+                    #     logged_vars["ind_errors"].append((coord_error[idx].detach().cpu().numpy()))
+                    # if "predicted_coords" in list(logged_vars.keys()): 
+                    #     logged_vars["predicted_coords"].append((pred_coords[idx].detach().cpu().numpy()))
+                    # if "target_coords" in list(logged_vars.keys()): 
+                    #     logged_vars["target_coords"].append((target_coords[idx].detach().cpu().numpy()))
+                    # if "uid" in list(logged_vars.keys()): 
+                    #     logged_vars["uid"].append((data_dict["uid"][idx].detach().cpu().numpy()))
+
+                    # # for extra_info, ensure key exists in user's logged_vars 
+                    # for key_ in list(extra_info.keys()):
+                    #     if key_ in list(logged_vars.keys()):
+                    #         logged_vars[key_].append((extra_info["key_"][idx].detach().cpu().numpy()))
  
             
+    def maybe_rescale_coords(self, pred_coords, data_dict):
+        """Maybe rescale coordinates based on evaluation parameters, and decide which target coords to evaluate against.
+            Cases C1:4:
+            C1) used full-scale image to train or resized heatmap already: leave predicted, use full-res target
+            C2) used low-scale image to train and rescaling coordinates up to full-scale image size 
+            C3) use low-scale image to train, want to eval on low-scale coordinates
+        Args:
+            pred_coords (tensor): coords extracted from output heatmap
+            data_dict (dict): dataloader sample dictionary
 
-    def inference_patchified(self, samples_patchified, stitching_infos):
-        raise NotImplementedError()
+        Returns:
+            tensor, tensor: predicted coordinates and target coordinates for evaluation
+        """
+        if self.use_full_res_coords:
+            target_coords =data_dict['full_res_coords'].to( self.device ) #C1
+        else:
+            target_coords =data_dict['target_coords'].to( self.device ) #C3 (and C1 if input size == full res size so full & target the same)
+
+        # C2
+        if self.use_full_res_coords and not self.resize_first :
+            upscale_factor = [self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[0]/self.trainer_config.SAMPLER.INPUT_SIZE[0], self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[1]/self.trainer_config.SAMPLER.INPUT_SIZE[1]]
+            pred_coords = torch.rint(pred_coords * upscale_factor)
+
+        return pred_coords, target_coords
+
+    @abstractmethod
+    def get_coords_from_model_output_patchified(self, output):
+        """
+        Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
+        """
+
+        # raise NotImplementedError()
         
-        all_hms = []
-        for idx, sample_patches in enumerate(samples_patchified):
-            stich_info = stitching_infos[idx]
-            patch_predictions = []
+        # all_hms = []
+        # for idx, sample_patches in enumerate(samples_patchified):
+        #     stich_info = stitching_infos[idx]
+        #     patch_predictions = []
 
-            for patch in sample_patches:
-                output = self.network(patch)
-                patch_predictions.append(output)
+        #     for patch in sample_patches:
+        #         output = self.network(patch)
+        #         patch_predictions.append(output)
 
 
-            final_hm = self.stitch_heatmap(patch_predictions, stich_info)
-            all_hms.append(torch.tensor(final_hm))
+        #     final_hm = self.stitch_heatmap(patch_predictions, stich_info)
+        #     all_hms.append(torch.tensor(final_hm))
 
-        all_hms = torch.stack(all_hms)
-        print("hm patchified output len: ", all_hms.shape)
-        return all_hms
+        # all_hms = torch.stack(all_hms)
+        # print("hm patchified output len: ", all_hms.shape)
+        # return all_hms
       
 
 
@@ -649,7 +710,7 @@ class NetworkTrainer(ABC):
 
     def get_evaluation_dataset(self, split):
         """Gets an evaluation dataset based on split given (must be "validation" or "testing").
-            We do not perform patch sampling on evaluation dataset, always returning the full image.
+            We do not perform patch sampling on evaluation dataset, always returning the full image (sample_mode = "full").
             Patchifying the evaluation image is too large memory constraint to do in batches here.
 
         Args:

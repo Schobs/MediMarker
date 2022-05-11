@@ -214,9 +214,16 @@ class UnetTrainer(NetworkTrainer):
 
         del final_heatmap
 
+
+        
+
         return pred_coords, extra_info
 
-
+    def get_coords_from_model_output_patchified(self, output):
+        raise NotImplementedError()
+        """
+        Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
+        """
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
         '''
         Use model outputs from a patchified image to stitch together a full resolution heatmap
