@@ -5,8 +5,9 @@ import numpy as np
 from time import time
 # import multiprocessing as mp
 from utils.im_utils.heatmap_manipulation import get_coords
+from utils.local_logging.dict_logger import DictLogger
 from torch.cuda.amp import GradScaler, autocast
-from losses import HeatmapLoss, IntermediateOutputLoss, AdaptiveWingLoss, SigmaLoss
+from evaluation.localization_evaluation import success_detection_rate, generate_summary_df
 
 from torchvision.transforms import Resize,InterpolationMode
 from datasets.dataset import DatasetBase
@@ -15,12 +16,15 @@ from torch.utils.data import DataLoader
 from abc import ABC, abstractmethod
 import imgaug
 import copy
+import pandas as pd
+
+import matplotlib.pyplot as plt
 
 class NetworkTrainer(ABC):
     """ Super class for trainers. I extend this for trainers for U-Net and PHD-Net. They share some functions.y
     """
     @abstractmethod
-    def __init__(self, trainer_config,  is_train= True, output_folder=None, logger=None, profiler=None):
+    def __init__(self, trainer_config,  is_train= True, output_folder=None, comet_logger=None, profiler=None):
         #Device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -34,11 +38,13 @@ class NetworkTrainer(ABC):
         self.gen_hms_in_mainthread = self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
         self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
         self.landmarks = self.trainer_config.DATASET.LANDMARKS
+        self.training_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM if self.sampler_mode == "patch" else self.trainer_config.SAMPLER.INPUT_SIZE
+
        
 
         #Set up logger & profiler
         self.profiler = profiler
-        self.logger = logger
+        self.comet_logger = comet_logger
         self.verbose_logging = self.trainer_config.OUTPUT.VERBOSE
 
 
@@ -76,7 +82,7 @@ class NetworkTrainer(ABC):
         self.was_initialized = False
         self.amp_grad_scaler = None 
         self.train_dataloader = self.valid_dataloader = None
-        self.logged_per_epoch = None
+        self.dict_logger = None
 
 
         #Set up in init of extended class (child)
@@ -89,6 +95,7 @@ class NetworkTrainer(ABC):
         #Can be changed in extended class (child)
         self.early_stop_patience = 150
         self.initial_lr = 1e-2
+
      
 
         #Initialize
@@ -110,9 +117,8 @@ class NetworkTrainer(ABC):
             print("Initialized profiler")
             self.profiler.start()
         
-        if self.logger:
-            self.logger.log_parameters(self.trainer_config)
-            
+        
+        self.initialize_dataloader_settings()
         if training_bool:
             self.set_training_dataloaders()
 
@@ -120,11 +126,17 @@ class NetworkTrainer(ABC):
         self.initialize_optimizer_and_scheduler()
         self.initialize_loss_function()
         self._maybe_init_amp()
+
+        if self.comet_logger:
+            self.comet_logger.log_parameters(self.trainer_config)
+        
+        #This is the logger that will save epoch results to log & log variables at inference, extend this for any extra stuff you want to log/save at evaluation!
+        self.dict_logger = DictLogger(len(self.landmarks), self.regress_sigma, self.loss.loss_seperated_keys)
+
         self.was_initialized = True
 
         self.maybe_load_checkpoint()
 
-        self.initialize_keys_for_logging_epoch()
 
     @abstractmethod
     def initialize_network(self):
@@ -133,24 +145,6 @@ class NetworkTrainer(ABC):
         
         '''
     
-    @abstractmethod
-    def initialize_keys_for_logging_epoch(self):
-        '''
-        Initialize  keys to log in self.logged_per_epoch here, especially logging the keys from the loss_dict 
-        for proper loss logging!.These are used in self.log_key_variables() every epoch.
-        Extend this in child class for other keys to log :)
-        '''
-        self.logged_per_epoch =  {"valid_coord_error_mean": [], "epoch_time": []}
-        if self.regress_sigma:
-            self.logged_per_epoch["sigmas_mean"] =  []
-            for sig in range(len(self.landmarks)):
-                 self.logged_per_epoch["sigma_"+str(sig)] = []
-
-        #initialise keys for logging the multi-part losses.
-        for key_ in self.loss.loss_seperated_keys:
-            self.logged_per_epoch["training_" + key_] = []
-            self.logged_per_epoch["validation_" + key_] = []
-
 
 
     @abstractmethod
@@ -168,8 +162,6 @@ class NetworkTrainer(ABC):
         
         '''
 
-
-   
 
     def maybe_update_lr(self, epoch=None, exponent=0.9):
         """
@@ -193,6 +185,7 @@ class NetworkTrainer(ABC):
             self.amp_grad_scaler = GradScaler()
         print("initialized auto mixed precision.")
 
+
     @abstractmethod
     def get_coords_from_heatmap(self, model_output):
 
@@ -215,14 +208,14 @@ class NetworkTrainer(ABC):
             generator = iter(self.train_dataloader)
 
             #We will log the training and validation info here. The keys we set describe all the info we are logging.
-            per_epoch_logs =  copy.deepcopy(self.logged_per_epoch)
+            per_epoch_logs =  self.dict_logger.get_epoch_logger()
 
 
             # Train for X number of batches per epoch e.g. 250
             for iter_b in range(self.num_batches_per_epoch):
                 l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True, split="training", log_coords=False,  logged_vars=per_epoch_logs)
-                if self.logger:
-                    self.logger.log_metric("training loss iteration", l, step)
+                if self.comet_logger:
+                    self.comet_logger.log_metric("training loss iteration", l, step)
                 step += 1
             del generator
 
@@ -246,13 +239,13 @@ class NetworkTrainer(ABC):
             self.epoch +=1
 
         #Save the final weights
-        if self.logger:
+        if self.comet_logger:
             print("Logging weights as histogram...")
             weights = []
             for name in self.network.named_parameters():
                 if 'weight' in name[0]:
                     weights.extend(name[1].detach().cpu().numpy().tolist())
-            self.logger.log_histogram_3d(weights, step=self.epoch)
+            self.comet_logger.log_histogram_3d(weights, step=self.epoch)
 
 
 
@@ -272,7 +265,6 @@ class NetworkTrainer(ABC):
         try:
             data_dict = next(generator)
         except StopIteration:
-            # restart the generator if the previous generator is exhausted. If valid/test then all data has been used
             if split != "training":
                 return 0, None
             else:
@@ -292,7 +284,7 @@ class NetworkTrainer(ABC):
         self.optimizer.zero_grad()
 
 
-        if self.auto_mixed_precision:
+        if self.auto_mixed_precision and self.is_train:
             with autocast():
                 output = self.network(data)
                 del data
@@ -318,11 +310,23 @@ class NetworkTrainer(ABC):
                 if self.regress_sigma:
                     self.update_dataloader_sigmas(self.sigmas)
 
+        # plt.imshow(output[-1][0][0].cpu().detach().numpy())
+        # plt.show()
 
         #Log info from this iteration.
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
-                self.log_key_variables(output, loss_dict, data_dict, logged_vars, log_coords, split)
+                if log_coords:
+
+                    #get coords
+                    pred_coords, extra_info = self.get_coords_from_heatmap(output)
+                    #Maybe rescale the coordinates based on evaluation settings.
+                    pred_coords, target_coords = self.maybe_rescale_coords(pred_coords, data_dict)
+                else:
+                    pred_coords = extra_info = target_coords = None
+
+                
+                logged_vars = self.dict_logger.log_key_variables(logged_vars, pred_coords, extra_info, target_coords, loss_dict, data_dict, log_coords, split)
 
         if self.profiler:
             self.profiler.step()
@@ -331,19 +335,7 @@ class NetworkTrainer(ABC):
         del target
         return l.detach().cpu().numpy(), generator
 
-    def generate_heatmaps_batch(self, data_dict, dataloader):
-        batch_hms = []
-        np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
-        b_= [dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"].detach().numpy()]
-        for x in b_:
-            if batch_hms == []:
-                batch_hms = [[y] for y in x]
-            else:
-                for hm_idx, hm in enumerate(x):
-                    batch_hms[hm_idx].append(hm)
-        batch_hms = [torch.stack(x) for x in batch_hms]
-
-        return batch_hms
+    
 
         
     def on_epoch_end(self, per_epoch_logs):
@@ -358,26 +350,12 @@ class NetworkTrainer(ABC):
         continue_training = self.epoch < self.max_num_epochs
 
         #######Logging some end of epoch info #############
-        if "epoch_time" in list(per_epoch_logs.keys()):
-            per_epoch_logs["epoch_time"] = self.epoch_end_time - self.epoch_start_time
-        if "sigmas_mean" in list(per_epoch_logs.keys()):
-            np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
-            per_epoch_logs["sigmas_mean"] = (np.mean(np_sigmas))
-
-            for idx, sig in enumerate(np_sigmas):
-                if "sigma_"+str(idx) in list(per_epoch_logs.keys()):
-                    per_epoch_logs["sigma_"+str(idx)] = sig
-
-        for key, value in per_epoch_logs.items():
-            #get the mean of all the batches from the training/validations. 
-            if isinstance(value, list):
-                per_epoch_logs[key] = np.mean([x.detach().cpu().numpy() if torch.is_tensor(x) else x for x in value])
-            if torch.is_tensor(value):
-                per_epoch_logs[key] = value.detach().cpu().numpy()
-            
-            #Log them if using a logger, else they are lost!
-            if self.logger:
-                self.logger.log_metric(key, per_epoch_logs[key], self.epoch)
+        time_taken =self.epoch_end_time - self.epoch_start_time
+        per_epoch_logs = self.dict_logger.log_epoch_end_variables(per_epoch_logs, time_taken, self.sigmas)
+      
+        #log them else they are lost!
+        if self.comet_logger:
+            self.dict_logger.log_dict_to_comet(self.comet_logger, per_epoch_logs, self.epoch)
 
         print("the final per epoch logs :", per_epoch_logs )
 
@@ -441,94 +419,7 @@ class NetworkTrainer(ABC):
             print("done")
 
            
-    def log_key_variables(self, output, loss_dict, data_dict, logged_vars, log_coords, split):
-        """Logs base key variables. Should be extended by child class for non-generic logging variables.
-
-        Args:
-            output (_type_): _description_
-            loss (_type_): _description_
-            data_dict (_type_): _description_
-            logged_vars (_type_): _description_
-        """
-
-        #1) Log training/validation losses based on split.
-
-        for key, value in loss_dict.items():
-            key_ = split+ "_" + key
-            assert key_ in logged_vars         
-
-            logged_vars[key_].append(value)
-            
-        #2) If log_coords, get coords from output. Then, check for the keys for what to log.
-        if log_coords:
-
-            pred_coords, extra_info = self.get_coords_from_heatmap(output)
-            
-            #Maybe rescale the coordinates based on evaluation settings.
-            pred_coords, target_coords = self.maybe_rescale_coords(pred_coords, data_dict)
-                
-            coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
-            
-
-            if split == "validation":
-                logged_vars["valid_coord_error_mean" ].append(np.mean(coord_error.detach().cpu().numpy()))
-            elif split == "training":
-                assert "train_coord_error_mean" in list(logged_vars.keys())
-                logged_vars["train_coord_error_mean" ].append(np.mean(coord_error.detach().cpu().numpy()))
-
-
-            #TODO: test this out from the testing stuff. use this in the run_inference. should work with a validaiton & testing split!
-            #Logging any other extra info (e.g. heatmap max values), so check if the keys are requested in our logging dict.
-            # In these cases we need to save each sample seperately
-            if "individual_results" in list(logged_vars.keys()):
-                for idx in range(len(pred_coords)):
-                    print("idx", idx)
-                    print("coord error for 1 sample: ", coord_error[idx])
-                    ind_dict = {}
-                    ind_dict["Error All Mean"] = (np.mean(coord_error[idx].detach().cpu().numpy()))
-                    ind_dict["Error All Std"] = (np.mean(coord_error[idx].detach().cpu().numpy()))
-                    ind_dict["ind_errors"] = ((coord_error[idx].detach().cpu().numpy()))
-                    ind_dict["predicted_coords"] = ((pred_coords[idx].detach().cpu().numpy()))
-                    ind_dict["target_coords"] = ((target_coords[idx].detach().cpu().numpy()))
-                    ind_dict["uid"] = ((data_dict["uid"][idx].detach().cpu().numpy()))
-
-                    for idx, er in enumerate(coord_error[idx]):
-                        ind_dict["L"+str(idx)] = er
-
-                        if "landmark_errors" in list(logged_vars.keys()):
-                            logged_vars["all_landmark_errors"][idx].append(er)
-
-                    #any extra info returned by the child class when calculating coords from outputs.
-                    for key_ in list(extra_info.keys()):
-                        ind_dict[key_] = ((extra_info["key_"][idx].detach().cpu().numpy()))
-
-
-                    logged_vars["individual_results"].append(ind_dict)
-        
-            #extra_logging_keys = ["coord_error_all", "predicted_coords", "target_coords", "uid"] + list(extra_info.keys())
-            # if any(x in extra_logging_keys for x in list(logged_vars.keys()) ):
-            #     for idx in range(len(pred_coords)):
-            #         print("idx", idx)
-            #         print("coord error for 1 sample: ", coord_error[idx])
-                    # if "error_all_mean" in list(logged_vars.keys()):
-                    #     logged_vars["Error All Mean"].append(np.mean(coord_error[idx].detach().cpu().numpy()))
-                    # if "error_all_mean" in list(logged_vars.keys()):
-                    #     logged_vars["Error All Std"].append(np.mean(coord_error[idx].detach().cpu().numpy()))
-                    # # Error All Mean": np.mean(sample), "Error All Std
-                    # if "ind_errors" in list(logged_vars.keys()): 
-                    #     logged_vars["ind_errors"].append((coord_error[idx].detach().cpu().numpy()))
-                    # if "predicted_coords" in list(logged_vars.keys()): 
-                    #     logged_vars["predicted_coords"].append((pred_coords[idx].detach().cpu().numpy()))
-                    # if "target_coords" in list(logged_vars.keys()): 
-                    #     logged_vars["target_coords"].append((target_coords[idx].detach().cpu().numpy()))
-                    # if "uid" in list(logged_vars.keys()): 
-                    #     logged_vars["uid"].append((data_dict["uid"][idx].detach().cpu().numpy()))
-
-                    # # for extra_info, ensure key exists in user's logged_vars 
-                    # for key_ in list(extra_info.keys()):
-                    #     if key_ in list(logged_vars.keys()):
-                    #         logged_vars[key_].append((extra_info["key_"][idx].detach().cpu().numpy()))
- 
+    
             
     def maybe_rescale_coords(self, pred_coords, data_dict):
         """Maybe rescale coordinates based on evaluation parameters, and decide which target coords to evaluate against.
@@ -552,11 +443,12 @@ class NetworkTrainer(ABC):
         if self.use_full_res_coords and not self.resize_first :
             upscale_factor = [self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[0]/self.trainer_config.SAMPLER.INPUT_SIZE[0], self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[1]/self.trainer_config.SAMPLER.INPUT_SIZE[1]]
             pred_coords = torch.rint(pred_coords * upscale_factor)
+            # pred_coords = pred_coords * upscale_factor
 
         return pred_coords, target_coords
 
 
-    @abstractmethod 
+    # @abstractmethod 
     def patchify_and_predict(self, single_sample, logged_vars):
         """Function that takens in a large input image, patchifies it and runs each patch through the model & stitches heatmap together
 
@@ -571,8 +463,8 @@ class NetworkTrainer(ABC):
         """
 
 
-    @abstractmethod 
-    def run_inference(self):
+    # @abstractmethod 
+    def run_inference(self, split):
         """ Function to run inference on a full sized input
 
         #0) instantitate test dataset and dataloader
@@ -586,8 +478,95 @@ class NetworkTrainer(ABC):
         #3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
         #4) return individual results & do summary results.
         """
-       
-        x = 1
+
+        #If trained using patch, return the full image, else ("full") will return the image size network was trained on. 
+        if self.sampler_mode == "patch":
+            if self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE == "patchify_and_stitch":
+                #In this case we are patchifying the image
+                inference_full_image = False
+            else:
+                #else we are doing it fully_convolutional
+                inference_full_image = True
+        else:
+            #This case is the full sampler
+            inference_full_image = True
+        inference_resolution = self.training_resolution
+        #Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
+        test_dataset = self.get_evaluation_dataset(split, inference_resolution)
+        self.test_dataloader = DataLoader(test_dataset, batch_size=self.data_loader_batch_size, shuffle=False, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
+
+        #instantiate interested variables log!
+        evaluation_logs =  self.dict_logger.get_evaluation_logger()
+
+        #network evaluation mode
+        self.network.eval()
+
+        #then iterate through dataloader and save to log
+        generator = iter(self.test_dataloader)
+        if inference_full_image:
+            while generator != None:
+                l, generator = self.run_iteration(generator, self.test_dataloader, backprop=False, split=split, log_coords=True,  logged_vars=evaluation_logs)
+            del generator
+        else:
+            #this is where we patchify and stitch the input image
+            raise NotImplementedError()
+
+        
+        summary_results, ind_results = self.evaluation_metrics(evaluation_logs)
+
+ 
+        return summary_results, ind_results
+
+    # @abstractmethod 
+    # def run_inference_patch(self):
+    #     """ Function to run inference on a full sized input
+
+    #     #0) instantitate test dataset and dataloader
+    #     #1A) if FULL: 
+    #         i) iterate dataloader and run_iteration each time to go through and save results.
+    #         ii) should run using run_iteration with logged_vars to log
+    #     1B) if PATCHIFYING full_res_output  <- this can be fututre addition
+    #         i) use patchify_and_predict to stitch hm together with logged_vars to log
+
+    #     #2) need a way to deal with the key dictionary & combine all samples
+    #     #3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
+    #     #4) return individual results & do summary results.
+    #     """
+
+    #     #Load dataloader
+    #     #In patch case we load the full image we were sampling patches from
+    #     test_dataset = self.get_evaluation_dataset("testing", self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM)
+
+    #     if self.trainer_config.SAMPLER.PATCH.FULLY_CONVOLUTIONAL_INFERENCE:
+    #         # no need to patchify image
+    #         x = 1
+    #     else:
+    #         #patchify the image
+    #         x= 1
+
+    #     raise NotImplementedError()
+
+    #     #run inference direcly on image from dataloader.
+    #     x = 1
+    #     #and not self.trainer_config.SAMPLER.PATCH.FULLY_CONVOLUTIONAL_INFERENCE
+
+    def evaluation_metrics(self, evaluation_dict):
+        # Success Detection Rate i.e. % images within error thresholds
+        radius_list = [20,25,30,40]
+        outlier_results = {}
+        for rad in radius_list:
+            out_res_rad = success_detection_rate(evaluation_dict["individual_results"], rad)
+            outlier_results[rad] = (out_res_rad)    
+
+        # print("outlier results: ", outlier_results)
+
+
+        #Generate summary Results
+        summary_results = generate_summary_df(evaluation_dict["landmark_errors"], outlier_results )
+        ind_results = pd.DataFrame(evaluation_dict["individual_results"] )
+    
+
+        return summary_results, ind_results
 
     def save_checkpoint(self, path):
         state = {
@@ -599,7 +578,10 @@ class NetworkTrainer(ABC):
             'best_valid_loss_epoch': self.best_valid_loss_epoch,
             "best_valid_coords_epoch": self.best_valid_coords_epoch,
             "epochs_wo_improvement": self.epochs_wo_val_improv,
-            "sigmas": self.sigmas
+            "sigmas": self.sigmas,
+            "training_sampler": self.sampler_mode,
+            "training_resolution": self.training_resolution
+
         }
 
         if self.amp_grad_scaler is not None:
@@ -610,7 +592,7 @@ class NetworkTrainer(ABC):
 
     def maybe_load_checkpoint(self):
         if self.continue_checkpoint:
-            self.load_checkpoint(self.continue_checkpoint, True)
+            self.load_checkpoint(self.continue_checkpoint, self.is_train)
     
     def update_dataloader_sigmas(self, new_sigmas):
         np_sigmas = [x.cpu().detach().numpy() for x in new_sigmas]
@@ -627,14 +609,32 @@ class NetworkTrainer(ABC):
         self.epoch = checkpoint_info['epoch']
         self.network.load_state_dict(checkpoint_info["state_dict"])
         self.optimizer.load_state_dict(checkpoint_info["optimizer"])
-        self.best_valid_loss = checkpoint_info['best_valid_loss']
-        self.best_valid_loss_epoch = checkpoint_info['best_valid_loss_epoch']
-        self.best_valid_coord_error = checkpoint_info['best_valid_coord_error']
-        self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
-        self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
-        self.sigmas= checkpoint_info["sigmas"]
 
+        if training_bool:
+            self.best_valid_loss = checkpoint_info['best_valid_loss']
+            self.best_valid_loss_epoch = checkpoint_info['best_valid_loss_epoch']
+            self.best_valid_coord_error = checkpoint_info['best_valid_coord_error']
+            self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
+            self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
+        
+        #Allow legacy models to be loaded (they didn't use to save sigmas)
+        if "sigmas" in checkpoint_info:
+            self.sigmas= checkpoint_info["sigmas"]
+        
+        #if not saved, default to full since this was the only option for legacy models
+        if "training_sampler" in checkpoint_info:
+            self.sampler_mode = checkpoint_info["training_sampler"]
+        else:
+            self.sampler_mode = "full"
 
+        #if not saved, default to input_size since this was the only option for legacy models
+        if "training_resolution" in checkpoint_info:
+            self.training_resolution = checkpoint_info["training_resolution"]
+        else:
+            self.training_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
+
+        self.checkpoint_loading_checking()
+      
         if self.auto_mixed_precision:
             self._maybe_init_amp()
 
@@ -642,6 +642,43 @@ class NetworkTrainer(ABC):
                 self.amp_grad_scaler.load_state_dict(checkpoint_info['amp_grad_scaler'])
 
         print("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch ))
+
+    def checkpoint_loading_checking(self):
+        """Checks that the loaded checkpoint is compatible with the current model and training settings.
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+        """
+
+        #Check the sampler in config is the same as the one in the checkpoint.
+        if self.sampler_mode != self.trainer_config.SAMPLER.SAMPLE_MODE:
+            raise ValueError("model was trained using SAMPLER.SAMPLE_MODE %s but attempting to load with SAMPLER.SAMPLE_MODE %s. \
+                Please amend this in config file." % (self.sampler_mode, self.trainer_config.SAMPLER.SAMPLE_MODE))
+
+        #check if the training resolution from config is the same as the one in the checkpoint.
+        if self.sampler_mode == "patch":
+            if self.training_resolution != self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM:
+                raise ValueError("model was trained using SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM %s but attempting to load with self.training_resolution %s. \
+                    Please amend this in config file." % (self.training_resolution, self.training_resolution))
+        else:
+            if self.training_resolution != self.trainer_config.SAMPLER.INPUT_SIZE:
+                raise ValueError("model was trained using SAMPLER.INPUT_SIZE %s but attempting to load with self.training_resolution %s. \
+                    Please amend this in config file." % (self.training_resolution, self.trainer_config.SAMPLER.INPUT_SIZE))
+
+
+    def initialize_dataloader_settings(self):
+        """Initializes dataloader settings. If debug use only main thread to load data bc we only 
+            want to show a single plot on screen. 
+            If num_workers=0 we are only using the main thread, so persist_workers = False.
+        """
+       
+        if self.trainer_config.SAMPLER.DEBUG or self.trainer_config.SAMPLER.NUM_WORKERS == 0:
+            self.persist_workers = False
+            self.num_workers_cfg=0
+        else:
+            self.persist_workers = True
+            self.num_workers_cfg= self.trainer_config.SAMPLER.NUM_WORKERS    
 
     def set_training_dataloaders(self):
         """
@@ -671,32 +708,24 @@ class NetworkTrainer(ABC):
             hm_lambda_scale = self.trainer_config.MODEL.HM_LAMBDA_SCALE,
             data_augmentation_strategy = self.trainer_config.SAMPLER.DATA_AUG,
             data_augmentation_package = self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
-
- 
         )
-
     
-        if self.perform_validation:            
-            valid_dataset = self.get_evaluation_dataset("validation")
+        if self.perform_validation:
+            #if patchify, we want to return the full image
+            if self.sampler_mode == "patch":            
+                valid_dataset = self.get_evaluation_dataset("validation", self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM)
+            else:
+                valid_dataset = self.get_evaluation_dataset("validation", self.trainer_config.SAMPLER.INPUT_SIZE)
+
         else:
             valid_dataset = train_dataset
             print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
 
-        #If debug use only main thread to load data bc we only want to show a single plot on screen.
-        #If num_workers=0 we are only using the main thread, so persist_workers = False.
-        if self.trainer_config.SAMPLER.DEBUG or self.trainer_config.SAMPLER.NUM_WORKERS == 0:
-            persist_workers = False
-            num_workers_cfg=0
-        else:
-            persist_workers = True
-            num_workers_cfg= self.trainer_config.SAMPLER.NUM_WORKERS    
-       
-
-        self.train_dataloader = DataLoader(train_dataset, batch_size=self.data_loader_batch_size, shuffle=True, num_workers=num_workers_cfg, persistent_workers=persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
-        self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.data_loader_batch_size, shuffle=False, num_workers=num_workers_cfg, persistent_workers=persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
+        self.train_dataloader = DataLoader(train_dataset, batch_size=self.data_loader_batch_size, shuffle=True, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
+        self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.data_loader_batch_size, shuffle=False, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
     
 
-    def get_evaluation_dataset(self, split):
+    def get_evaluation_dataset(self, split, load_im_size):
         """Gets an evaluation dataset based on split given (must be "validation" or "testing").
             We do not perform patch sampling on evaluation dataset, always returning the full image (sample_mode = "full").
             Patchifying the evaluation image is too large memory constraint to do in batches here.
@@ -729,13 +758,25 @@ class NetworkTrainer(ABC):
                 debug=self.trainer_config.SAMPLER.DEBUG,
                 data_augmentation_strategy =None,
                 original_image_size= self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE,
-                input_size =  self.trainer_config.SAMPLER.INPUT_SIZE,
+                input_size =  load_im_size,
                 hm_lambda_scale = self.trainer_config.MODEL.HM_LAMBDA_SCALE,
 
             )
         return dataset
 
-    
+    def generate_heatmaps_batch(self, data_dict, dataloader):
+        batch_hms = []
+        np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
+        b_= [dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"].detach().numpy()]
+        for x in b_:
+            if batch_hms == []:
+                batch_hms = [[y] for y in x]
+            else:
+                for hm_idx, hm in enumerate(x):
+                    batch_hms[hm_idx].append(hm)
+        batch_hms = [torch.stack(x) for x in batch_hms]
+
+        return batch_hms
 
     @staticmethod
     def worker_init_fn(worker_id):

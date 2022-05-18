@@ -258,7 +258,6 @@ class DatasetBase(data.Dataset):
             
             #Recalculate indicators incase transform pushed out/in coords.
             landmarks_in_indicator = [1 if ((0 <= xy[0] <= self.input_size[0] ) and (0 <= xy[1] <= self.input_size[1] )) else 0 for xy in input_coords  ]
-        
 
         else:
 

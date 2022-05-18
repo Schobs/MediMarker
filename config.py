@@ -40,13 +40,11 @@ _C.SAMPLER.DATA_AUG_PACKAGE = 'imgaug' #['imgaug', 'albumentations']
 _C.SAMPLER.NUM_WORKERS = 8
 
 
-
-
 _C.SAMPLER.PATCH = CN() 
 _C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [512,512]
 _C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = _C.DATASET.ORIGINAL_IMAGE_SIZE #Default samples from full resolution image.
 _C.SAMPLER.PATCH.SAMPLER_BIAS = 0.66
-
+_C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional" #["patchify_and_stitch", "fully_convolutional"] # patchify_and_stitch if you wish to patchify and stitch the RESOLUTION_TO_SAMPLE_FROM sized image, fully_convolutional to use input size directly RESOLUTION_TO_SAMPLE_FROM
 # _C.SAMPLER.SAMPLE_PATCH = False
 # _C.SAMPLER.SAMPLE_PATCH_SIZE = [512,512]
 # _C.SAMPLER.SAMPLE_FROM_FULLRES =  True
@@ -81,6 +79,8 @@ _C.TRAINER.PERFORM_VALIDATION = True
 _C.TRAINER.SAVE_LATEST_ONLY = True 
 _C.TRAINER.CACHE_DATA = True
 _C.TRAINER.FOLD = 0
+_C.TRAINER.INFERENCE_ONLY = False
+
 
 
 # ---------------------------------------------------------------------------- #

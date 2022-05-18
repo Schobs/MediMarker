@@ -1,5 +1,5 @@
 
-OUTPUT_DIR: "/mnt/bess/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/testing/t4"
+OUTPUT_DIR: "/mnt/bess/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/testing/t5"
 # OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
 
 SOLVER:
@@ -17,7 +17,7 @@ SOLVER:
 # /mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2/ISBI_512F_512Res_3GS_4MFR_AugACEBS_DS5
 
 MODEL:
-  GAUSS_SIGMA: 12
+  GAUSS_SIGMA: 5
   UNET:
     MAX_FEATURES: 512
     MIN_FEATURE_RESOLUTION: 4
@@ -37,7 +37,7 @@ DATASET:
 
 
 SAMPLER:
-  DATA_AUG: 'thaler21'
+  DATA_AUG: 'AffineComplex'
   INPUT_SIZE : [512,512]
   # SAMPLE_MODE: 'patch' # ['patch', 'full']
   NUM_WORKERS: 8
@@ -57,3 +57,4 @@ TRAINER:
   SAVE_LATEST_ONLY: False
   CACHE_DATA: False
 
+  INFERENCE_ONLY: True

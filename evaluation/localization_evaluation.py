@@ -18,6 +18,7 @@ def success_detection_rate(sample_dicts, threshold):
     total_samples = len(sample_dicts)
     total_landmarks = len(sample_dicts[0]["ind_errors"])
 
+
     images_within_thresh_all = []
     images_over_thresh_all = []
 

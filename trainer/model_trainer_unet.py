@@ -30,10 +30,10 @@ class UnetTrainer(NetworkTrainer):
     """ Class for the u-net trainer stuff.
     """
 
-    def __init__(self, trainer_config= None, is_train=True, output_folder=None, logger=None, profiler=None):
+    def __init__(self, trainer_config= None, is_train=True, output_folder=None, comet_logger=None, profiler=None):
 
 
-        super(UnetTrainer, self).__init__(trainer_config, is_train, output_folder, logger, profiler)
+        super(UnetTrainer, self).__init__(trainer_config, is_train, output_folder, comet_logger, profiler)
 
       
         #global config variable
@@ -121,8 +121,8 @@ class UnetTrainer(NetworkTrainer):
         self.network.to(self.device)
 
         #Log network and initial weights
-        if self.logger:
-            self.logger.set_model_graph(str(self.network))
+        if self.comet_logger:
+            self.comet_logger.set_model_graph(str(self.network))
             print("Logged the model graph.")
 
      
@@ -204,13 +204,14 @@ class UnetTrainer(NetworkTrainer):
 
         #Get only the full resolution heatmap
         output = output[-1]
+
         final_heatmap = output
         if self.resize_first:
             #torch resize does HxW so need to flip the diemsions
             final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
         
         pred_coords, max_values = get_coords(final_heatmap)
-        extra_info["hm_max"].append(max_values.cpu().detach().numpy())
+        extra_info["hm_max"] = (max_values)
 
         del final_heatmap
 

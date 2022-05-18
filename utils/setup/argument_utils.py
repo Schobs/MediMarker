@@ -71,9 +71,24 @@ def argument_checking(yaml_args):
     """
     all_errors = []
     # if yaml_args.SAMPLER.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
-
+    
 
     #### Parse sampler arguments ####
+
+    try:
+        accepted_samplers = ['patchify_and_stitch', 'fully_convolutional']
+        if yaml_args.SAMPLER.PATCH.INFERENCE_MODE not in accepted_samplers :
+            raise ValueError("SAMPLER.SAMPLE_MODE %s not recognised. Choose from %s" %  (yaml_args.SAMPLER.SAMPLE_MODE, accepted_samplers) )
+    except ValueError as e:
+        all_errors.append(e)
+    
+    #temp for not implemented yet
+    try:
+        if yaml_args.SAMPLER.PATCH.INFERENCE_MODE =="patchify_and_stitch" :
+            raise ValueError("SAMPLER.PATCH.INFERENCE_MODE \"patchify_and_stitch\" not implemented yet.")
+    except ValueError as e:
+        all_errors.append(e)
+
     try:
         accepted_samplers = ['patch', 'full']
         if yaml_args.SAMPLER.SAMPLE_MODE not in accepted_samplers :

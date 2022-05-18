@@ -70,54 +70,82 @@ def main():
 
 
     #Trainer 
-    trainer = UnetTrainer(trainer_config= cfg, is_train=True, output_folder=cfg.OUTPUT_DIR, logger=writer)
-    trainer.initialize(training_bool=True)
 
-    trainer.train()
-
+    ############ Training ############
+    if not cfg.TRAINER.INFERENCE_ONLY:
+        trainer = UnetTrainer(trainer_config= cfg, is_train=True, output_folder=cfg.OUTPUT_DIR, comet_logger=writer)
+        trainer.initialize(training_bool=True)
+        trainer.train()
+    else:
+        trainer = UnetTrainer(trainer_config= cfg, is_train=False, output_folder=cfg.OUTPUT_DIR, comet_logger=writer)
+        trainer.initialize(training_bool=False)
 
     ########### Testing ##############
-
-    #Load Models that were saved.
-    model_paths = []
-    model_names = []
-    for fname in os.listdir(cfg.OUTPUT_DIR):
-            if "fold"+fold in fname and ".model" in fname:
-                model_names.append(fname.split(".model")[0])
-
-    for name in model_names:
-        model_paths.append(os.path.join(cfg.OUTPUT_DIR, (name+ ".model")))
-
+    print("testing")
 
     all_model_summaries = {}
     all_model_individuals = {}
 
-    for i in range(len(model_paths)):
-        summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i], "testing")
+    if cfg.MODEL.CHECKPOINT:
+        print("loading provided checkpoint",cfg.MODEL.CHECKPOINT)
+
+        model_name = cfg.MODEL.CHECKPOINT.split('/')[-1].split(".model")[0]
+        print("model name: ", model_name)
+
+        trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
+        summary_results, ind_results = trainer.run_inference(split="testing")
+
+        all_model_summaries[model_name] = summary_results
+        all_model_individuals[model_name] = ind_results
+
+    else:
+        print("Loading all models in cfg.OUTPUT_DIR: ", cfg.OUTPUT_DIR)
+        #Load Models that were saved.
+        model_paths = []
+        model_names = []
+        for fname in os.listdir(cfg.OUTPUT_DIR):
+            if "fold"+fold in fname and ".model" in fname:
+                model_names.append(fname.split(".model")[0])
+
+        for name in model_names:
+            model_paths.append(os.path.join(cfg.OUTPUT_DIR, (name+ ".model")))
+
+
+
         
-        all_model_summaries[model_names[i]] = summary_results
-        all_model_individuals[model_names[i]] = ind_results
-
-
-        #Print results and Log to CometML
-        print("Results for Model: ", model_paths[i])
-        print("All Mean Error %s +/- %s" % (summary_results.loc["Error Mean", "All"], summary_results.loc["Error Std","All"]), end=" - ")
-        writer.log_metric(model_names[i].split("_fold")[0] + " Error All Mean", summary_results.loc["Error Mean", "All"])
-        writer.log_metric(model_names[i].split("_fold")[0] + " Error All Std", summary_results.loc["Error Std", "All"])
-
-        for k in summary_results.index.values:
-                if "SDR" in k:
-                    print(" %s : %s," % (k, summary_results.loc[k, "All"] ), end="")
-                    writer.log_metric(model_names[i].split("_fold")[0] + " " + k,summary_results.loc[k, "All"])
+        # model_paths = ["/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_8GS_4MFR_AugAC_DS5/model_best_valid_coord_error_fold0.model"]
 
         
-        print("\n Individual Results: \n")
-        for lm in range(len(cfg.DATASET.LANDMARKS)):
-            print("Landmark %s Mean Error %s +/- %s " % (lm, summary_results.loc["Error Mean","L"+str(lm)], summary_results.loc["Error Std","L"+str(lm)] ), end=", ")
-            for k in summary_results.index.values:
-                if "SDR" in k:
-                    print(" %s : %s," % (k, summary_results.loc[k,"L"+ str(lm)] ), end="")
-            print("\n")
+        for i in range(len(model_paths)):
+            print("loading ", model_paths[i])
+            trainer.load_checkpoint( model_paths[i], training_bool=False)
+            # summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i], "testing")
+            summary_results, ind_results = trainer.run_inference(split="testing")
+
+            all_model_summaries[model_names[i]] = summary_results
+            all_model_individuals[model_names[i]] = ind_results
+
+            
+
+            # #Print results and Log to CometML
+            # print("Results for Model: ", model_paths[i])
+            # print("All Mean Error %s +/- %s" % (summary_results.loc["Error Mean", "All"], summary_results.loc["Error Std","All"]), end=" - ")
+            # writer.log_metric(model_names[i].split("_fold")[0] + " Error All Mean", summary_results.loc["Error Mean", "All"])
+            # writer.log_metric(model_names[i].split("_fold")[0] + " Error All Std", summary_results.loc["Error Std", "All"])
+
+            # for k in summary_results.index.values:
+            #         if "SDR" in k:
+            #             print(" %s : %s," % (k, summary_results.loc[k, "All"] ), end="")
+            #             writer.log_metric(model_names[i].split("_fold")[0] + " " + k,summary_results.loc[k, "All"])
+
+            
+            # print("\n Individual Results: \n")
+            # for lm in range(len(cfg.DATASET.LANDMARKS)):
+            #     print("Landmark %s Mean Error %s +/- %s " % (lm, summary_results.loc["Error Mean","L"+str(lm)], summary_results.loc["Error Std","L"+str(lm)] ), end=", ")
+            #     for k in summary_results.index.values:
+            #         if "SDR" in k:
+            #             print(" %s : %s," % (k, summary_results.loc[k,"L"+ str(lm)] ), end="")
+            #     print("\n")
 
 
     #Now Save all model results to a spreadsheet

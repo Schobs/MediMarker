@@ -5,6 +5,7 @@ from albumentations.augmentations.transforms import ImageOnlyTransform
 from albumentations.core.transforms_interface import BasicTransform
 
 def normalize_cmr(image,to_tensor=False):
+
     # image = sample["image"]
     if torch.is_tensor(image):
         norm_image = ((image-torch.mean(image))/torch.std(image)).float()
@@ -13,9 +14,7 @@ def normalize_cmr(image,to_tensor=False):
         norm_image = ((image-np.mean(image))/np.std(image))
         if to_tensor:
             norm_image = torch.from_numpy(np.expand_dims(norm_image, axis=0))
-    # sample["image"] = norm_image
-    # return (zscore(image, axis=None)).astype(np.float32)
-    # image = ((image - np.min(image)) / (np.max(image) - np.min(image))).astype(np.float32)
+
     return norm_image
 
 
