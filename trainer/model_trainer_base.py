@@ -250,8 +250,8 @@ class NetworkTrainer(ABC):
 
 
     @abstractmethod
-    def predict_heatmaps_and_coordinates(self, data_dict,  return_all_layers = False, resize_to_og=False,):
-        """ For inference. Predict heatmap and coordinates directly.
+    def predict_heatmaps_and_coordinates(self, data_dict):
+        """ For inference. Predict heatmap and coordinates directly from a data_dict.
 
         Args:
             data_dict (_type_): _description_
@@ -273,7 +273,6 @@ class NetworkTrainer(ABC):
 
 
         data =(data_dict['image']).to( self.device )
-
 
         #This happens when we regress sigma with >0 workers due to multithreading issues.
         if self.gen_hms_in_mainthread:

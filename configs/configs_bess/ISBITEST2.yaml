@@ -21,7 +21,7 @@ MODEL:
   UNET:
     MAX_FEATURES: 512
     MIN_FEATURE_RESOLUTION: 4
-  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_8GS_4MFR_AugAC_DS5/model_best_valid_coord_error_fold0.model"
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_8GS_4MFR_AugAC_DS5/model_best_valid_coord_error_fold0.model"
   # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/testing/t3/model_ep_299_fold0.model"
   # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/testing/t5/model_best_valid_coord_error_fold0.model"
 
@@ -40,14 +40,14 @@ DATASET:
 
 SAMPLER:
   DATA_AUG: 'AffineComplex'
-  INPUT_SIZE : [512,512]
-  # SAMPLE_MODE: 'patch' # ['patch', 'full']
+  INPUT_SIZE : [128,128]
+  SAMPLE_MODE: 'patch' # ['patch', 'full']
   NUM_WORKERS: 1
   # DEBUG: True
   PATCH:
     SAMPLER_BIAS: 0.66
-    RESOLUTION_TO_SAMPLE_FROM:  [1935,2400]
-    SAMPLE_PATCH_SIZE: [512,512]
+    RESOLUTION_TO_SAMPLE_FROM:  [512,512]
+    SAMPLE_PATCH_SIZE: [128,128]
 
 
 # _C.SAMPLER.PATCH = CN() 
@@ -59,4 +59,4 @@ TRAINER:
   SAVE_LATEST_ONLY: False
   CACHE_DATA: False
 
-  INFERENCE_ONLY: True
+  INFERENCE_ONLY: False

@@ -94,17 +94,9 @@ class UnetTrainer(NetworkTrainer):
 
         ################# Settings for saving checkpoints ##################################
         self.save_every = 25
-        # self.save_latest_only = self.trainer_config.TRAINER.SAVE_LATEST_ONLY  # if false it will not store/overwrite _latest but separate files each
-
-        #Add additional things to log
-        # self.logged_per_epoch["train_loss_hm"] = []
-        # for i in range(self.num_res_supervision):
-        #     self.logged_per_epoch["train_loss_hm_level"+str(i)]
 
 
-    def initialize(self, training_bool=True):
 
-        super(UnetTrainer, self).initialize()
 
 
 
@@ -160,34 +152,7 @@ class UnetTrainer(NetworkTrainer):
 
         print("initialized Loss function.")
 
-    def initialize_keys_for_logging_epoch(self):
-        super(UnetTrainer, self).initialize_keys_for_logging_epoch()
 
-
-    def maybe_update_lr(self, epoch=None, exponent=0.9):
-
-        super(UnetTrainer, self).maybe_update_lr(epoch, exponent)
-
-       
-
-    def _maybe_init_amp(self):
-        super(UnetTrainer, self)._maybe_init_amp()
-
-   
-
-    def train(self):
-        super(UnetTrainer, self).train()
-
-    # def log_key_variables(self, output, loss, data_dict, logged_vars):
-    #     """Logs trainer specific variables. Also call's super method which logs base/generic variables.
-
-    #     Args:
-    #         output (_type_): _description_
-    #         loss (_type_): _description_
-    #         data_dict (_type_): _description_
-    #         logged_vars (_type_): _description_
-    #     """
-    #     super(UnetTrainer, self).log_key_variables(self, output, loss, data_dict, logged_vars)
 
     def get_coords_from_heatmap(self, output):
         """ Gets x,y coordinates from a model output. Here we use the final layer prediction of the U-Net,
@@ -214,17 +179,13 @@ class UnetTrainer(NetworkTrainer):
         extra_info["hm_max"] = (max_values)
 
         del final_heatmap
-
-
-        
+  
 
         return pred_coords, extra_info
 
-    def get_coords_from_model_output_patchified(self, output):
-        raise NotImplementedError()
-        """
-        Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
-        """
+
+    
+    
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
         '''
         Use model outputs from a patchified image to stitch together a full resolution heatmap
@@ -274,43 +235,7 @@ class UnetTrainer(NetworkTrainer):
         return heatmaps_return, final_heatmap, predicted_coords, l.detach().cpu().numpy()
 
     
-    def predict_heatmaps_and_coordinates_from_patches(self, data_dict,  return_all_layers = False, resize_to_og=False,):
-        data =(data_dict['image']).to( self.device )
-        target = [x.to(self.device) for x in data_dict['label']]
-        from_which_level_supervision = self.num_res_supervision 
-
-        if self.deep_supervision:
-            output = self.network(data)[-from_which_level_supervision:]
-        else:
-            output = self.network(data)
-
-        
-        l, loss_dict = self.loss(output, target, self.sigmas)
-
-        final_heatmap = output[-1]
-        if resize_to_og:
-            #torch resize does HxW so need to flip the dimesions for resize
-            final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
-
-        predicted_coords, max_values= get_coords(final_heatmap)
-
-        heatmaps_return = output
-        if not return_all_layers:
-            heatmaps_return = output[-1] #only want final layer
-
-
-        return heatmaps_return, final_heatmap, predicted_coords, l.detach().cpu().numpy()
-
-
-
-    # def run_iteration(self, generator, dataloader, backprop, get_coord_error=False, coord_error_list=None):
-    #     return super(UnetTrainer, self).run_iteration(generator, dataloader, backprop, get_coord_error, coord_error_list)
-
     
-
-    def set_training_dataloaders(self):
-        super(UnetTrainer, self).set_training_dataloaders()
-
 
 
     @staticmethod

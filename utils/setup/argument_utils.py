@@ -145,7 +145,7 @@ def argument_checking(yaml_args):
         #1e
         if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM < yaml_args.DATASET.ORIGINAL_IMAGE_SIZE:
             warnings.warn(f'SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM is smaller than DATASET.ORIGINAL_IMAGE_SIZE. Your model is learning on resized input images from {yaml_args.DATASET.ORIGINAL_IMAGE_SIZE} to {yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM} \
-                and sampling {yaml_args.SAMPLER.SAMPLE_PATCH_SIZE} patches from the {yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM} resolution image.', stacklevel=2)
+                and sampling {yaml_args.SAMPLER.PATCH.SAMPLE_PATCH_SIZE} patches from the {yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM} resolution image.', stacklevel=2)
 
 
     
