@@ -20,7 +20,7 @@ class LabelGenerator(ABC):
         self.network_input_size = network_input_size
 
     @abstractmethod
-    def generate_labels(self, landmarks, landmarks_in_indicator, input_size, hm_sigmas, num_res_supervisions, hm_lambda_scale):
+    def generate_labels(self, landmarks, x_y_corner_patch, landmarks_in_indicator, input_size, hm_sigmas, num_res_supervisions, hm_lambda_scale):
         """ generates heatmaps for given landmarks of size input_size, using sigma hm_sigmas.
             Generates int(num_res_supervisions) heatmaps, each half the size as previous.
             The hms are scaled by float hm_lambda_scale
@@ -59,7 +59,7 @@ class UNetLabelGenerator(LabelGenerator):
 
     
 
-    def generate_labels(self, landmarks, landmarks_in_indicator, image_size, sigmas, num_res_levels, lambda_scale=100, dtype=np.float32, to_tensor=True):
+    def generate_labels(self, landmarks, x_y_corner_patch, landmarks_in_indicator, image_size, sigmas, num_res_levels, lambda_scale=100, dtype=np.float32, to_tensor=True):
         heatmap_list = []
 
         resizing_factors = [[2**x, 2**x] for x in range(num_res_levels)]
@@ -133,36 +133,41 @@ class UNetLabelGenerator(LabelGenerator):
 class PHDNetLabelGenerator(LabelGenerator):
     """   Generates target heatmaps and displacements for the PHD-Net network training scheme
     """
-    def __init__(self, sampling_bias, maxpool_factor, full_image_resolution, class_label_scheme, sample_grid_size ):
+    def __init__(self, maxpool_factor, full_heatmap_resolution, class_label_scheme, sample_grid_size ):
         super(LabelGenerator, self).__init__()
-        self.sampling_bias = sampling_bias
+        # self.sampling_bias = sampling_bias
         self.maxpool_factor = maxpool_factor
-        self.full_image_resolution = full_image_resolution
+        self.full_heatmap_resolution = full_heatmap_resolution
         self.class_label_scheme = class_label_scheme
         self.sample_grid_size = sample_grid_size
 
 
-
+    def stitch_heatmap(self, patch_predictions, stitching_info):
+        '''
+        Use model outputs from a patchified image to stitch together a full resolution heatmap
+        
+        '''
 
     
 
-    def generate_labels(self, image, landmark,  landmarks_in_indicator, sigma, lambda_scale=100, dtype=np.float32, to_tensor=True):
+    def generate_labels(self, landmarks, xy_patch_corner, landmarks_in_indicator, image_size, sigmas, num_res_levels, lambda_scale=100, dtype=np.float32, to_tensor=True):
         heatmap_list = []
+    # landmark, xy_patch_corner, class_loss_scheme, grid_size, full_heatmap_resolution, maxpooling_factor, sigma, lambda_scale=100, debug=False):
 
-        sub_image, sub_patch_displacements, sub_class, sub_patch_cent, guassian_weights = gen_patch_displacements_heatmap(
-            image, landmark, self.class_label_scheme, self.sample_grid_size ,  self.sampling_bias, self.full_image_resolution, self.maxpool_factor, sigma, debug=True)
-        
-        for size_f in resizing_factors:
-            intermediate_heatmaps = []
-            for idx, lm in enumerate(landmarks):
-                lm = np.round(lm / size_f)
-                downsample_size = [image_size[0] / size_f[0], image_size[1] / size_f[1]]
-                down_sigma = sigmas[idx]/ size_f[0]
-                intermediate_heatmaps.append(gaussian_gen(lm, downsample_size, 1, down_sigma, dtype, lambda_scale))
+        # sub_image, sub_patch_displacements, sub_class, sub_patch_cent, guassian_weights = gen_patch_displacements_heatmap(
+        #     landmark, self.class_label_scheme, self.sample_grid_size, self.full_image_resolution, self.maxpool_factor, sigma, debug=True)
+    
+        intermediate_heatmaps = []
+        for idx, lm in enumerate(landmarks):
+            sigma = sigmas[idx]
+            # intermediate_heatmaps.append(gaussian_gen(lm, downsample_size, 1, down_sigma, dtype, lambda_scale))
+#  (landmark: Any, xy_patch_corner: Any, class_loss_scheme: Any, grid_size: Any, 
+# full_heatmap_resolution: Any, maxpooling_factor: Any, sigma: Any, lambda_scale: int = 100, debug: bool = False)
 
-                sub_im, sub_patch_disp, sub_patch_class, sub_patch_centers, guassian_weights = genSampleEfficient2(inp, pts_c, self.class_loss_scheme, self.grid_size, self.bias, resolution, self.maxpool_factor, self.std)
-
-            heatmap_list.append(np.array(intermediate_heatmaps))
+            sub_patch_displacements, sub_class, guassian_weights = gen_patch_displacements_heatmap(
+                lm, xy_patch_corner, self.class_label_scheme, self.sample_grid_size, self.full_heatmap_resolution, self.maxpool_factor, sigma, lambda_scale, debug=True)
+            
+            # heatmap_list.append(np.array(intermediate_heatmaps))
 
         hm_list = heatmap_list[::-1]
 
@@ -288,33 +293,15 @@ def get_downsampled_heatmaps(heatmaps, num_res_levels):
     plt.show()
 
 
-
-def gen_patch_displacements_heatmap(image, landmark, class_loss_scheme, grid_size, bias, resolution, maxpooling_factor, sigma, debug=False):
+#  image, landmark, self.class_label_scheme, self.sample_grid_size, self.full_image_resolution, self.maxpool_factor, sigma, debug=True
+def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme, grid_size, full_heatmap_resolution, maxpooling_factor, sigma, lambda_scale=100, debug=False):
+    # Don't worry about sampling here, just generate the heatmaps.
+    # 1) Generate displacements for the patch 
+    # 2) generate full heatmap and slice the heatmap
+        # Get the landmark on the full image by doing lm = normalized_lm + xy_patch 
 
     s = time.time()
-    # bias% chance for the landmark to be in randomly sampled grid
-    if grid_size < resolution[0]:
-        z_rand = np.random.uniform(0, 1)
-        if z_rand >= (1-bias):
-            y_rand = np.random.randint(landmark[1]-grid_size-4, landmark[1]-4)
-            x_rand = np.random.randint(landmark[0]-grid_size-4, landmark[0]-4)
-            # landmark_in = False
-            # while not landmark_in:
-            #     y_rand = np.random.randint(0, resolution[0]-grid_size)
-            #     x_rand = np.random.randint(0, resolution[1] - grid_size)
-            #     if y_rand <= landmark[1] <= y_rand+grid_size:
-            #         if x_rand <= landmark[0] <= x_rand + grid_size:
-            #             landmark_in = True
-
-        else:
-            y_rand = np.random.randint(0, resolution[0]-grid_size)
-            x_rand = np.random.randint(0, resolution[1] - grid_size)
-    
-        sub_image = image[:, y_rand:y_rand + grid_size, x_rand:x_rand+grid_size]
-    else:
-        sub_image = image
-        y_rand = 0
-        x_rand = 0
+   
    
     # need to find sub image grid now so 8x8 grid of this. so 64 patches of 16x16
     # need this grid so i can find center of each patch and if the landmark is in it
@@ -322,96 +309,57 @@ def gen_patch_displacements_heatmap(image, landmark, class_loss_scheme, grid_siz
     # loop from top left as 0,0 down so like the convolutions go to match.
     # go from the randomly generated y to that + grid_size in steps
     # (8 for grid size 128)
-    patches = grid_size//2**maxpooling_factor
-    step_size = grid_size//patches
+    patches = [grid_size[0]//2**maxpooling_factor, grid_size[1]//2**maxpooling_factor]
+    step_size = 2**maxpooling_factor
 
-
-    #Sub patch centers
-
-    start_x = x_rand+step_size//2
-    end_x   =   x_rand+grid_size
-    start_y = y_rand+step_size//2
-    end_y = y_rand+grid_size
-
-    sub_patch_centers_x = np.arange(start_x, end_x, step_size)
-    sub_patch_centers_y = np.arange(start_y, end_y, step_size)
-
-    sub_patch_cent = np.empty([1,2,patches, patches], dtype=np.float32)
-
-    sub_patch_cent[0,0] = sub_patch_centers_x
-    sub_patch_cent[0,1] = sub_patch_centers_y
-
-    sub_patch_cent[0,1] = np.transpose(sub_patch_cent[0,1], (1,0))
-
-
-
+    x_y_displacements = np.zeros((patches))
     
-    x_dists = np.empty([patches], dtype=np.float32)
-    y_dists = np.empty([patches], dtype=np.float32)
-    
-    counter = 0
-    for y in range(y_rand, y_rand+grid_size, step_size):
-        center_y = y+step_size//2
+    for x in range(0, grid_size[0], step_size):
+        for y in range(0, grid_size[0], step_size):
+        
+            center_xy = [x+(step_size//2),y+(step_size//2)]
 
-        distance_y = abs(landmark[1] - center_y)
+            # find log of displacements accounting for orientation
 
-        # #find log of displacements accounting for orientation
-        if (landmark[1] > center_y):
-            displace_y = math.log(distance_y, 2)
-        elif (landmark[1] < center_y):
-            displace_y = -math.log(distance_y, 2)
-        else:
-            displace_y = 0
+            distance_y = abs(landmark[1] - center_xy[1])
+            if (landmark[1] > center_xy[1]):
+                displace_y = math.log(distance_y, 2)
+            elif (landmark[1] < center_xy[1]):
+                displace_y = -math.log(distance_y, 2)
+            else:
+                displace_y = 0
 
-        y_dists[counter] = (displace_y)
-        counter +=1
-
-    counter = 0
-    for x in range(x_rand, x_rand+grid_size, step_size):
-        center_x = x+step_size//2
-
-        distance_x = abs(landmark[0] - center_x)
-
-        # #find log of displacements accounting for orientation
-        if (landmark[0] > center_x):
-                displace_x = math.log(distance_x, 2)
-        elif (landmark[0] < center_x):
-            displace_x = -math.log(distance_x, 2)
-        else:
+            distance_x = abs(landmark[0] - center_xy[0])
+            if (landmark[0] > center_xy[0]):
+                    displace_x = math.log(distance_x, 2)
+            elif (landmark[0] < center_xy[0]):
+                displace_x = -math.log(distance_x, 2)
+            else:
                 displace_x = 0
 
-        x_dists[counter] =(displace_x)  
-        counter +=1
-       
+            x_y_displacements[x,y] = [displace_x, displace_y]
 
-    X,Y = np.meshgrid(x_dists,y_dists)
- 
-    sub_patch_displacements = np.array([X,Y])
 
-    
 
     ###########Gaussian weights #############
     #Generate guassian weights for weighted loss
-    guassian_weights = np.array(gaussian_gen(landmark, resolution, step_size, sigma))
+    full_resolution_lm = landmark + xy_patch_corner
+    gaussian_weights_full = gaussian_gen(full_resolution_lm, full_heatmap_resolution, step_size, sigma, lambda_scale)
 
-    x_block_start = int(np.floor(x_rand/step_size))
-    x_block_end = int(np.floor((x_rand + grid_size)/step_size))
-    y_block_start = int(np.floor(y_rand/step_size))
-    y_block_end = int(np.floor((y_rand+ grid_size)/step_size))
 
-    # print("grid size: ",grid_size)
-    # print("x and y start and end: ",x_block_start ,x_block_end,y_block_start,y_block_end)
-    # print("full guassian shape@ ", guassian_weights.shape)
-
-   # guassian_weights =  guassian_weights[:, x_block_start:x_block_end, y_block_start:y_block_end]
-    guassian_weights =  guassian_weights[:, y_block_start:y_block_end, x_block_start:x_block_end]
+    x_block_start = int(np.floor(xy_patch_corner[0]/step_size))
+    x_block_end = int(np.floor((xy_patch_corner[0] + grid_size)/step_size))
+    y_block_start = int(np.floor(xy_patch_corner[1]/step_size))
+    y_block_end = int(np.floor((xy_patch_corner[1]+ grid_size)/step_size))
+    gaussian_weights =  gaussian_weights_full[:, x_block_start:x_block_end, y_block_start:y_block_end]
     # print("after guassian shape@ ", guassian_weights.shape)
   
 
     #Classification labels. Can be gaussian heatmap or binary.
     if class_loss_scheme == 'gaussian':
-        sub_class = guassian_weights
+        sub_class = gaussian_weights
     else:
+        raise NotImplementedError("only multi-branch labels are currently implemented. try with PHDNET.BRANCH_SCHEME as \"multi\"")
         sub_class = np.zeros([1,patches, patches])
         if landmark[0] >= x_rand and landmark[0] <= x_rand+grid_size and landmark[1] >= y_rand and landmark[1] <=y_rand+grid_size:
             pos_patches = []
@@ -469,42 +417,43 @@ def gen_patch_displacements_heatmap(image, landmark, class_loss_scheme, grid_siz
 
 
     if debug:
-        print("sub patch disp shape: ", sub_patch_displacements.shape)
-        print("guassian shape: ", guassian_weights.shape)
-
-        fig, ax = plt.subplots(nrows=2, ncols=2)
-        ax[0,0].imshow(np.squeeze(image))
-        ax[0,1].imshow(np.squeeze(image))
-
-        rect = patchesplt.Rectangle(( landmark[0], landmark[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
-        ax[0,0].add_patch(rect)
+        print("normalized landmark: ", landmark)
+        print("reconstructed full landmark: ", full_resolution_lm)
+        print("full gauss shape and sliced gauss shape ", gaussian_weights_full.shape, gaussian_weights.shape)
 
 
-        ax[1,0].imshow(np.squeeze(sub_image))
+        fig, ax = plt.subplots(nrows=3, ncols=1)
+        ax[0].imshow(gaussian_weights_full[0])
+        ax[1].imshow(gaussian_weights[0])
+        ax[2].imshow(gaussian_weights[0])
 
-        print("lm", landmark[0], landmark[1])
-        rect1 = patchesplt.Rectangle(( landmark[0]- x_rand, landmark[1]-y_rand) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
-        ax[1,0].add_patch(rect1)
-        #ax.plot(512,512, linewidth=3, color="k") 
-        for i in range(16):
-            for j in range(16):
-                x_cent = sub_patch_cent[0,0,i,j]
-                y_cent = sub_patch_cent[0,1,i,j]
-                x_disp = np.sign(sub_patch_displacements[0,i,j]) * (2**(abs(sub_patch_displacements[0,i,j])))
-                y_disp = np.sign(sub_patch_displacements[1,i,j]) * (2**(abs(sub_patch_displacements[1,i,j])))
+        rect0 = patchesplt.Rectangle(( full_resolution_lm[0], full_resolution_lm[1]) ,6,6,linewidth=2,edgecolor='g',facecolor='none') 
+        ax[0].add_patch(rect0)
+
+        rect1 = patchesplt.Rectangle(( landmark[0], landmark[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
+        ax[1].add_patch(rect1)
+
+        rect2 = patchesplt.Rectangle(( landmark[0], landmark[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
+        ax[2].add_patch(rect2)
+
+
+        for x in range(0, grid_size[0], step_size):
+            for y in range(0, grid_size[0], step_size):
+        
+                center_xy = [x+(step_size//2),y+(step_size//2)]
+                x_disp = np.sign(x_y_displacements[x,y,0]) * (2**(abs(x_y_displacements[x,y,0])))
+                y_disp = np.sign(x_y_displacements[x,y,1]) * (2**(abs(x_y_displacements[x,y,1])))
             #  print(x_cent, y_cent, x_disp, y_disp)
-                ax[0,1].arrow(x_cent, y_cent, x_disp, y_disp)
+                ax[2].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
 
 
 
-        ax[1,1].imshow(np.squeeze(sub_class))
         plt.show()
 
     # # ############################# end of DEBUGGING VISUALISATION #################
-
     
 
     # e = time.time()
-    return sub_image, sub_patch_displacements, sub_class, sub_patch_cent, guassian_weights
+    return x_y_displacements, sub_class, gaussian_weights
 
     

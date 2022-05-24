@@ -12,6 +12,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 from config import get_cfg_defaults
 from trainer.model_trainer_unet import UnetTrainer
+from trainer.model_trainer_phdnet import PHDNetTrainer
+
 from visualisation import visualize_predicted_heatmaps
 from run_inference import run_inference_model
 from pandas import ExcelWriter
@@ -68,20 +70,27 @@ def main():
     #     record_shapes=True,
     #     with_stack=True)
 
+    #Get model trainer (u-net or phdnet)
+    if cfg.MODEL.ARCHITECTURE == "U-Net":
+        trainer = UnetTrainer
+    elif cfg.MODEL.ARCHITECTURE == "PHD-Net":
+        trainer = PHDNetTrainer
+    else:
+        raise ValueError("trainer not recognised.")
 
     #Trainer 
 
     ############ Training ############
     if not cfg.TRAINER.INFERENCE_ONLY:
-        trainer = UnetTrainer(trainer_config= cfg, is_train=True, output_folder=cfg.OUTPUT_DIR, comet_logger=writer)
+        trainer = trainer(trainer_config= cfg, is_train=True, output_folder=cfg.OUTPUT_DIR, comet_logger=writer)
         trainer.initialize(training_bool=True)
         trainer.train()
     else:
-        trainer = UnetTrainer(trainer_config= cfg, is_train=False, output_folder=cfg.OUTPUT_DIR, comet_logger=writer)
+        trainer = trainer(trainer_config= cfg, is_train=False, output_folder=cfg.OUTPUT_DIR, comet_logger=writer)
         trainer.initialize(training_bool=False)
 
     ########### Testing ##############
-    print("testing")
+    print("\n Testing")
 
     all_model_summaries = {}
     all_model_individuals = {}

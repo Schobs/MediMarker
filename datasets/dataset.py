@@ -226,9 +226,11 @@ class DatasetBase(data.Dataset):
              }
         """
         
-    
+        sorgin= time()
+
         hm_sigmas = self.sigmas
         image = self.load_function(self.images[index])
+        # print("load time: " , (time()-sorgin))
         coords = self.target_coordinates[index]
         full_res_coods = self.full_res_coordinates[index]
         im_path = self.image_paths[index]
@@ -236,6 +238,7 @@ class DatasetBase(data.Dataset):
         this_uid = self.uids[index]
         untransformed_im = image
         untransformed_coords = coords
+        x_y_corner = [0,0]
 
       
 
@@ -243,16 +246,17 @@ class DatasetBase(data.Dataset):
 
         #Do data augmentation
         if self.data_augmentation_strategy != None:
-
-
-
+            
+            #By default, the origin is 0,0 unless we sample from the middle of the image somewhere.
             #If sampling patches we first sample the patch with a little wiggle room, & normalize the lms. The transform center-crops it back.
             if self.sample_mode == "patch":
-                untransformed_im, untransformed_coords, landmarks_in_indicator = self.sample_patch(untransformed_im, untransformed_coords)
+                untransformed_im, untransformed_coords, landmarks_in_indicator, x_y_corner = self.sample_patch(untransformed_im, untransformed_coords)
 
             kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords], shape=untransformed_im[0].shape )
 
+            s= time()
             transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps) #list where [0] is image and [1] are coords.
+            # print("aug time ", time() - s)
             input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
             input_coords = np.array([[coo.x_int, coo.y_int] for coo in transformed_sample[1]])
             
@@ -265,12 +269,13 @@ class DatasetBase(data.Dataset):
             input_image = torch.from_numpy(image)
             landmarks_in_indicator = [1 for xy in input_coords]
 
-        
+        s= time()
         if self.generate_hms_here:
             
-            label = self.LabelGenerator.generate_labels(input_coords, landmarks_in_indicator,  self.heatmap_label_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
+            label = self.LabelGenerator.generate_labels(input_coords, x_y_corner, landmarks_in_indicator,  self.heatmap_label_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
         else:
             label = []
+        # print("gen labels: ", time()-s)
 
         sample = {"image":input_image , "label":label, "target_coords": input_coords, "landmarks_in_indicator": landmarks_in_indicator,
             "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid }
@@ -288,7 +293,8 @@ class DatasetBase(data.Dataset):
             print("input coords: " , input_coords)
             self.LabelGenerator.debug_sample(sample,untransformed_im, untransformed_coords)
           
-    
+
+        # print("full resturn: ", time()-sorgin)
         return sample
 
     def generate_labels(self, landmarks, sigmas):
@@ -302,9 +308,12 @@ class DatasetBase(data.Dataset):
 
         """
 
-        landmarks_in_indicator = [1 for xy in landmarks  ]
+        # landmarks_in_indicator = [1 for xy in landmarks  ]
+        landmarks_in_indicator = [1 if ((0 <= xy[0] <= self.input_size[0] ) and (0 <= xy[1] <= self.input_size[1] )) else 0 for xy in landmarks  ]
 
-        return self.LabelGenerator.generate_labels(landmarks, landmarks_in_indicator, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
+        x_y_corner = [0,0]
+
+        return self.LabelGenerator.generate_labels(landmarks, x_y_corner, landmarks_in_indicator, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
         
 
     def sample_patch(self, image, landmarks, lm_safe_region=0, safe_padding=128):
@@ -370,36 +379,36 @@ class DatasetBase(data.Dataset):
 
 
         # Add the safe padding size
-        y_rand = y_rand + safe_padding
-        x_rand = x_rand + safe_padding
+        y_rand_safe = y_rand + safe_padding
+        x_rand_safe = x_rand + safe_padding
 
         #First pad image
         padded_image =   np.expand_dims(np.pad(image[0], (safe_padding,safe_padding)), axis=0)
         padded_patch_size = [x+ (2*safe_padding) for x in self.sample_patch_size]
 
         # We pad before and after the slice.
-        y_rand_pad = y_rand -safe_padding
-        x_rand_pad = x_rand -safe_padding
+        y_rand_pad = y_rand_safe -safe_padding
+        x_rand_pad = x_rand_safe -safe_padding
         cropped_padded_sample = padded_image[:, y_rand_pad:y_rand_pad+padded_patch_size[1], x_rand_pad:x_rand_pad+padded_patch_size[0]]
      
         #Calculate the new origin: 2*safe_padding bc we padded image & then added pad to the patch.
-        normalized_landmarks = [[(lm[0]+2*safe_padding)-(x_rand), (lm[1]+2*safe_padding)-(y_rand)] for lm in landmarks]
+        normalized_landmarks = [[(lm[0]+2*safe_padding)-(y_rand_safe), (lm[1]+2*safe_padding)-(x_rand_safe)] for lm in landmarks]
 
         if self.debug:
             padded_lm = [[lm[0]+safe_padding, lm[1]+safe_padding] for lm in landmarks]
 
             print("the min xy is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
              and the normalized landmark is %s : " % 
-                (x_rand, y_rand, x_rand_pad, y_rand_pad, landmarks, padded_lm, normalized_landmarks ))
+                (y_rand_safe, x_rand_safe, x_rand_pad, y_rand_pad, landmarks, padded_lm, normalized_landmarks ))
 
 
             visualize_patch(image[0], landmarks[0], padded_image[0], padded_lm[0], cropped_padded_sample[0], normalized_landmarks[0], [x_rand_pad, y_rand_pad])
-        return cropped_padded_sample, normalized_landmarks, landmarks_in_indicator
+        return cropped_padded_sample, normalized_landmarks, landmarks_in_indicator, [x_rand, y_rand]
 
 
     def get_patch_stitching_info(self, image_size, patch_size):
         """
-        Get stitching ingo for breaking up an input image into patches, 
+        Get stitching info for breaking up an input image into patches, 
         where each patch overlaps with the next by 50% in x,y. The x,y, indicies are returned for each
         patch so we know how to slice the full resolution image.
 

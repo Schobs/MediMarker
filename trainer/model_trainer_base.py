@@ -210,23 +210,20 @@ class NetworkTrainer(ABC):
             #We will log the training and validation info here. The keys we set describe all the info we are logging.
             per_epoch_logs =  self.dict_logger.get_epoch_logger()
 
-
             # Train for X number of batches per epoch e.g. 250
             for iter_b in range(self.num_batches_per_epoch):
                 l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True, split="training", log_coords=False,  logged_vars=per_epoch_logs)
                 if self.comet_logger:
                     self.comet_logger.log_metric("training loss iteration", l, step)
                 step += 1
-            del generator
+            # del generator
 
-            
             with torch.no_grad():
                 self.network.eval()
                 generator = iter(self.valid_dataloader)
-                for iter_b in range(int(len(self.valid_dataloader.dataset)/self.data_loader_batch_size)):
+                while generator != None:
                     l, generator = self.run_iteration(generator, self.valid_dataloader, backprop=False, split="validation", log_coords=True,  logged_vars=per_epoch_logs)
                  
-            
             self.epoch_end_time = time()
            
             continue_training = self.on_epoch_end(per_epoch_logs)
@@ -264,17 +261,19 @@ class NetworkTrainer(ABC):
         so = time()
         try:
             data_dict = next(generator)
+
         except StopIteration:
             if split != "training":
                 return 0, None
             else:
                 generator = iter(dataloader)
                 data_dict = next(generator)
-
+            
 
         data =(data_dict['image']).to( self.device )
 
         #This happens when we regress sigma with >0 workers due to multithreading issues.
+        #currently does not support patch-based.
         if self.gen_hms_in_mainthread:
             data_dict['label'] = self.generate_heatmaps_batch(data_dict, dataloader)          
 
@@ -282,7 +281,7 @@ class NetworkTrainer(ABC):
 
         self.optimizer.zero_grad()
 
-
+        so = time()
         if self.auto_mixed_precision and self.is_train:
             with autocast():
                 output = self.network(data)
@@ -309,10 +308,10 @@ class NetworkTrainer(ABC):
                 if self.regress_sigma:
                     self.update_dataloader_sigmas(self.sigmas)
 
-        # plt.imshow(output[-1][0][0].cpu().detach().numpy())
-        # plt.show()
+
 
         #Log info from this iteration.
+        s= time()
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
                 if log_coords:
@@ -610,11 +609,17 @@ class NetworkTrainer(ABC):
         self.optimizer.load_state_dict(checkpoint_info["optimizer"])
 
         if training_bool:
-            self.best_valid_loss = checkpoint_info['best_valid_loss']
-            self.best_valid_loss_epoch = checkpoint_info['best_valid_loss_epoch']
-            self.best_valid_coord_error = checkpoint_info['best_valid_coord_error']
-            self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
-            self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
+            # self.best_valid_loss = checkpoint_info['best_valid_loss']
+            # self.best_valid_loss_epoch = checkpoint_info['best_valid_loss_epoch']
+            # self.best_valid_coord_error = checkpoint_info['best_valid_coord_error']
+            # self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
+            # self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
+
+            self.best_valid_loss = 0
+            self.best_valid_loss_epoch = 0
+            self.best_valid_coord_error = 0
+            self.best_valid_coords_epoch = 0
+            self.epochs_wo_val_improv = 0
         
         #Allow legacy models to be loaded (they didn't use to save sigmas)
         if "sigmas" in checkpoint_info:
@@ -720,6 +725,7 @@ class NetworkTrainer(ABC):
             valid_dataset = train_dataset
             print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
 
+        print("num worjers and persists workers :", self.num_workers_cfg, self.persist_workers)
         self.train_dataloader = DataLoader(train_dataset, batch_size=self.data_loader_batch_size, shuffle=True, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
         self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.data_loader_batch_size, shuffle=False, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
     
@@ -766,7 +772,7 @@ class NetworkTrainer(ABC):
     def generate_heatmaps_batch(self, data_dict, dataloader):
         batch_hms = []
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
-        b_= [dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"].detach().numpy()]
+        b_= [dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"]]
         for x in b_:
             if batch_hms == []:
                 batch_hms = [[y] for y in x]

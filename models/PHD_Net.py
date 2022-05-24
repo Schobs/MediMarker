@@ -12,12 +12,16 @@ import torch.nn.functional as F
 
 
 class PHDNet(nn.Module):
+    """ Implmentation of the PHDNet architecture [ref]. 
+        Can use either the multi-branch scheme, heatmap branch only, or displacment branch only.
+
+    """
 
     def __init__(self, branch_scheme):
         self.branch_scheme = branch_scheme
         super(PHDNet, self).__init__()
-     #   k_size = 3
-        #padding = (kernal size -1)/2
+        
+
         padding = 1
         run_stats = True
         momentum = 0.1
@@ -100,7 +104,7 @@ class PHDNet(nn.Module):
         #dont apply sigmoid if using weighted loss as BCEwithlogits does sigmoid in it.
 
 
-    def forward(self, x, sigmoid):
+    def forward(self, x):
 
         # print("the shape of x is:", x.shape)
        # out = []
@@ -122,14 +126,14 @@ class PHDNet(nn.Module):
         x = self.layer6(x)
         # print(x.shape)
 
-        if self.branch_scheme == 'patch_disp_gauss' or 'displacement_only':
+        if self.branch_scheme == 'multi' or 'displacement':
 
             x_reg = self.layer_reg(x)
             # print("reg, ", x_reg.shape)
             out_reg = self.outReg(x_reg) 
             # print(out_reg.shape)
 
-        if self.branch_scheme == 'patch_disp_gauss' or 'class_only':
+        if self.branch_scheme == 'multi' or 'heatmap':
 
             x_class = self.layer_class(x)
             # print("class, ", x_class.shape)
@@ -140,16 +144,16 @@ class PHDNet(nn.Module):
 
 
 
-            if sigmoid == True:
-                s = nn.Sigmoid()
-                out_class = s(out_class)
+            # if sigmoid == True:
+            #     s = nn.Sigmoid()
+            #     out_class = s(out_class)
 
       #  print(out_class.shape)
 
        # out.append([out_class, out_reg])
-        if self.branch_scheme == 'patch_disp_gauss': 
+        if self.branch_scheme == 'multi': 
             return [out_class, out_reg]
-        elif self.branch_scheme == 'class_only':
+        elif self.branch_scheme == 'heatmap':
             return out_class
         else: 
             return out_reg

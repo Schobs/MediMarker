@@ -37,11 +37,12 @@ _C.SAMPLER.INPUT_SIZE = [512,512]
 
 _C.SAMPLER.DATA_AUG = None
 _C.SAMPLER.DATA_AUG_PACKAGE = 'imgaug' #['imgaug', 'albumentations']
-_C.SAMPLER.NUM_WORKERS = 8
+_C.SAMPLER.NUM_WORKERS = 0
 
 
 _C.SAMPLER.PATCH = CN() 
 _C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [512,512]
+
 _C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = _C.DATASET.ORIGINAL_IMAGE_SIZE #Default samples from full resolution image.
 _C.SAMPLER.PATCH.SAMPLER_BIAS = 0.66
 _C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional" #["patchify_and_stitch", "fully_convolutional"] # patchify_and_stitch if you wish to patchify and stitch the RESOLUTION_TO_SAMPLE_FROM sized image, fully_convolutional to use input size directly RESOLUTION_TO_SAMPLE_FROM
@@ -97,6 +98,11 @@ _C.MODEL.UNET = CN()
 _C.MODEL.UNET.MIN_FEATURE_RESOLUTION = 4
 _C.MODEL.UNET.MAX_FEATURES= 512
 _C.MODEL.UNET.INIT_FEATURES= 32
+
+
+_C.MODEL.PHDNET = CN()
+_C.MODEL.PHDNET.BRANCH_SCHEME = 'multi' # ['multi', 'heatmap', 'displacement']
+_C.MODEL.PHDNET.MAXPOOL_FACTOR = 3 # ['multi', 'heatmap', 'displacement']
 
 
 

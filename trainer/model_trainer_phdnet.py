@@ -33,9 +33,7 @@ class PHDNetTrainer(NetworkTrainer):
         #global config variable
         self.trainer_config = trainer_config
 
-
-        #Label generator
-        self.label_generator = PHDNetLabelGenerator()
+     
 
         #get model config parameters
         self.num_out_heatmaps = len(self.trainer_config.DATASET.LANDMARKS)
@@ -44,13 +42,20 @@ class PHDNetTrainer(NetworkTrainer):
         self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
         self.input_size = self.trainer_config.SAMPLER.INPUT_SIZE
         self.orginal_im_size = self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE
+        self.sample_patch_size = self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE
 
 
         #get arch config parameters
-        
+        self.branch_scheme = self.trainer_config.MODEL.PHDNET.BRANCH_SCHEME
+        self.maxpool_factor = self.trainer_config.MODEL.PHDNET.MAXPOOL_FACTOR
+
+
+        # maxpool_factor, full_heatmap_resolution, class_label_scheme, sample_grid_size
+        #Label generator
+        self.label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.branch_scheme, self.sample_patch_size )
 
         #scheduler, initialiser and optimiser params
-        self.weight_inititialiser = InitWeights_KaimingUniform(self.activation_kwargs['negative_slope'])
+        self.weight_inititialiser = InitWeights_KaimingUniform()
         self.optimizer= torch.optim.SGD
         self.optimizer_kwargs =  {"lr": self.initial_lr, "momentum": 0.99, "weight_decay": 3e-5, "nesterov": True}
 
@@ -68,8 +73,6 @@ class PHDNetTrainer(NetworkTrainer):
 
         ################# Settings for saving checkpoints ##################################
         self.save_every = 25
-
-
 
 
 

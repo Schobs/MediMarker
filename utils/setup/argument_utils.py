@@ -150,10 +150,17 @@ def argument_checking(yaml_args):
 
     
          
-
+    #deep supervision cases to cover:
     try:
         if yaml_args.MODEL.ARCHITECTURE != "U-Net" and yaml_args.SOLVER.DEEP_SUPERVISION:
             raise ValueError("Only MODEL.ARCHITECTURE U-Net can be used to deep supervision (SOLVER.DEEP_SUPERVISION is True). You are using ", yaml_args.MODEL.ARCHITECTURE )
+    except ValueError as e:
+        all_errors.append(e)
+
+    try:
+        if not yaml_args.SOLVER.DEEP_SUPERVISION and yaml_args.SOLVER.NUM_RES_SUPERVISIONS > 1:
+            raise ValueError("""(SOLVER.DEEP_SUPERVISION is False), but your number of resolution supervision levels (SOLVER.NUM_RES_SUPERVISIONS) is %s. """
+                """ Please set to 1 or turn DEEP_SUPERVISION =True if you want to use >1 supervision level."""  % yaml_args.SOLVER.NUM_RES_SUPERVISIONS)
     except ValueError as e:
         all_errors.append(e)
 
