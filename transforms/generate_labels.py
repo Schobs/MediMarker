@@ -14,6 +14,7 @@ import matplotlib.patches as patchesplt
 import time
 import torch.nn.functional as F
 import cv2
+from PIL import Image
 class LabelGenerator(ABC):
     """ Super class that defines some methods for generating landmark labels.
     """
@@ -220,17 +221,27 @@ class PHDNetLabelGenerator(LabelGenerator):
         ax[0,2].add_patch(rect3)
 
         #5)
-        tensor_weights = torch.tensor(np.expand_dims(np.expand_dims(patch_heatmap_label, axis=0), axis=0))
+        # tensor_weights = torch.tensor(np.expand_dims(np.expand_dims(patch_heatmap_label, axis=0), axis=0))
         #need to flip axis here because torch does y-x not x-y
-        upscaled_hm =  (F.interpolate(tensor_weights, [self.sample_grid_size[1], self.sample_grid_size[0]], mode="nearest")).cpu().detach().numpy()[0,0]
-
+        # upscaled_hm =  (F.interpolate(tensor_weights, [1,self.sample_grid_size[0], self.sample_grid_size[1]], mode="nearest-exact")).cpu().detach().numpy()[0,0]
+        # upscaled_hm =  cv2.resize(patch_heatmap_label,[self.sample_grid_size[0], self.sample_grid_size[1]],0,0, interpolation = cv2.INTER_NEAREST)
+        step_size = 2**self.maxpool_factor
+        upscaled_hm =  np.broadcast_to(patch_heatmap_label[:,None,:,None], (patch_heatmap_label.shape[0], step_size, patch_heatmap_label.shape[1], step_size)).reshape(self.sample_grid_size)
+        coords_from_uhm, arg_max = get_coords(torch.tensor(np.expand_dims(np.expand_dims(upscaled_hm, axis=0), axis=0)))
+        print("get_coords from upscaled_hm: ", coords_from_uhm)
+        
+        # pil_im = Image.fromarray(patch_heatmap_label,'L')
+        # plt.imshow(pil_im)
+        # plt.show
+        # upscaled_hm = pil_im.resize([self.sample_grid_size[0], self.sample_grid_size[1]], resample=Image.NEAREST)
+        
         ax[1,0].imshow(upscaled_hm)
-        rect4 = patchesplt.Rectangle(( transformed_targ_coords[0], transformed_targ_coords[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
+        rect4 = patchesplt.Rectangle(( np.round(transformed_targ_coords[0]), np.round(transformed_targ_coords[1])) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
         ax[1,0].add_patch(rect4)
 
         #6
         ax[1,1].imshow(upscaled_hm)
-        rect5 = patchesplt.Rectangle(( transformed_targ_coords[0], transformed_targ_coords[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
+        rect5 = patchesplt.Rectangle(( np.round(transformed_targ_coords[0]), np.round(transformed_targ_coords[1])) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
         ax[1,1].add_patch(rect5)
 
         all_locs = []
