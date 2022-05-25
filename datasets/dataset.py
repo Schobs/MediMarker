@@ -250,6 +250,7 @@ class DatasetBase(data.Dataset):
             #By default, the origin is 0,0 unless we sample from the middle of the image somewhere.
             #If sampling patches we first sample the patch with a little wiggle room, & normalize the lms. The transform center-crops it back.
             if self.sample_mode == "patch":
+                print("full res coords: ", full_res_coods)
                 untransformed_im, untransformed_coords, landmarks_in_indicator, x_y_corner = self.sample_patch(untransformed_im, untransformed_coords)
 
             kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords], shape=untransformed_im[0].shape )
@@ -258,7 +259,7 @@ class DatasetBase(data.Dataset):
             transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps) #list where [0] is image and [1] are coords.
             # print("aug time ", time() - s)
             input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
-            input_coords = np.array([[coo.x_int, coo.y_int] for coo in transformed_sample[1]])
+            input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
             
             #Recalculate indicators incase transform pushed out/in coords.
             landmarks_in_indicator = [1 if ((0 <= xy[0] <= self.input_size[0] ) and (0 <= xy[1] <= self.input_size[1] )) else 0 for xy in input_coords  ]
@@ -271,6 +272,7 @@ class DatasetBase(data.Dataset):
 
         s= time()
         if self.generate_hms_here:
+            print("the keypoints!: ", kps)
             
             label = self.LabelGenerator.generate_labels(input_coords, x_y_corner, landmarks_in_indicator,  self.heatmap_label_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
         else:

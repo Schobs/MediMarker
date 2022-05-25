@@ -103,6 +103,8 @@ _C.MODEL.UNET.INIT_FEATURES= 32
 _C.MODEL.PHDNET = CN()
 _C.MODEL.PHDNET.BRANCH_SCHEME = 'multi' # ['multi', 'heatmap', 'displacement']
 _C.MODEL.PHDNET.MAXPOOL_FACTOR = 3 # ['multi', 'heatmap', 'displacement']
+_C.MODEL.PHDNET.CLASS_LABEL_SCHEME = "gaussian" # ['binary', 'binary_weighted', 'gaussian']
+_C.MODEL.PHDNET.WEIGHT_DISP_LOSS_BY_HEATMAP = True # ['binary', 'binary_weighted', 'gaussian']
 
 
 

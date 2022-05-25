@@ -238,3 +238,65 @@ class IntermediateOutputLossAndSigma(nn.Module):
 
 
         return l + sig_l
+
+
+class MultiBranchPatchLoss(nn.Module):
+    def __init__(self, branch_scheme, class_loss_scheme, distance_weighted_bool):
+        super(MultiBranchPatchLoss, self).__init__()
+        self.branch_scheme = branch_scheme
+        self.criterion_reg = nn.MSELoss(reduction='mean')
+        self.distance_weighted_bool = distance_weighted_bool
+        self.loss_seperated_keys = ["loss_all", "displacment_loss", "heatmap_loss"]
+
+        if class_loss_scheme == "binary":
+            self.class_criterion = nn.BCELoss(reduction='mean')
+        elif class_loss_scheme == "binary_weighted": 
+            self.class_criterion = nn.BCEWithLogitsLoss(reduction='mean', pos_weight=  torch.tensor(4096).to(device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')))
+            raise NotImplementedError("this needs testing in new package. the hardcoded pos_weight doesn't seem right. I imagine it needs to be equal to # negative patches.")
+        elif class_loss_scheme == "gaussian":
+            self.class_criterion = nn.MSELoss(reduction='mean')
+          #  self.class_criterion = nn.BCEWithLogitsLoss(reduction='mean', pos_weight=  torch.tensor(4096).to(device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')))
+        else:
+            print("no recognised class loss scheme: ", class_loss_scheme )
+
+
+
+    def weighted_mse_loss(self, input, target, weights):
+      
+        return torch.mean(weights * (input - target) ** 2)    
+
+
+    def forward(self, predictions, labels):
+
+        losses_seperated = {}
+        total_loss = 0
+
+        if self.branch_scheme == 'displacement' or self.branch_scheme == 'multi':
+            if self.distance_weighted_bool:
+                weights = labels["patch_heatmap"]
+                loss_disp = self.weighted_mse_loss(predictions['patch_displacements'], labels['patch_displacements'], weights)
+            else:
+                loss_disp = self.criterion_reg(predictions['patch_displacements'], labels['patch_displacements'])
+            
+            total_loss += loss_disp
+            losses_seperated["displacment_loss"] = loss_disp
+
+        if self.branch_scheme == 'heatmap' or self.branch_scheme == 'multi':
+            loss_class = self.class_criterion(predictions['patch_heatmap'], labels['patch_heatmap'])
+
+            total_loss += loss_class
+            losses_seperated["heatmap_loss"] = loss_class
+
+        losses_seperated["loss_all"] = total_loss
+
+        return total_loss, losses_seperated
+
+        # if self.branch_scheme == 'multi':
+        #     # print("reg loss and class loss", self.loss_regress.float(), self.loss_class)
+        #     return (self.loss_class + self.loss_disp)
+        # elif self.branch_scheme == 'displacement_only':
+        #     # print("reg loss ", self.loss_regress.float())
+        #     return (self.loss_disp)
+        # else:
+        #     # print("class loss ", self.loss_class)
+        #     return (self.loss_class)

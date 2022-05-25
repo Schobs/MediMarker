@@ -2,7 +2,7 @@
 from torch import nn
 import os
 from utils.setup.initialization import InitWeights_KaimingUniform
-from losses import HeatmapLoss, IntermediateOutputLoss, AdaptiveWingLoss, SigmaLoss
+from losses import MultiBranchPatchLoss
 from models.PHD_Net import PHDNet
 import torch
 import numpy as np
@@ -48,11 +48,11 @@ class PHDNetTrainer(NetworkTrainer):
         #get arch config parameters
         self.branch_scheme = self.trainer_config.MODEL.PHDNET.BRANCH_SCHEME
         self.maxpool_factor = self.trainer_config.MODEL.PHDNET.MAXPOOL_FACTOR
-
+        self.class_label_scheme = self.trainer_config.MODEL.PHDNET.CLASS_LABEL_SCHEME
 
         # maxpool_factor, full_heatmap_resolution, class_label_scheme, sample_grid_size
         #Label generator
-        self.label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.branch_scheme, self.sample_patch_size )
+        self.label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.class_label_scheme, self.sample_patch_size )
 
         #scheduler, initialiser and optimiser params
         self.weight_inititialiser = InitWeights_KaimingUniform()
@@ -60,14 +60,7 @@ class PHDNetTrainer(NetworkTrainer):
         self.optimizer_kwargs =  {"lr": self.initial_lr, "momentum": 0.99, "weight_decay": 3e-5, "nesterov": True}
 
 
-        #Loss params
-        loss_str = self.trainer_config.SOLVER.LOSS_FUNCTION
-        if loss_str == "mse":
-            self.individual_hm_loss = HeatmapLoss()
-        elif loss_str =="awl":
-            self.individual_hm_loss = AdaptiveWingLoss(hm_lambda_scale=self.model_config.MODEL.HM_LAMBDA_SCALE)
-        else:
-            raise ValueError("the loss function %s is not implemented. Try mse or awl" % (loss_str))
+      
 
 
 
@@ -108,18 +101,12 @@ class PHDNetTrainer(NetworkTrainer):
 
     def initialize_loss_function(self):
 
-        if self.deep_supervision:
-            #first get weights for the layers. We don't care about the first two decoding levels
-            #[::-1] because we don't use bottleneck layer. reverse bc the high res ones are important
-            loss_weights = np.array([1 / (2 ** i) for i in range(self.num_res_supervision)])[::-1] 
-            loss_weights = (loss_weights / loss_weights.sum()) #Normalise to add to 1
+        #Loss params
+        loss_str = self.trainer_config.SOLVER.LOSS_FUNCTION
+        if loss_str == "mse":
+            self.loss = MultiBranchPatchLoss(self.branch_scheme, self.class_label_scheme, self.trainer_config.MODEL.PHDNET.WEIGHT_DISP_LOSS_BY_HEATMAP)
         else:
-            loss_weights = [1]
-
-        if self.regress_sigma:
-            self.loss = IntermediateOutputLoss(self.individual_hm_loss, loss_weights,sigma_loss=True, sigma_weight=self.trainer_config.SOLVER.REGRESS_SIGMA_LOSS_WEIGHT )
-        else:
-            self.loss = IntermediateOutputLoss(self.individual_hm_loss, loss_weights,sigma_loss=False )
+            raise ValueError("the loss function %s is not implemented for PHD-Net. Try \"mse\"." % (loss_str))
 
         print("initialized Loss function.")
 
