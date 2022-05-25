@@ -161,7 +161,7 @@ class PHDNetLabelGenerator(LabelGenerator):
             sigma = sigmas[idx]
 
             x_y_displacements, sub_class, weights = gen_patch_displacements_heatmap(
-                lm, xy_patch_corner, self.class_label_scheme, self.sample_grid_size, self.full_heatmap_resolution, self.maxpool_factor, sigma, lambda_scale, debug=True)
+                lm, xy_patch_corner, self.class_label_scheme, self.sample_grid_size, self.full_heatmap_resolution, self.maxpool_factor, sigma, lambda_scale, debug=False)
 
             return_dict["patch_heatmap"].append(sub_class)
             return_dict["patch_displacements"].append(x_y_displacements)
@@ -186,7 +186,7 @@ class PHDNetLabelGenerator(LabelGenerator):
         untransformed_im = untransformed_im[0]
         untransformed_coords= np.array(untransformed_coords[0])
 
-        print("all shapes: ", xy_corner.shape, untransformed_im.shape, untransformed_coords.shape, patch_heatmap_label.shape,patch_disp_label.shape, \
+        print("\n \n \n all shapes: ", xy_corner.shape, untransformed_im.shape, untransformed_coords.shape, patch_heatmap_label.shape,patch_disp_label.shape, \
             patch_disp_weights.shape, transformed_targ_coords.shape, full_res_coords.shape, transformed_input_image.shape )
         
         #difference between these is removing the padding (so -128, or whatever the patch padding was)
@@ -200,9 +200,6 @@ class PHDNetLabelGenerator(LabelGenerator):
         #6) show patch_disp_weights point to transformed_targ_coords    
 
         fig, ax = plt.subplots(nrows=2, ncols=3)
-
-        #1)
-        # reconstructed_lm = xy_corner + transformed_targ_coords  
 
         
         #2)
@@ -219,7 +216,7 @@ class PHDNetLabelGenerator(LabelGenerator):
         #4)
         downsampled_coords = np.round(transformed_targ_coords/(2**self.maxpool_factor))
         ax[0,2].imshow(patch_heatmap_label)
-        rect3 = patchesplt.Rectangle(( downsampled_coords[0], downsampled_coords[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
+        rect3 = patchesplt.Rectangle(( downsampled_coords[0], downsampled_coords[1]) ,1,1,linewidth=2,edgecolor='m',facecolor='none') 
         ax[0,2].add_patch(rect3)
 
         #5)
@@ -239,63 +236,16 @@ class PHDNetLabelGenerator(LabelGenerator):
         all_locs = []
         for x_idx, x in enumerate(range(0, self.sample_grid_size[0], (2**self.maxpool_factor))):
             for y_idx, y in enumerate(range(0, self.sample_grid_size[1], (2**self.maxpool_factor))):
-        
+
                 center_xy = [x+((2**self.maxpool_factor)//2),y+((2**self.maxpool_factor)//2)]
+                #REMEMBER TO ADD 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
                 x_disp = np.sign(patch_disp_label[x_idx,y_idx,0]) * (2**(abs(patch_disp_label[x_idx,y_idx,0]))-1)
                 y_disp = np.sign(patch_disp_label[x_idx,y_idx,1]) * (2**(abs(patch_disp_label[x_idx,y_idx,1]))-1)
-            #  print(x_cent, y_cent, x_disp, y_disp)
                 loc = [center_xy[0]+x_disp, center_xy[1]+y_disp]
-                print("loc",x,y, loc)
                 ax[1,1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
                 all_locs.append(loc)
-        print("average loc: ", np.mean(all_locs, axis=0))
+        print("average location: ", np.mean(all_locs, axis=0))
         
-        
-
-
-        # print("normalized landmark: ", landmarks)
-        # print("reconstructed full landmark: ", full_resolution_lm)
-        # print("full gauss shape and sliced gauss shape ", gaussian_weights_full.shape, gaussian_weights.shape)
-
-
-        # ax[0,1].imshow(gaussian_weights)
-        # # resized_gauss = torch.tensor(gaussian_weights).resize(grid_size)
-        # tensor_weights = torch.tensor(np.expand_dims(np.expand_dims(gaussian_weights, axis=0), axis=0))
-        # print("weights and resize requestion: ", tensor_weights.shape, grid_size)
-        # resized_gauss = (F.interpolate(tensor_weights, [grid_size[0], grid_size[1]], mode="nearest")).cpu().detach().numpy()[0,0]
-        # ax[1,0].imshow(copy.deepcopy(resized_gauss))
-
-        # ax[1,1].imshow(resized_gauss)
-
-        # downscaled_full_lms = full_resolution_lm/(2**maxpooling_factor)
-        # rect0 = patchesplt.Rectangle(( downscaled_full_lms[0], downscaled_full_lms[1]) ,6,6,linewidth=2,edgecolor='r',facecolor='none') 
-        # ax[0,0].add_patch(rect0)
-
-        # rect1 = patchesplt.Rectangle(( landmark[0], landmark[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
-        # ax[0,1].add_patch(rect1)
-
-        # rect2 = patchesplt.Rectangle(( landmark[0], landmark[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
-        # ax[1,0].add_patch(rect2)
-        
-        # rect3 = patchesplt.Rectangle(( landmark[0], landmark[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
-        # ax[1,1].add_patch(rect3)
-
-        # for x_idx, x in enumerate(range(0, grid_size[0], step_size)):
-        #     for y_idx, y in enumerate(range(0, grid_size[0], step_size)):
-        
-        #         center_xy = [x+(step_size//2),y+(step_size//2)]
-        #         x_disp = np.sign(x_y_displacements[x_idx,y_idx,0]) * (2**(abs(x_y_displacements[x_idx,y_idx,0])))
-        #         y_disp = np.sign(x_y_displacements[x_idx,y_idx,1]) * (2**(abs(x_y_displacements[x_idx,y_idx,1])))
-        #     #  print(x_cent, y_cent, x_disp, y_disp)
-        #         ax[1,1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
-
-        
-        
-        # landmarks_from_label = get_coords(torch.from_numpy(np.expand_dims(sample_dict["label"][-1], axis=0)))
-        # print("landmarks reverse engineered from heatmap label: ", landmarks_from_label)
-
-        # # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
-        # visualize_image_trans_coords(image[0], sample_dict["image"][0] , sample_dict["target_coords"])
 
 
 def generate_heatmaps(landmarks, image_size, sigma, num_res_levels, lambda_scale=100, dtype=np.float32):
@@ -315,14 +265,7 @@ def generate_heatmaps(landmarks, image_size, sigma, num_res_levels, lambda_scale
         heatmap_list.append(np.array(intermediate_heatmaps))
 
 
-    # fig, ax = plt.subplots(nrows=3, ncols=len(heatmap_list))
 
-    # for i,map in enumerate(heatmap_list):
-    #     print("this map shape, ", map.shape)
-    #     for c in range(num_heatmaps):
-    #         ax[c, i].imshow(map[c])
-    
-    # plt.show()
     return heatmap_list[::-1]
 
 #generate Guassian with center on landmark. sx and sy are the std.
@@ -349,104 +292,58 @@ def gaussian_gen(landmark, resolution, step_size, std, dtype=np.float32, lambda_
 
     #normalise between 0 and 1
     g *= 1.0/g.max() * lambda_scale
-    # g[g<=0]=-1hm_lambda_scale
-
-
-    #transpose becasue x and y are the wrong way round
-    # g = np.transpose(g)
-    #add extra dimension for later calculations in Loss
-    # g =  np.expand_dims(g, axis=0)
 
 
     return g
 
-def get_downsampled_heatmaps(heatmaps, num_res_levels):
 
-    print("og shape ", heatmaps.shape) #1,3,512,512
-
-    original_size = heatmaps.shape[2:]
-    num_heatmaps = heatmaps.shape[1]
-    resizings = [[(num_heatmaps, int(original_size[0]/(2**x)), int(original_size[1]/(2**x)))] for x in range(num_res_levels)]
-    resizing_factors = [[(1, 2**x, 2**x)] for x in range(num_res_levels)]
-
-    print("resizings: ", resizings)
-    print("resizing_factors: ", resizing_factors)
-
-    z = [x[0] for x in resizings]
-    print(z[0], " and ", z[-1])
-    
-
-    print("asd", np.squeeze(heatmaps).shape ,(3,256,256))
-    y = resize(np.squeeze(heatmaps),resizings[-1][0], mode="edge", clip=True, anti_aliasing=False)
-    print("ressss", y.shape)
-
-    # heatmaps_to_return = [np.expand_dims(resize(np.squeeze(heatmaps), resizings[x][0], mode="edge", clip=True, anti_aliasing=False), axis=0) for x in range(len(resizings))]
-    # heatmaps_to_return = [np.expand_dims(downscale_local_mean(np.squeeze(heatmaps), resizings[x][0]), axis=0) for x in range(len(resizings))]
-    # heatmaps_to_return = [np.expand_dims(block_reduce(np.squeeze(heatmaps), resizings[x][0], func=np.mean), axis=0) for x in range(len(resizings))]
-    heatmaps_to_return = [np.expand_dims(downscale_local_mean(np.squeeze(heatmaps), resizing_factors[x][0]), axis=0) for x in range(len(resizing_factors))]
-
-    print("heatmaps to return shape@ ", len(heatmaps_to_return))
-    fig, ax = plt.subplots(nrows=3, ncols=len(heatmaps_to_return))
-
-    for i,map in enumerate(heatmaps_to_return):
-        print("this map shape, ", map.shape)
-        for c in range(num_heatmaps):
-            ax[c, i].imshow(map[0,c])
-    plt.show()
-
-
-#  image, landmark, self.class_label_scheme, self.sample_grid_size, self.full_image_resolution, self.maxpool_factor, sigma, debug=True
 def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme, grid_size, full_heatmap_resolution, maxpooling_factor, sigma, lambda_scale=100, debug=False):
-    # Don't worry about sampling here, just generate the heatmaps.
-    # 1) Generate displacements for the patch 
-    # 2) generate full heatmap and slice the heatmap
-        # Get the landmark on the full image by doing lm = normalized_lm + xy_patch 
+    """Function to generate sub-patch displacements and patch-wise heatmap values.
 
-    s = time.time()
-   
-   
-    # need to find sub image grid now so 8x8 grid of this. so 64 patches of 16x16
-    # need this grid so i can find center of each patch and if the landmark is in it
+    Args:
+        landmark (_type_): _description_
+        xy_patch_corner (_type_): _description_
+        class_loss_scheme (_type_): _description_
+        grid_size (_type_): _description_
+        full_heatmap_resolution (_type_): _description_
+        maxpooling_factor (_type_): _description_
+        sigma (_type_): _description_
+        lambda_scale (int, optional): _description_. Defaults to 100.
+        debug (bool, optional): _description_. Defaults to False.
 
-    # loop from top left as 0,0 down so like the convolutions go to match.
-    # go from the randomly generated y to that + grid_size in steps
-    # (8 for grid size 128)
+    Raises:
+        NotImplementedError: _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    # need to find sub image grid e.g. grid size 128x128, patch size of 8x8 = 16x16 patches.
+    # I need this grid so i can find center of each patch, displacment to lanmdark 
+    # and heatmap values centered around the landmark.
+    # We use log displacements to dampen distance parts, shifting function to right to avoid asymptope.
     patches = [grid_size[0]//2**maxpooling_factor, grid_size[1]//2**maxpooling_factor]
     step_size = 2**maxpooling_factor
 
     x_y_displacements = np.zeros((patches[0], patches[1], 2), dtype=np.float32)
-    
-    print("landmark: ", landmark)
     for x_idx, x in enumerate(range(0, grid_size[0], step_size)):
         for y_idx, y in enumerate(range(0, grid_size[0], step_size)):
         
             center_xy = [x+(step_size//2),y+(step_size//2)]
 
             # find log of displacements accounting for orientation
-            
-            #log(0) is undefined
             distance_y = abs(landmark[1] - center_xy[1]) 
-
-            #shift log funciton by 1 so now the asymptope is at -1 instead of 0.
+            #shift log function by 1 so now the asymtope is at -1 instead of 0.
             if (landmark[1] > center_xy[1]):
                 displace_y = math.log(distance_y + 1, 2)
             elif (landmark[1] < center_xy[1]):
                 displace_y = -math.log(distance_y + 1, 2)
             else:
                 displace_y = 0
-                # raise ValueError("Landmark is on the center of the patch, this shouldn't have happened.")
-            # else:
-            #     if (landmark[1] > center_xy[1]):
-            #         displace_y = -math.log(distance_y+ 1, 2)
-            #     elif (landmark[1] < center_xy[1]):
-            #         displace_y = math.log(distance_y, 2)
-            #     else:
-            #         raise ValueError("Landmark is on the center of the patch, this shouldn't have happened.")
+   
 
-            #log(0) is undefined
             distance_x =abs(landmark[0] - center_xy[0]) 
-
-
+            #shift log function by 1 so now the asymtope is at -1 instead of 0.
             if (landmark[0] > center_xy[0]):
                 displace_x = math.log(distance_x+ 1, 2)
             elif (landmark[0] < center_xy[0]):
@@ -457,31 +354,24 @@ def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme
 
             x_y_displacements[x_idx,y_idx,:] = [displace_x, displace_y]
 
-            if y == 72 or x==80 or (x==0):
-                print(center_xy, distance_y, displace_y, distance_x, displace_x)
 
     ###########Gaussian weights #############
-    #Generate guassian weights for weighted loss
-    # full_resolution_lm = landmark + xy_patch_corner
+    #Generate guassian heatmap for classificaiton and displacement weights!
+    #First pad around the grid (to catch landmark if the heatmap will spill over the edge).
+    #then downsample to the size of the heatmap to match how many patches we have.
     safe_padding = 128
     padded_lm =  landmark+ safe_padding
     hm_res = [grid_size[0]+(safe_padding*2), grid_size[1]+(safe_padding*2)]
-    print("hm res: ", hm_res, "n padded lm: ", padded_lm)
-    gaussian_weights_full = gaussian_gen(padded_lm, hm_res, 1, sigma, lambda_scale)
+    gaussian_weights_full = gaussian_gen(padded_lm, hm_res, step_size, sigma, lambda_scale)
 
-    print("gauss weights full shape: ", gaussian_weights_full.shape)
-
-    x_block_start = int(safe_padding)
-    x_block_end = int(np.floor((safe_padding + grid_size[0])))
-    y_block_start = int(safe_padding)
-    y_block_end = int(np.floor((safe_padding+ grid_size[1])))
+    x_block_start = int(safe_padding//step_size)
+    x_block_end = int(np.floor((safe_padding//step_size + grid_size[0]//step_size)))
+    y_block_start = int(safe_padding//step_size)
+    y_block_end = int(np.floor((safe_padding//step_size+ grid_size[1]//step_size)))
     gaussian_weights =  gaussian_weights_full[x_block_start:x_block_end, y_block_start:y_block_end]
-    print("shape 2: ", gaussian_weights.shape )
-    gaussian_weights = cv2.resize(gaussian_weights, (patches[0], patches[1]), interpolation=cv2.INTER_AREA)
-    print("shape 3: ", gaussian_weights.shape )
-
-    # print("after guassian shape@ ", guassian_weights.shape)
-    # tensor_weights = torch.tensor(np.expand_dims(np.expand_dims(gaussian_weights, axis=0), axis=0))
+  
+    # gaussian_weights = cv2.resize(gaussian_weights, (patches[0], patches[1]), interpolation=cv2.INTER_NEAREST)
+    # gaussian_weights *= 1.0/gaussian_weights.max() * lambda_scale
 
 
     #Classification labels. Can be gaussian heatmap or binary.
@@ -489,58 +379,6 @@ def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme
         sub_class = gaussian_weights
     else:
         raise NotImplementedError("only gaussian labels for class loss scheme are currently implemented. try with MODEL.PHDNET.CLASS_LOSS_SCHEME as \"gaussian\"")
-        sub_class = np.zeros([1,patches, patches])
-        if landmark[0] >= x_rand and landmark[0] <= x_rand+grid_size and landmark[1] >= y_rand and landmark[1] <=y_rand+grid_size:
-            pos_patches = []
-        #  print("sample contains patch")
-            #find positive patches
-            patch_xy = landmark[:2].cpu().detach().numpy()- [x_rand, y_rand]
-            patch_xy = (patch_xy/8).clip(0,patches-0.001) #clip when landmark is on far right border. cant be whole num due to border check
-
-            #if landmark is on the border then patch before is also classed positive
-
-            #case 1: X and Y not on border (X,Y)
-            #Case 2: X is on the border, then (X,Y), (X-1, Y)
-            #Case 3: Y is on the border (X,Y), (X, Y-1)
-            #Case 4: X and Y is on the border  (X,Y), (X-1, Y),  (X-1,Y-1), (X, Y-1)
-
-            #Also need to worry if border is at 0 edge or far edge.
-            #if landmark is on the left of patch zero, just use patch 0. solved by additional clause below.
-            #if landmark is on right of patch 16 (idx 15) then just use patch idx 15. Solved by above clip.
-            border_x = float(patch_xy[0]).is_integer() and  patch_xy[0] != 0
-            border_y = float(patch_xy[1]).is_integer() and  patch_xy[1] != 0
-
-            x_rounded = np.floor(patch_xy[0]).astype('int')
-            y_rounded = np.floor(patch_xy[1]).astype('int')
-
-            if not border_x and not border_y:
-                pos_patches.append([x_rounded,y_rounded ])
-
-            elif border_x and not border_y:
-                pos_patches.append([x_rounded,y_rounded ])
-                pos_patches.append([x_rounded-1,y_rounded ])
-
-            elif not border_x and border_y:
-                pos_patches.append([x_rounded,y_rounded ])
-                pos_patches.append([x_rounded,y_rounded-1 ])
-            else: # border_x and border_y
-                pos_patches.append([x_rounded,y_rounded ])
-                pos_patches.append([x_rounded-1,y_rounded ])
-                pos_patches.append([x_rounded,y_rounded-1 ])
-                pos_patches.append([x_rounded-1,y_rounded-1 ])
-            
-            pos_patches = np.array(pos_patches)
-
-            try:
-                sub_class[:,pos_patches[:,1],pos_patches[:,0]] = 1
-            except:
-                print("error")
-                print("landmark:", landmark)
-                print("x range: ", x_rand, x_rand+grid_size, "y range: ", y_rand, y_rand+grid_size)
-                print("patch xy", patch_xy)
-                print("pose patches", pos_patches)
-                exit() 
-
 
     # ####################### DEBUGGING VISUALISATION ##############
 
@@ -562,13 +400,13 @@ def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme
 
         ax[1,1].imshow(resized_gauss)
 
-        downscaled_full_lms = padded_lm/(2**maxpooling_factor)
+        downscaled_full_lms = np.round(padded_lm/(2**maxpooling_factor))
         print("downscaled lm to fit 64x64: ", downscaled_full_lms)
         rect0 = patchesplt.Rectangle(( downscaled_full_lms[0], downscaled_full_lms[1]) ,6,6,linewidth=2,edgecolor='r',facecolor='none') 
         ax[0,0].add_patch(rect0)
 
 
-        downscaled_full_lms_16 = landmark/(2**maxpooling_factor)
+        downscaled_full_lms_16 = np.round(landmark/(2**maxpooling_factor))
         print("downscaled lm to fit 16x16: ", downscaled_full_lms_16)
 
         rect1 = patchesplt.Rectangle(( downscaled_full_lms_16[0], downscaled_full_lms_16[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
@@ -600,7 +438,6 @@ def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme
     # # ############################# end of DEBUGGING VISUALISATION #################
     
 
-    # e = time.time()
     return x_y_displacements, sub_class, gaussian_weights
 
     

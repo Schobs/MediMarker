@@ -15,7 +15,7 @@ from transforms.transformations import (HeatmapsToTensor, NormalizeZScore, ToTen
                              normalize_cmr)
 from transforms.dataloader_transforms import get_aug_package_loader
 
-from transforms.generate_labels import LabelGenerator, generate_heatmaps, get_downsampled_heatmaps
+from transforms.generate_labels import LabelGenerator, generate_heatmaps
 from load_data import get_datatype_load, load_aspire_datalist
 from visualisation import (visualize_heat_pred_coords, visualize_image_target,
                            visualize_image_trans_coords,
@@ -338,8 +338,9 @@ class DatasetBase(data.Dataset):
         
         z_rand = np.random.uniform(0, 1)
         landmarks_in_indicator = []
-
+        print("z_rand", z_rand)
         if z_rand >= (1-self.sample_patch_bias):
+            print("biased")
 
             #Keep sampling until landmark is in patch         
             while 1 not in landmarks_in_indicator:
@@ -369,13 +370,15 @@ class DatasetBase(data.Dataset):
                 # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
 
         else:
+            print("rand")
+
             y_rand = np.random.randint(0, self.load_im_size[1]-self.sample_patch_size[1])
             x_rand = np.random.randint(0, self.load_im_size[0] -self.sample_patch_size[0])
 
             for lm in landmarks:
                 landmark_in = 0
                 if y_rand+lm_safe_region <= lm[1]<= y_rand+self.sample_patch_size[1]-lm_safe_region:
-                    if x_rand+lm_safe_region <= lm[0] <= x_rand +self.sample_patch_size[0]-lm_safe_region:
+                    if x_rand+lm_safe_region <= lm[0] <= (x_rand +self.sample_patch_size[0])-lm_safe_region:
                         landmark_in = 1
                 landmarks_in_indicator.append(landmark_in)
 
@@ -394,7 +397,7 @@ class DatasetBase(data.Dataset):
         cropped_padded_sample = padded_image[:, y_rand_pad:y_rand_pad+padded_patch_size[1], x_rand_pad:x_rand_pad+padded_patch_size[0]]
      
         #Calculate the new origin: 2*safe_padding bc we padded image & then added pad to the patch.
-        normalized_landmarks = [[(lm[0]+2*safe_padding)-(y_rand_safe), (lm[1]+2*safe_padding)-(x_rand_safe)] for lm in landmarks]
+        normalized_landmarks = [[(lm[0]+2*safe_padding)-(x_rand_safe), (lm[1]+2*safe_padding)-(y_rand_safe)] for lm in landmarks]
 
         if self.debug:
             padded_lm = [[lm[0]+safe_padding, lm[1]+safe_padding] for lm in landmarks]
