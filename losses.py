@@ -147,6 +147,8 @@ class IntermediateOutputLoss(nn.Module):
 
     def forward(self, x, y, sigmas=None):
 
+        y = y["heatmaps"]
+
         losses_seperated = {}
         # print("we have 7 outputs, 1 for each resolution,", len(x))
         # print(" each output has 12 (batchsize)", len(x[0]))losses_seperated

@@ -61,11 +61,12 @@ class UNetLabelGenerator(LabelGenerator):
         super(LabelGenerator, self).__init__()
 
 
-    
+
 
     def generate_labels(self, landmarks, x_y_corner_patch, landmarks_in_indicator, image_size, sigmas, num_res_levels, lambda_scale=100, dtype=np.float32, to_tensor=True):
-        heatmap_list = []
+        return_dict = {"heatmaps": []}
 
+        heatmap_list = []
         resizing_factors = [[2**x, 2**x] for x in range(num_res_levels)]
 
         for size_f in resizing_factors:
@@ -92,8 +93,8 @@ class UNetLabelGenerator(LabelGenerator):
 
             hm_list = all_seg_labels
 
-
-        return hm_list
+        return_dict["heatmaps"] = hm_list
+        return return_dict
 
     def stitch_heatmap(self, patch_predictions, stitching_info):
         '''
@@ -187,7 +188,7 @@ class PHDNetLabelGenerator(LabelGenerator):
         untransformed_im = untransformed_im[0]
         untransformed_coords= np.array(untransformed_coords[0])
 
-        print("\n \n \n all shapes: ", xy_corner.shape, untransformed_im.shape, untransformed_coords.shape, patch_heatmap_label.shape,patch_disp_label.shape, \
+        print("all shapes: ", xy_corner.shape, untransformed_im.shape, untransformed_coords.shape, patch_heatmap_label.shape,patch_disp_label.shape, \
             patch_disp_weights.shape, transformed_targ_coords.shape, full_res_coords.shape, transformed_input_image.shape )
         
         #difference between these is removing the padding (so -128, or whatever the patch padding was)
@@ -204,7 +205,7 @@ class PHDNetLabelGenerator(LabelGenerator):
 
         
         #2)
-        print("Full resolution coords: ", full_res_coords, "and downscaled, untransformed coords: ", untransformed_coords)
+        print("Full resolution coords: ", full_res_coords)
         ax[0,0].imshow(untransformed_im)
         rect1 = patchesplt.Rectangle(( untransformed_coords[0], untransformed_coords[1]) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
         ax[0,0].add_patch(rect1)
@@ -215,7 +216,8 @@ class PHDNetLabelGenerator(LabelGenerator):
         ax[0,1].add_patch(rect2)
 
         #4)
-        downsampled_coords = np.round(transformed_targ_coords/(2**self.maxpool_factor))
+        downsampled_coords = (transformed_targ_coords/(2**self.maxpool_factor))
+        print("downscampled coords to fit on heatmap label: ", downsampled_coords)
         ax[0,2].imshow(patch_heatmap_label)
         rect3 = patchesplt.Rectangle(( downsampled_coords[0], downsampled_coords[1]) ,1,1,linewidth=2,edgecolor='m',facecolor='none') 
         ax[0,2].add_patch(rect3)
@@ -225,23 +227,24 @@ class PHDNetLabelGenerator(LabelGenerator):
         #need to flip axis here because torch does y-x not x-y
         # upscaled_hm =  (F.interpolate(tensor_weights, [1,self.sample_grid_size[0], self.sample_grid_size[1]], mode="nearest-exact")).cpu().detach().numpy()[0,0]
         # upscaled_hm =  cv2.resize(patch_heatmap_label,[self.sample_grid_size[0], self.sample_grid_size[1]],0,0, interpolation = cv2.INTER_NEAREST)
-        step_size = 2**self.maxpool_factor
-        upscaled_hm =  np.broadcast_to(patch_heatmap_label[:,None,:,None], (patch_heatmap_label.shape[0], step_size, patch_heatmap_label.shape[1], step_size)).reshape(self.sample_grid_size)
-        coords_from_uhm, arg_max = get_coords(torch.tensor(np.expand_dims(np.expand_dims(upscaled_hm, axis=0), axis=0)))
-        print("get_coords from upscaled_hm: ", coords_from_uhm)
-        
         # pil_im = Image.fromarray(patch_heatmap_label,'L')
         # plt.imshow(pil_im)
         # plt.show
         # upscaled_hm = pil_im.resize([self.sample_grid_size[0], self.sample_grid_size[1]], resample=Image.NEAREST)
         
+        step_size = 2**self.maxpool_factor
+        upscaled_hm =  np.broadcast_to(patch_heatmap_label[:,None,:,None], (patch_heatmap_label.shape[0], step_size, patch_heatmap_label.shape[1], step_size)).reshape(self.sample_grid_size)
+        coords_from_uhm, arg_max = get_coords(torch.tensor(np.expand_dims(np.expand_dims(upscaled_hm, axis=0), axis=0)))
+        print("get_coords from upscaled_hm: ", coords_from_uhm)
+    
+        
         ax[1,0].imshow(upscaled_hm)
-        rect4 = patchesplt.Rectangle(( np.round(transformed_targ_coords[0]), np.round(transformed_targ_coords[1])) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
+        rect4 = patchesplt.Rectangle(( (transformed_targ_coords[0]), (transformed_targ_coords[1])) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
         ax[1,0].add_patch(rect4)
 
         #6
         ax[1,1].imshow(upscaled_hm)
-        rect5 = patchesplt.Rectangle(( np.round(transformed_targ_coords[0]), np.round(transformed_targ_coords[1])) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
+        rect5 = patchesplt.Rectangle(( (transformed_targ_coords[0]), (transformed_targ_coords[1])) ,6,6,linewidth=2,edgecolor='m',facecolor='none') 
         ax[1,1].add_patch(rect5)
 
         all_locs = []
@@ -288,8 +291,8 @@ def gaussian_gen(landmark, resolution, step_size, std, dtype=np.float32, lambda_
     x = resolution[0]//step_size
     y = resolution[1]//step_size
 
-    mx = np.round(landmark[0]/step_size)
-    my = np.round(landmark[1]/step_size)
+    mx = (landmark[0]/step_size)
+    my = (landmark[1]/step_size)
 
    
 
@@ -372,16 +375,27 @@ def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme
     #then downsample to the size of the heatmap to match how many patches we have.
     safe_padding = 128
     padded_lm =  landmark+ safe_padding
-    hm_res = [grid_size[0]+(safe_padding*2), grid_size[1]+(safe_padding*2)]
-    gaussian_weights_full = gaussian_gen(padded_lm, hm_res, step_size, sigma, lambda_scale)
+    downscaled_padded_lm = padded_lm/ step_size
+    hm_res = [(grid_size[0]+(safe_padding*2))/step_size, (grid_size[1]+(safe_padding*2))/step_size]
 
-    x_block_start = int(safe_padding//step_size)
-    x_block_end = int(np.floor((safe_padding//step_size + grid_size[0]//step_size)))
-    y_block_start = int(safe_padding//step_size)
-    y_block_end = int(np.floor((safe_padding//step_size+ grid_size[1]//step_size)))
-    gaussian_weights =  gaussian_weights_full[x_block_start:x_block_end, y_block_start:y_block_end]
-  
+    gaussian_weights_full = gaussian_gen(downscaled_padded_lm, hm_res, 1, sigma, lambda_scale)
+    gaussian_weights = gaussian_weights_full[(safe_padding//step_size):(safe_padding+grid_size[0])//step_size, safe_padding//step_size:(safe_padding+grid_size[1])//step_size  ]
+
+    # print("padded_lm: ", padded_lm)
+    # plt.imshow(gaussian_weights_full)
+    # plt.show()
+    # x_block_start = int(safe_padding)
+    # x_block_end = int(np.floor((safe_padding + grid_size[0])))
+    # y_block_start = int(safe_padding)
+    # y_block_end = int(np.floor((safe_padding+ grid_size[1])))
+    # gaussian_weights =  gaussian_weights_full[x_block_start:x_block_end, y_block_start:y_block_end]
     # gaussian_weights = cv2.resize(gaussian_weights, (patches[0], patches[1]), interpolation=cv2.INTER_NEAREST)
+    # gaussian_weights_full = gaussian_gen(padded_lm, hm_res, step_size, sigma, lambda_scale)
+    # x_block_start = int(safe_padding//step_size)
+    # x_block_end = int(np.floor((safe_padding//step_size + grid_size[0]//step_size)))
+    # y_block_start = int(safe_padding//step_size)
+    # y_block_end = int(np.floor((safe_padding//step_size+ grid_size[1]//step_size)))
+    # gaussian_weights =  gaussian_weights_full[x_block_start:x_block_end, y_block_start:y_block_end]
     # gaussian_weights *= 1.0/gaussian_weights.max() * lambda_scale
 
 

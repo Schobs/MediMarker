@@ -272,13 +272,18 @@ class NetworkTrainer(ABC):
 
         data =(data_dict['image']).to( self.device )
 
-        #This happens when we regress sigma with >0 workers due to multithreading issues.
-        #currently does not support patch-based.
+        # This happens when we regress sigma with >0 workers due to multithreading issues.
+        # Currently does not support patch-based, which is raised on run of programme by argument checker.
         if self.gen_hms_in_mainthread:
             data_dict['label'] = self.generate_heatmaps_batch(data_dict, dataloader)          
 
-        target = [x.to(self.device) for x in data_dict['label']]
+        # target = [x.to(self.device) for x in values for key,values in enumerate(data_dict['label'])]
+        # y = [x.to(self.device) if isinstance(data_dict, list)  else x.to(self.device) for x in data_dict ]
+        # print("data_dict['label']", data_dict['label'].keys())
+        target = {key: ([x.to(self.device) for x in val ] if isinstance(val, list) else val.to(self.device) ) for key, val in data_dict['label'].items() }
+        # print("target",target.keys())
 
+        
         self.optimizer.zero_grad()
 
         so = time()
@@ -725,7 +730,7 @@ class NetworkTrainer(ABC):
             valid_dataset = train_dataset
             print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
 
-        print("num worjers and persists workers :", self.num_workers_cfg, self.persist_workers)
+        print("# dataloader workers and persist workers bool :", self.num_workers_cfg, self.persist_workers)
         self.train_dataloader = DataLoader(train_dataset, batch_size=self.data_loader_batch_size, shuffle=True, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
         self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.data_loader_batch_size, shuffle=False, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
     

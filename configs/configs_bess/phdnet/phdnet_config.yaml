@@ -35,13 +35,13 @@ DATASET:
 
 
 SAMPLER:
-  # DATA_AUG: 'AffineComplex'
+  DATA_AUG: 'thaler21'
   INPUT_SIZE : [128,128]
   SAMPLE_MODE: 'patch' # ['patch', 'full']
-  NUM_WORKERS: 1
-  DEBUG: True
+  NUM_WORKERS: 8
+  # DEBUG: True
   PATCH:
-    SAMPLER_BIAS: 0.9
+    SAMPLER_BIAS: 0.66
     RESOLUTION_TO_SAMPLE_FROM:  [512,512]
     SAMPLE_PATCH_SIZE: [128,128]
 

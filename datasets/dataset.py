@@ -250,7 +250,7 @@ class DatasetBase(data.Dataset):
             #By default, the origin is 0,0 unless we sample from the middle of the image somewhere.
             #If sampling patches we first sample the patch with a little wiggle room, & normalize the lms. The transform center-crops it back.
             if self.sample_mode == "patch":
-                print("full res coords: ", full_res_coods)
+                # print("full res coords: ", full_res_coods)
                 untransformed_im, untransformed_coords, landmarks_in_indicator, x_y_corner = self.sample_patch(untransformed_im, untransformed_coords)
 
             kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords], shape=untransformed_im[0].shape )
@@ -272,7 +272,6 @@ class DatasetBase(data.Dataset):
 
         s= time()
         if self.generate_hms_here:
-            print("the keypoints!: ", kps)
             
             label = self.LabelGenerator.generate_labels(input_coords, x_y_corner, landmarks_in_indicator,  self.heatmap_label_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
         else:
@@ -338,9 +337,7 @@ class DatasetBase(data.Dataset):
         
         z_rand = np.random.uniform(0, 1)
         landmarks_in_indicator = []
-        print("z_rand", z_rand)
         if z_rand >= (1-self.sample_patch_bias):
-            print("biased")
 
             #Keep sampling until landmark is in patch         
             while 1 not in landmarks_in_indicator:
@@ -370,8 +367,6 @@ class DatasetBase(data.Dataset):
                 # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
 
         else:
-            print("rand")
-
             y_rand = np.random.randint(0, self.load_im_size[1]-self.sample_patch_size[1])
             x_rand = np.random.randint(0, self.load_im_size[0] -self.sample_patch_size[0])
 
@@ -402,7 +397,7 @@ class DatasetBase(data.Dataset):
         if self.debug:
             padded_lm = [[lm[0]+safe_padding, lm[1]+safe_padding] for lm in landmarks]
 
-            print("the min xy is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
+            print("\n \n \n the min xy is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
              and the normalized landmark is %s : " % 
                 (y_rand_safe, x_rand_safe, x_rand_pad, y_rand_pad, landmarks, padded_lm, normalized_landmarks ))
 
