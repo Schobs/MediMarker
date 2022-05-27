@@ -149,6 +149,10 @@ class IntermediateOutputLoss(nn.Module):
 
         y = y["heatmaps"]
 
+        # print("pred_class shape: ", len(x), "pred_displacements shape: ", x[0].shape)
+        # print("labels shape class ",  len(y), y[0].shape)
+
+
         losses_seperated = {}
         # print("we have 7 outputs, 1 for each resolution,", len(x))
         # print(" each output has 12 (batchsize)", len(x[0]))losses_seperated
@@ -209,6 +213,9 @@ class IntermediateOutputLossAndSigma(nn.Module):
       
 
     def forward(self, x, y, sigmas):
+
+        y = y["heatmaps"]
+
         # print("we have 7 outputs, 1 for each resolution,", len(x))
         # print(" each output has 20 (batchsize)", len(x[0]))
         # print("target len", len(y))
@@ -268,23 +275,31 @@ class MultiBranchPatchLoss(nn.Module):
         return torch.mean(weights * (input - target) ** 2)    
 
 
-    def forward(self, predictions, labels):
+    def forward(self, predictions, labels, sigmas):
 
         losses_seperated = {}
         total_loss = 0
 
+        pred_displacements = predictions[1]
+        pred_class =  predictions[0]
+
+        print("pred_class shape: ", pred_class.shape, "pred_displacements shape: ", pred_displacements.shape)
+        print("labels shape class ",  len(labels['patch_heatmap']), labels['patch_heatmap'].shape)
+        print("labels shape disp ",   len(labels['patch_displacements']), labels['patch_displacements'].shape)
+
+        # print()
         if self.branch_scheme == 'displacement' or self.branch_scheme == 'multi':
             if self.distance_weighted_bool:
                 weights = labels["patch_heatmap"]
-                loss_disp = self.weighted_mse_loss(predictions['patch_displacements'], labels['patch_displacements'], weights)
+                loss_disp = self.weighted_mse_loss(pred_displacements, labels['patch_displacements'], weights)
             else:
-                loss_disp = self.criterion_reg(predictions['patch_displacements'], labels['patch_displacements'])
+                loss_disp = self.criterion_reg(pred_displacements, labels['patch_displacements'])
             
             total_loss += loss_disp
             losses_seperated["displacment_loss"] = loss_disp
 
         if self.branch_scheme == 'heatmap' or self.branch_scheme == 'multi':
-            loss_class = self.class_criterion(predictions['patch_heatmap'], labels['patch_heatmap'])
+            loss_class = self.class_criterion(pred_class, labels['patch_heatmap'])
 
             total_loss += loss_class
             losses_seperated["heatmap_loss"] = loss_class

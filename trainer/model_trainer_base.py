@@ -271,17 +271,15 @@ class NetworkTrainer(ABC):
             
 
         data =(data_dict['image']).to( self.device )
+        print("input shape: ", data.shape)
 
         # This happens when we regress sigma with >0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
         if self.gen_hms_in_mainthread:
             data_dict['label'] = self.generate_heatmaps_batch(data_dict, dataloader)          
 
-        # target = [x.to(self.device) for x in values for key,values in enumerate(data_dict['label'])]
-        # y = [x.to(self.device) if isinstance(data_dict, list)  else x.to(self.device) for x in data_dict ]
-        # print("data_dict['label']", data_dict['label'].keys())
+        #Put targets to device
         target = {key: ([x.to(self.device) for x in val ] if isinstance(val, list) else val.to(self.device) ) for key, val in data_dict['label'].items() }
-        # print("target",target.keys())
 
         
         self.optimizer.zero_grad()

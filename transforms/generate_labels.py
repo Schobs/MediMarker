@@ -165,11 +165,21 @@ class PHDNetLabelGenerator(LabelGenerator):
             x_y_displacements, sub_class, weights = gen_patch_displacements_heatmap(
                 lm, xy_patch_corner, self.class_label_scheme, self.sample_grid_size, self.full_heatmap_resolution, self.maxpool_factor, sigma, lambda_scale, debug=False)
 
+         
+
+                
             return_dict["patch_heatmap"].append(sub_class)
             return_dict["patch_displacements"].append(x_y_displacements)
             return_dict["displacement_weights"].append(weights)
         return_dict["xy_corner"] = xy_patch_corner
 
+        if to_tensor:
+            return_dict["patch_heatmap"] = torch.stack([torch.from_numpy(x).float() for x in return_dict["patch_heatmap"]])
+            return_dict["patch_displacements"] = torch.stack([torch.from_numpy(x).float() for x in return_dict["patch_displacements"]])
+            return_dict["displacement_weights"] = torch.stack([torch.from_numpy(x).float() for x in return_dict["displacement_weights"]])
+
+
+        #shape is 1,1,16,16
         return return_dict
 
         
@@ -218,7 +228,7 @@ class PHDNetLabelGenerator(LabelGenerator):
         #4)
         downsampled_coords = (transformed_targ_coords/(2**self.maxpool_factor))
         print("downscampled coords to fit on heatmap label: ", downsampled_coords)
-        ax[0,2].imshow(patch_heatmap_label)
+        ax[0,2].imshow(patch_heatmap_label[0])
         rect3 = patchesplt.Rectangle(( downsampled_coords[0], downsampled_coords[1]) ,1,1,linewidth=2,edgecolor='m',facecolor='none') 
         ax[0,2].add_patch(rect3)
 
@@ -233,7 +243,7 @@ class PHDNetLabelGenerator(LabelGenerator):
         # upscaled_hm = pil_im.resize([self.sample_grid_size[0], self.sample_grid_size[1]], resample=Image.NEAREST)
         
         step_size = 2**self.maxpool_factor
-        upscaled_hm =  np.broadcast_to(patch_heatmap_label[:,None,:,None], (patch_heatmap_label.shape[0], step_size, patch_heatmap_label.shape[1], step_size)).reshape(self.sample_grid_size)
+        upscaled_hm =  np.broadcast_to(patch_heatmap_label[0][:,None,:,None], (patch_heatmap_label[0].shape[0], step_size, patch_heatmap_label[0].shape[1], step_size)).reshape(self.sample_grid_size)
         coords_from_uhm, arg_max = get_coords(torch.tensor(np.expand_dims(np.expand_dims(upscaled_hm, axis=0), axis=0)))
         print("get_coords from upscaled_hm: ", coords_from_uhm)
     
@@ -253,8 +263,8 @@ class PHDNetLabelGenerator(LabelGenerator):
 
                 center_xy = [x+((2**self.maxpool_factor)//2),y+((2**self.maxpool_factor)//2)]
                 #REMEMBER TO ADD 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
-                x_disp = np.sign(patch_disp_label[x_idx,y_idx,0]) * (2**(abs(patch_disp_label[x_idx,y_idx,0]))-1)
-                y_disp = np.sign(patch_disp_label[x_idx,y_idx,1]) * (2**(abs(patch_disp_label[x_idx,y_idx,1]))-1)
+                x_disp = np.sign(patch_disp_label[0,x_idx,y_idx]) * (2**(abs(patch_disp_label[0,x_idx,y_idx]))-1)
+                y_disp = np.sign(patch_disp_label[1, x_idx,y_idx]) * (2**(abs(patch_disp_label[1,x_idx,y_idx]))-1)
                 loc = [center_xy[0]+x_disp, center_xy[1]+y_disp]
                 ax[1,1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
                 all_locs.append(loc)
@@ -288,8 +298,8 @@ def gaussian_gen(landmark, resolution, step_size, std, dtype=np.float32, lambda_
     sx = std
     sy = std
 
-    x = resolution[0]//step_size
-    y = resolution[1]//step_size
+    x = resolution[0]/step_size
+    y = resolution[1]/step_size
 
     mx = (landmark[0]/step_size)
     my = (landmark[1]/step_size)
@@ -339,7 +349,7 @@ def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme
     patches = [grid_size[0]//2**maxpooling_factor, grid_size[1]//2**maxpooling_factor]
     step_size = 2**maxpooling_factor
 
-    x_y_displacements = np.zeros((patches[0], patches[1], 2), dtype=np.float32)
+    x_y_displacements = np.zeros((2, patches[0], patches[1]), dtype=np.float32)
     for x_idx, x in enumerate(range(0, grid_size[0], step_size)):
         for y_idx, y in enumerate(range(0, grid_size[0], step_size)):
         
@@ -366,7 +376,7 @@ def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme
                 displace_x = 0
          
 
-            x_y_displacements[x_idx,y_idx,:] = [displace_x, displace_y]
+            x_y_displacements[:, x_idx,y_idx] = [displace_x, displace_y]
 
 
     ###########Gaussian weights #############
@@ -380,7 +390,7 @@ def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme
 
     gaussian_weights_full = gaussian_gen(downscaled_padded_lm, hm_res, 1, sigma, lambda_scale)
     gaussian_weights = gaussian_weights_full[(safe_padding//step_size):(safe_padding+grid_size[0])//step_size, safe_padding//step_size:(safe_padding+grid_size[1])//step_size  ]
-
+    # gaussian_weights = gaussian_weights.reshape(1, gaussian_weights.shape[0], gaussian_weights.shape[1])
     # print("padded_lm: ", padded_lm)
     # plt.imshow(gaussian_weights_full)
     # plt.show()

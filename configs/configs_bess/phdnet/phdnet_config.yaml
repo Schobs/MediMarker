@@ -23,7 +23,6 @@ MODEL:
   ARCHITECTURE: "PHD-Net"
 
 DATASET:
-  # DEBUG: True
   ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
   SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
