@@ -6,7 +6,7 @@ from losses import MultiBranchPatchLoss
 from models.PHD_Net import PHDNet
 import torch
 import numpy as np
-from utils.im_utils.heatmap_manipulation import get_coords
+from utils.im_utils.heatmap_manipulation import get_coords, candidate_smoothing
 import matplotlib.pyplot as plt
 
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
@@ -52,7 +52,8 @@ class PHDNetTrainer(NetworkTrainer):
 
         # maxpool_factor, full_heatmap_resolution, class_label_scheme, sample_grid_size
         #Label generator
-        self.label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.class_label_scheme, self.sample_patch_size )
+        self.train_label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.class_label_scheme, self.sample_patch_size )
+        self.eval_label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.class_label_scheme, self.training_resolution )
 
         #scheduler, initialiser and optimiser params
         self.weight_inititialiser = InitWeights_KaimingUniform()
@@ -124,20 +125,37 @@ class PHDNetTrainer(NetworkTrainer):
             [int, int]: predicted coordinates
         """
 
-        extra_info = {"hm_max": []}
 
-        #Get only the full resolution heatmap
-        output = output[-1]
+        extra_info = {"hm_max": None}
 
-        final_heatmap = output
-        if self.resize_first:
-            #torch resize does HxW so need to flip the diemsions
-            final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+        output = [x.detach().cpu().numpy() for x in output]
+
+        full_image_res = [output[0][0][0].shape[0]*(2**self.maxpool_factor),output[0][0][0].shape[1]*(2**self.maxpool_factor) ]
+        smoothed_candidate_maps = []
+
+        for sample_idx in range(len(output[0])):
+            csm = candidate_smoothing([output[0][sample_idx], output[1][sample_idx]], full_image_res, self.maxpool_factor, debug=False)
+            if self.resize_first:
+                csm = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(csm)
+
+            smoothed_candidate_maps.append(csm)
         
-        pred_coords, max_values = get_coords(final_heatmap)
+        smoothed_candidate_maps = torch.stack(smoothed_candidate_maps).to(self.device)
+        #Get only the full resolution heatmap
+        # output = output[-1]
+
+        # final_heatmap = output
+        # if self.resize_first:
+        #     #torch resize does HxW so need to flip the diemsions
+        #     final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+       
+       
+        # coords_from_uhm, arg_max_uhm = get_coords(torch.tensor(np.expand_dims(np.expand_dims(upscaled_hm, axis=0), axis=0)))
+
+        pred_coords, max_values = get_coords(smoothed_candidate_maps)
         extra_info["hm_max"] = (max_values)
 
-        del final_heatmap
+        # del final_heatmap
         
 
         return pred_coords, extra_info

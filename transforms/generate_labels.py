@@ -318,8 +318,147 @@ def gaussian_gen(landmark, resolution, step_size, std, dtype=np.float32, lambda_
     g *= 1.0/g.max() * lambda_scale
 
 
+
+
     return g
 
+
+def gaussian_gen_fast(predictions, resolution, sigma):
+    sx = sigma
+    sy = sigma
+
+    x = resolution[0]
+    y = resolution[1]
+
+    # predictions = predictions.cpu().detach().numpy()
+    zeros = np.zeros(resolution)
+    
+    # print("zeros shape:", zeros.shape)
+    # print("incside gauss gen alt. Predictions: ", predictions)
+
+    #gen a generic gaussian blob
+    blob_size = 10
+    x = np.arange(blob_size)
+    y = np.arange(blob_size)
+    mx = my = (blob_size//2)
+
+    x, y = np.meshgrid(x, y) # get 2D variables instead of 1D
+
+    #define guassian 
+    g = (1) / (2. * np.pi * sx * sy) * np.exp(-((x - mx)**2. / (2. * sx**2.) + (y - my)**2. / (2. * sy**2.))) 
+    #normalise between 0 and 1
+    g *= 1.0/g.max() 
+    
+    # for row in g:
+    #     print(row)
+    # print(g)
+    # plt.imshow(g)
+    # plt.show()
+    
+    #TODO: do testing for edge cases below, beyond a visual check.
+    # predictions =[[0,0], [5,5], [3,3], [9,9], [6,6], [510,510], [511,511], [508, 60]]
+    for pred in predictions:
+        pred = [round(pred[0]), round(pred[1])]
+        #make sure prediction is in bounds.
+        if 0 <= pred[0] < resolution[0] and 0 <= pred[1] < resolution[1]:
+
+            #where to slice the gaussian blob? This is if landmark is on the edge, it slices the
+            # corresponding part of the blob.
+            if pred[0] < mx:
+                # print("x1")
+                x_start, x_end = (mx-pred[0]), blob_size
+            elif pred[0] > (resolution[0]-mx):
+                # print("x2")
+                # x_start, x_end = mx-(resolution[0]-pred[0]), (resolution[0]-pred[0])
+                x_start, x_end =  0 , mx+(resolution[0]-pred[0])
+
+            else:
+                x_start, x_end = 0, blob_size
+
+            if pred[1] < my:
+                # print("y1")
+                y_start, y_end = (my-pred[1]), blob_size
+            elif pred[1] > (resolution[1]-my):
+                # print("y2")
+                y_start, y_end = 0, my+(resolution[1]-pred[1])
+            else:
+                y_start, y_end = 0, blob_size
+
+            # print("pred: ", pred)
+            # print("starts and ends for blob", y_start, y_end, x_start, x_end)
+            clipped_blob = g[y_start:y_end , x_start:x_end]
+
+            # print("clipped blob shape ", clipped_blob.shape)
+
+            #Only add to zeros where blob is overlapping.
+            start_x = max(0, min(round(pred[0]-mx), resolution[0]))
+            end_x = start_x + (x_end-x_start)
+
+            start_y = max(0, min(round(pred[1]-my), resolution[1]))
+            end_y = start_y + (y_end-y_start)
+            # print("starts and ends for gauss plot", start_y, end_y, start_x, end_x)
+
+        # if pred[0] >=0+blob_size/2 and pred[1] >=0+blob_size/2 and  \
+            #     pred[0] <=resolution[0]-blob_size/2 and pred[1]<=resolution[1]-blob_size/2:
+        
+            # print("inner pred:", pred.shape, pred)
+
+            #pytorch orders y-x not x-y so flip axis
+
+            # start_x = (np.clip(round(pred[1]-mx), 0,resolution[1]-1))
+            # end_x = (np.clip(round(pred[1]+mx), 0,resolution[1]-1))
+            # start_y = (np.clip(round(pred[0]-my), 0,resolution[0]-1))
+            # end_y = (np.clip(round(pred[0]+my), 0,resolution[0]-1))
+
+            # start_x = max(0, min(round(pred[1]-mx), resolution[1]))
+            # end_x = start_x + blob_size
+
+            # start_y = max(0, min(round(pred[0]-my), resolution[0]))
+            # end_y = start_y + blob_size
+
+
+            # start_x = (np.clip(round(pred[1]-mx), 0,resolution[0]-1))
+            # end_x = (np.clip(round(pred[1]+mx), 0,resolution[0]-1))
+            # start_y = (np.clip(round(pred[0]-my), 0,resolution[1]-1))
+            # end_y = (np.clip(round(pred[0]+my), 0,resolution[1]-1))
+
+            # start_x = (round(pred[1]-mx))
+            # end_x = (round(pred[1]+mx))
+            # start_y = (round(pred[0]-my))
+            # end_y = (round(pred[0]+my))
+
+            # # print("start_x, end_x, start_y, end_y: ", start_x, end_x, start_y, end_y)
+
+            # clipped_blob = g[0:(end_x-start_x), 0:(end_y-start_y)]
+
+            # print("full and clipped blob shape ", g.shape, clipped_blob.shape)
+
+            zeros[start_y:end_y , start_x:end_x] += clipped_blob
+            # zeros[int(np.clip(np.round(pred[0])-mx, 0,resolution[0]-1)), int(np.clip(np.round(pred[1])-my, 0, resolution[1]-1))] += 1
+
+    # zeros = cv2.GaussianBlur((zeros), [0,0], sigma)
+    # zeros = np.transpose(zeros)
+    return zeros
+
+def gaussian_gen_alternate(predictions, resolution, sigma):
+    sx = sigma
+    sy = sigma
+
+    # predictions = predictions.cpu().detach().numpy()
+    zeros = np.zeros(resolution)
+    
+    # print("zeros shape:", zeros.shape)
+    # print("incside gauss gen alt. Predictions: ", predictions)
+
+    for pred in predictions:
+        # print("inner pred:", pred.shape, pred)
+        zeros[int(np.clip(np.round(pred[0]), 0,resolution[0]-1)), int(np.clip(np.round(pred[1]), 0, resolution[1]-1))] += 1
+
+    zeros = cv2.GaussianBlur((zeros), [0,0], sigma)
+    zeros = np.transpose(zeros)
+    return zeros
+
+    # g =  np.expand_dims(zeros, axis=0)
 
 def gen_patch_displacements_heatmap(landmark, xy_patch_corner, class_loss_scheme, grid_size, full_heatmap_resolution, maxpooling_factor, sigma, lambda_scale=100, debug=False):
     """Function to generate sub-patch displacements and patch-wise heatmap values.

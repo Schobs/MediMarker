@@ -41,8 +41,8 @@ class UnetTrainer(NetworkTrainer):
 
 
         #Label generator
-        self.label_generator = UNetLabelGenerator()
-
+        self.train_label_generator = self.eval_label_generator = UNetLabelGenerator()
+   
         #get model config parameters
         self.num_out_heatmaps = len(self.trainer_config.DATASET.LANDMARKS)
         self.base_num_features = self.trainer_config.MODEL.UNET.INIT_FEATURES

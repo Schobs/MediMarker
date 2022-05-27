@@ -255,7 +255,7 @@ class MultiBranchPatchLoss(nn.Module):
         self.branch_scheme = branch_scheme
         self.criterion_reg = nn.MSELoss(reduction='mean')
         self.distance_weighted_bool = distance_weighted_bool
-        self.loss_seperated_keys = ["loss_all", "displacment_loss", "heatmap_loss"]
+        self.loss_seperated_keys = ["all_loss_all", "displacement_loss", "heatmap_loss"]
 
         if class_loss_scheme == "binary":
             self.class_criterion = nn.BCELoss(reduction='mean')
@@ -283,9 +283,9 @@ class MultiBranchPatchLoss(nn.Module):
         pred_displacements = predictions[1]
         pred_class =  predictions[0]
 
-        print("pred_class shape: ", pred_class.shape, "pred_displacements shape: ", pred_displacements.shape)
-        print("labels shape class ",  len(labels['patch_heatmap']), labels['patch_heatmap'].shape)
-        print("labels shape disp ",   len(labels['patch_displacements']), labels['patch_displacements'].shape)
+        # print("pred_class shape: ", pred_class.shape, "pred_displacements shape: ", pred_displacements.shape)
+        # print("labels shape class ",  len(labels['patch_heatmap']), labels['patch_heatmap'].shape)
+        # print("labels shape disp ",   len(labels['patch_displacements']), labels['patch_displacements'].shape)
 
         # print()
         if self.branch_scheme == 'displacement' or self.branch_scheme == 'multi':
@@ -296,7 +296,7 @@ class MultiBranchPatchLoss(nn.Module):
                 loss_disp = self.criterion_reg(pred_displacements, labels['patch_displacements'])
             
             total_loss += loss_disp
-            losses_seperated["displacment_loss"] = loss_disp
+            losses_seperated["displacement_loss"] = loss_disp
 
         if self.branch_scheme == 'heatmap' or self.branch_scheme == 'multi':
             loss_class = self.class_criterion(pred_class, labels['patch_heatmap'])
@@ -304,7 +304,7 @@ class MultiBranchPatchLoss(nn.Module):
             total_loss += loss_class
             losses_seperated["heatmap_loss"] = loss_class
 
-        losses_seperated["loss_all"] = total_loss
+        losses_seperated["all_loss_all"] = total_loss
 
         return total_loss, losses_seperated
 

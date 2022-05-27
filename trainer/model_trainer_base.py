@@ -87,7 +87,7 @@ class NetworkTrainer(ABC):
 
         #Set up in init of extended class (child)
         self.network = None
-        self.label_generator = None
+        self.train_label_generator = self.eval_label_generator = None
         self.optimizer= None
         self.loss = None
         self.num_res_supervision = None
@@ -210,6 +210,7 @@ class NetworkTrainer(ABC):
             #We will log the training and validation info here. The keys we set describe all the info we are logging.
             per_epoch_logs =  self.dict_logger.get_epoch_logger()
 
+
             # Train for X number of batches per epoch e.g. 250
             for iter_b in range(self.num_batches_per_epoch):
                 l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True, split="training", log_coords=False,  logged_vars=per_epoch_logs)
@@ -271,7 +272,6 @@ class NetworkTrainer(ABC):
             
 
         data =(data_dict['image']).to( self.device )
-        print("input shape: ", data.shape)
 
         # This happens when we regress sigma with >0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
@@ -318,11 +318,16 @@ class NetworkTrainer(ABC):
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
                 if log_coords:
-
+                    
+                    # print("correct coords are: ", data_dict["target_coords"])
+                    # output = [data_dict['label']["patch_heatmap"], data_dict['label']["patch_displacements"]]
                     #get coords
                     pred_coords, extra_info = self.get_coords_from_heatmap(output)
                     #Maybe rescale the coordinates based on evaluation settings.
                     pred_coords, target_coords = self.maybe_rescale_coords(pred_coords, data_dict)
+                    
+                    # print("pred coords  ", pred_coords)
+                    # print("targ coords ", target_coords)
                 else:
                     pred_coords = extra_info = target_coords = None
 
@@ -438,7 +443,7 @@ class NetworkTrainer(ABC):
         if self.use_full_res_coords:
             target_coords =data_dict['full_res_coords'].to( self.device ) #C1
         else:
-            target_coords =data_dict['target_coords'].to( self.device ) #C3 (and C1 if input size == full res size so full & target the same)
+            target_coords =np.round(data_dict['target_coords']).to( self.device ) #C3 (and C1 if input size == full res size so full & target the same)
 
         # C2
         if self.use_full_res_coords and not self.resize_first :
@@ -697,7 +702,7 @@ class NetworkTrainer(ABC):
         train_dataset = DatasetBase(
             annotation_path =self.trainer_config.DATASET.SRC_TARGETS,
             landmarks = self.landmarks,
-            LabelGenerator = self.label_generator,
+            LabelGenerator = self.train_label_generator,
             split = "training",
             sample_mode = self.sampler_mode,
             sample_patch_size = self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
@@ -728,7 +733,7 @@ class NetworkTrainer(ABC):
             valid_dataset = train_dataset
             print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
 
-        print("# dataloader workers and persist workers bool :", self.num_workers_cfg, self.persist_workers)
+        print("Using %s Dataloader workers and persist workers bool : %s " % (self.num_workers_cfg, self.persist_workers))
         self.train_dataloader = DataLoader(train_dataset, batch_size=self.data_loader_batch_size, shuffle=True, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
         self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.data_loader_batch_size, shuffle=False, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
     
@@ -751,7 +756,7 @@ class NetworkTrainer(ABC):
         dataset = DatasetBase(
                 annotation_path =self.trainer_config.DATASET.SRC_TARGETS,
                 landmarks = self.landmarks,
-                LabelGenerator = self.label_generator,
+                LabelGenerator = self.eval_label_generator,
                 split = split,
                 sample_mode = "full",
                 sample_patch_size = self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,

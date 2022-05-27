@@ -131,7 +131,7 @@ class PHDNet(nn.Module):
             x_reg = self.layer_reg(x)
             # print("reg, ", x_reg.shape)
             #unsqueeze because single landmark version does not give correct out dimensions
-            out_reg = self.outReg(x_reg).unsqueeze(0)
+            out_reg = self.outReg(x_reg).unsqueeze(1)
             # print(out_reg.shape)
 
         if self.branch_scheme == 'multi' or 'heatmap':

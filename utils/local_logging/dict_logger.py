@@ -49,7 +49,6 @@ class DictLogger():
                 data_dict (_type_): _description_
                 logged_vars (_type_): _description_
             """
-
             #1) Log training/validation losses based on split.
             vars_to_log = list(log_dict.keys())
             for key, value in loss_dict.items():
@@ -120,6 +119,7 @@ class DictLogger():
                     per_epoch_logs["sigma_"+str(idx)] = sig
 
         for key, value in per_epoch_logs.items():
+            print("end of epoch", key, value)
             #get the mean of all the batches from the training/validations. 
             if isinstance(value, list):
                 per_epoch_logs[key] = np.mean([x.detach().cpu().numpy() if torch.is_tensor(x) else x for x in value])
