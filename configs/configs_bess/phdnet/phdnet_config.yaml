@@ -20,6 +20,7 @@ SOLVER:
 MODEL:
   GAUSS_SIGMA: 4
   ARCHITECTURE: "PHD-Net"
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/testing/phdnet/model_latest_fold0.model"
 
 DATASET:
   ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
@@ -37,7 +38,7 @@ SAMPLER:
   INPUT_SIZE : [128,128]
   SAMPLE_MODE: 'patch' # ['patch', 'full']
   NUM_WORKERS: 8
-  # DEBUG: True
+  DEBUG: False
   PATCH:
     SAMPLER_BIAS: 0.66
     RESOLUTION_TO_SAMPLE_FROM:  [512,512]
@@ -51,9 +52,10 @@ SAMPLER:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: True
+  CACHE_DATA: False
 
-  INFERENCE_ONLY: False
+  INFERENCE_ONLY: True
 
 INFERENCE:
-  EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  EVALUATION_MODE: "use_input_size" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: True

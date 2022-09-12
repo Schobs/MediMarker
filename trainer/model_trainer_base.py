@@ -94,7 +94,7 @@ class NetworkTrainer(ABC):
 
         #Can be changed in extended class (child)
         self.early_stop_patience = 150
-        self.initial_lr = 1e-2
+        self.initial_lr = self.trainer_config.SOLVER.BASE_LR
 
      
 
@@ -183,7 +183,10 @@ class NetworkTrainer(ABC):
     def _maybe_init_amp(self):
         if self.auto_mixed_precision and self.amp_grad_scaler is None:
             self.amp_grad_scaler = GradScaler()
-        print("initialized auto mixed precision.")
+            print("initialized auto mixed precision.")
+        else:
+            print("Not initialized auto mixed precision.")
+
 
 
     @abstractmethod
@@ -210,7 +213,7 @@ class NetworkTrainer(ABC):
             #We will log the training and validation info here. The keys we set describe all the info we are logging.
             per_epoch_logs =  self.dict_logger.get_epoch_logger()
 
-
+            print("training")
             # Train for X number of batches per epoch e.g. 250
             for iter_b in range(self.num_batches_per_epoch):
                 l, generator = self.run_iteration(generator, self.train_dataloader, backprop=True, split="training", log_coords=False,  logged_vars=per_epoch_logs)
@@ -218,6 +221,7 @@ class NetworkTrainer(ABC):
                     self.comet_logger.log_metric("training loss iteration", l, step)
                 step += 1
             # del generator
+            print("validation")
 
             with torch.no_grad():
                 self.network.eval()
@@ -258,7 +262,7 @@ class NetworkTrainer(ABC):
         """
 
 
-    def run_iteration(self, generator, dataloader, backprop, split, log_coords, logged_vars=None):
+    def run_iteration(self, generator, dataloader, backprop, split, log_coords, logged_vars=None, debug=False):
         so = time()
         try:
             data_dict = next(generator)
@@ -269,10 +273,14 @@ class NetworkTrainer(ABC):
             else:
                 generator = iter(dataloader)
                 data_dict = next(generator)
-            
+        
+        # print(data_dict["uid"][0])
+        # if  data_dict["uid"][0] not in ["390", "129","389", "222"]  :
+        #     return 0, generator
 
         data =(data_dict['image']).to( self.device )
 
+        # print("ids: ", data_dict["uid"])
         # This happens when we regress sigma with >0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
         if self.gen_hms_in_mainthread:
@@ -281,7 +289,9 @@ class NetworkTrainer(ABC):
         #Put targets to device
         target = {key: ([x.to(self.device) for x in val ] if isinstance(val, list) else val.to(self.device) ) for key, val in data_dict['label'].items() }
 
+        # print("datatypes of heatmap, displacement: ", target["patch_heatmap"].dtype, target["patch_displacements"].dtype)
         
+        # print("example of displacement ", target["patch_displacements"][0][0][0])
         self.optimizer.zero_grad()
 
         so = time()
@@ -311,7 +321,9 @@ class NetworkTrainer(ABC):
                 if self.regress_sigma:
                     self.update_dataloader_sigmas(self.sigmas)
 
-
+        # output = [target['patch_heatmap'], target['patch_displacements']]
+        # print("displacement output type: ", output[1][0].dtype)
+        # print("displacement output examnple: ", output[1][0][0][0])
 
         #Log info from this iteration.
         s= time()
@@ -322,9 +334,9 @@ class NetworkTrainer(ABC):
                     # print("correct coords are: ", data_dict["target_coords"])
                     # output = [data_dict['label']["patch_heatmap"], data_dict['label']["patch_displacements"]]
                     #get coords
-                    pred_coords, extra_info = self.get_coords_from_heatmap(output)
+                    pred_coords_input_size, extra_info = self.get_coords_from_heatmap(output)
                     #Maybe rescale the coordinates based on evaluation settings.
-                    pred_coords, target_coords = self.maybe_rescale_coords(pred_coords, data_dict)
+                    pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
                     
                     # print("pred coords  ", pred_coords)
                     # print("targ coords ", target_coords)
@@ -333,7 +345,15 @@ class NetworkTrainer(ABC):
 
                 
                 logged_vars = self.dict_logger.log_key_variables(logged_vars, pred_coords, extra_info, target_coords, loss_dict, data_dict, log_coords, split)
+                if debug:
+                    # print("logged_vars ind resyults: ", logged_vars["individual_results"][0]["uid"])
+                    # print("data_dict['uid']: ", data_dict['uid'])
 
+                    debug_vars = [x for x in logged_vars["individual_results"]  if x["uid"] in data_dict['uid']]
+                    # self, input_dict, prediction_output, predicted_coords
+                    self.eval_label_generator.debug_prediction(data_dict, output, pred_coords,pred_coords_input_size, debug_vars, extra_info)
+                           
+        e = time()
         if self.profiler:
             self.profiler.step()
 
@@ -357,13 +377,13 @@ class NetworkTrainer(ABC):
 
         #######Logging some end of epoch info #############
         time_taken =self.epoch_end_time - self.epoch_start_time
-        per_epoch_logs = self.dict_logger.log_epoch_end_variables(per_epoch_logs, time_taken, self.sigmas)
+        per_epoch_logs = self.dict_logger.log_epoch_end_variables(per_epoch_logs, time_taken, self.sigmas, self.optimizer.param_groups[0]['lr'])
       
         #log them else they are lost!
         if self.comet_logger:
             self.dict_logger.log_dict_to_comet(self.comet_logger, per_epoch_logs, self.epoch)
 
-        print("the final per epoch logs :", per_epoch_logs )
+        print("Epoch %s logs: %s" % (self.epoch, per_epoch_logs ))
 
 
         #Checks for it this epoch was best in validation loss or validation coord error!
@@ -447,8 +467,10 @@ class NetworkTrainer(ABC):
 
         # C2
         if self.use_full_res_coords and not self.resize_first :
-            upscale_factor = [self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[0]/self.trainer_config.SAMPLER.INPUT_SIZE[0], self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[1]/self.trainer_config.SAMPLER.INPUT_SIZE[1]]
-            pred_coords = torch.rint(pred_coords * upscale_factor)
+            upscale_factor = torch.tensor([self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[0]/self.trainer_config.SAMPLER.INPUT_SIZE[0], self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[1]/self.trainer_config.SAMPLER.INPUT_SIZE[1]]).to(self.device)
+            # upscaled_coords = torch.tensor([pred_coords[x]*upscale_factor[x] for x in range(len(pred_coords))]).to(self.device)
+            upscaled_coords = torch.mul(pred_coords,upscale_factor)
+            pred_coords = torch.round(upscaled_coords)
             # pred_coords = pred_coords * upscale_factor
 
         return pred_coords, target_coords
@@ -470,7 +492,7 @@ class NetworkTrainer(ABC):
 
 
     # @abstractmethod 
-    def run_inference(self, split):
+    def run_inference(self, split, debug=False):
         """ Function to run inference on a full sized input
 
         #0) instantitate test dataset and dataloader
@@ -511,8 +533,10 @@ class NetworkTrainer(ABC):
         generator = iter(self.test_dataloader)
         if inference_full_image:
             while generator != None:
-                l, generator = self.run_iteration(generator, self.test_dataloader, backprop=False, split=split, log_coords=True,  logged_vars=evaluation_logs)
+                print("-", end="")
+                l, generator = self.run_iteration(generator, self.test_dataloader, backprop=False, split=split, log_coords=True,  logged_vars=evaluation_logs, debug=debug)
             del generator
+            print()
         else:
             #this is where we patchify and stitch the input image
             raise NotImplementedError()
@@ -558,7 +582,7 @@ class NetworkTrainer(ABC):
 
     def evaluation_metrics(self, evaluation_dict):
         # Success Detection Rate i.e. % images within error thresholds
-        radius_list = [20,25,30,40]
+        radius_list = [3,5,10,15,20,25,30,40]
         outlier_results = {}
         for rad in radius_list:
             out_res_rad = success_detection_rate(evaluation_dict["individual_results"], rad)
@@ -617,17 +641,17 @@ class NetworkTrainer(ABC):
         self.optimizer.load_state_dict(checkpoint_info["optimizer"])
 
         if training_bool:
-            # self.best_valid_loss = checkpoint_info['best_valid_loss']
-            # self.best_valid_loss_epoch = checkpoint_info['best_valid_loss_epoch']
-            # self.best_valid_coord_error = checkpoint_info['best_valid_coord_error']
-            # self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
-            # self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
+            self.best_valid_loss = checkpoint_info['best_valid_loss']
+            self.best_valid_loss_epoch = checkpoint_info['best_valid_loss_epoch']
+            self.best_valid_coord_error = checkpoint_info['best_valid_coord_error']
+            self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
+            self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
 
-            self.best_valid_loss = 0
-            self.best_valid_loss_epoch = 0
-            self.best_valid_coord_error = 0
-            self.best_valid_coords_epoch = 0
-            self.epochs_wo_val_improv = 0
+            # self.best_valid_loss = 0
+            # self.best_valid_loss_epoch = 0
+            # self.best_valid_coord_error = 0
+            # self.best_valid_coords_epoch = 0
+            # self.epochs_wo_val_improv = 0
         
         #Allow legacy models to be loaded (they didn't use to save sigmas)
         if "sigmas" in checkpoint_info:
@@ -720,6 +744,7 @@ class NetworkTrainer(ABC):
             hm_lambda_scale = self.trainer_config.MODEL.HM_LAMBDA_SCALE,
             data_augmentation_strategy = self.trainer_config.SAMPLER.DATA_AUG,
             data_augmentation_package = self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
+            dataset_split_size = self.trainer_config.DATASET.TRAINSET_SIZE,
         )
     
         if self.perform_validation:
@@ -730,7 +755,10 @@ class NetworkTrainer(ABC):
                 valid_dataset = self.get_evaluation_dataset("validation", self.trainer_config.SAMPLER.INPUT_SIZE)
 
         else:
-            valid_dataset = train_dataset
+            if self.sampler_mode == "patch":            
+                valid_dataset = self.get_evaluation_dataset("training", self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM, dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE)
+            else:
+                valid_dataset = self.get_evaluation_dataset("training", self.trainer_config.SAMPLER.INPUT_SIZE, dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE)
             print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
 
         print("Using %s Dataloader workers and persist workers bool : %s " % (self.num_workers_cfg, self.persist_workers))
@@ -738,7 +766,7 @@ class NetworkTrainer(ABC):
         self.valid_dataloader = DataLoader(valid_dataset, batch_size=self.data_loader_batch_size, shuffle=False, num_workers=self.num_workers_cfg, persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True )
     
 
-    def get_evaluation_dataset(self, split, load_im_size):
+    def get_evaluation_dataset(self, split, load_im_size, dataset_split_size=-1):
         """Gets an evaluation dataset based on split given (must be "validation" or "testing").
             We do not perform patch sampling on evaluation dataset, always returning the full image (sample_mode = "full").
             Patchifying the evaluation image is too large memory constraint to do in batches here.
@@ -750,8 +778,7 @@ class NetworkTrainer(ABC):
             _type_: Dataset object
         """
 
-        assert split in ["validation", "testing"]
-
+        # assert split in ["validation", "testing"]
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
         dataset = DatasetBase(
                 annotation_path =self.trainer_config.DATASET.SRC_TARGETS,
@@ -773,6 +800,7 @@ class NetworkTrainer(ABC):
                 original_image_size= self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE,
                 input_size =  load_im_size,
                 hm_lambda_scale = self.trainer_config.MODEL.HM_LAMBDA_SCALE,
+                dataset_split_size= dataset_split_size
 
             )
         return dataset

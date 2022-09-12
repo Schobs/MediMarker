@@ -1,0 +1,43 @@
+
+# OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_3GS_4MFR_AugAC_DS5"
+OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/MSA/testing/nnuent/MSA_nnunet_3GS_AugAC_CV"
+
+# OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
+
+SOLVER:
+  DEEP_SUPERVISION: True
+  NUM_RES_SUPERVISIONS: 5
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 32
+
+
+
+MODEL:
+  GAUSS_SIGMA: 3
+
+DATASET:
+  # DEBUG: True
+  ROOT: '/shared/tale2/Shared/data/CMRI/PAH-Baseline/Proc/SA'
+  SRC_TARGETS: '/shared/tale2/Shared/data/CMRI/PAH-Baseline/Proc/landmark_localisation_annotations/SA'
+  NAME:  "APSIRE_MEDIUM_SA"
+  IMAGE_MODALITY: 'CMRI'
+  LANDMARKS : [0,1,2,3,]
+  ORIGINAL_IMAGE_SIZE : [512,512]
+  
+ 
+TRAINER:
+  PERFORM_VALIDATION: True
+  SAVE_LATEST_ONLY: False
+  INFERENCE_ONLY: False
+  CACHE_DATA: True
+
+INFERENCE:
+  EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: False
+
+SAMPLER:
+  NUM_WORKERS: 1
+  DATA_AUG: 'AffineComplex'
+  INPUT_SIZE : [512,512]
+
+  #TODO: boolean for performing validation or not. its false in the isbi one because it is tested directly instead.

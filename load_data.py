@@ -3,10 +3,21 @@ import json
 from typing import Optional
 import nibabel as nib
 from PIL import Image
+import pydicom as dicom
 
 def get_datatype_load(im_path):
+    """Decides the image load function based on the suffix of the image path.
+
+    Args:
+        im_path (str): The path to an image
+
+    Returns:
+        lambda function: lambda function that loads the image depending on the suffix of the image path.
+    """
     if "nii.gz" in im_path:
         return lambda pth: Image.fromarray(nib.load(pth).get_fdata())
+    elif "dcm" in im_path:
+        return lambda pth: Image.fromarray(dicom.dcmread(pth).pixel_array)
     else:
         return lambda pth: Image.open(pth)
 

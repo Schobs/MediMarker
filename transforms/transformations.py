@@ -3,17 +3,32 @@ import torch
 import numpy as np
 from albumentations.augmentations.transforms import ImageOnlyTransform
 from albumentations.core.transforms_interface import BasicTransform
+import matplotlib.pyplot as plt
+
+import warnings
 
 def normalize_cmr(image,to_tensor=False):
+    """Adds small epsilon to std to avoid divide by zero
 
+    Args:
+        image (_type_): _description_
+        to_tensor (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
+    # warnings.filterwarnings("error")
     # image = sample["image"]
     if torch.is_tensor(image):
-        norm_image = ((image-torch.mean(image))/torch.std(image)).float()
-
+        
+        norm_image = ((image-torch.mean(image))/(torch.std(image)+1e-100)).float()
+       
     else:
-        norm_image = ((image-np.mean(image))/np.std(image))
+
+        norm_image = ((image-np.mean(image))/(np.std(image)+1e-100))
+    
         if to_tensor:
-            norm_image = torch.from_numpy(np.expand_dims(norm_image, axis=0))
+            norm_image = torch.from_numpy(np.expand_dims(norm_image, axis=0)).float()
 
     return norm_image
 

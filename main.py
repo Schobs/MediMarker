@@ -102,7 +102,7 @@ def main():
         print("model name: ", model_name)
 
         trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
-        summary_results, ind_results = trainer.run_inference(split="testing")
+        summary_results, ind_results = trainer.run_inference(split="testing", debug=cfg.INFERENCE.DEBUG)
 
         all_model_summaries[model_name] = summary_results
         all_model_individuals[model_name] = ind_results
@@ -129,7 +129,10 @@ def main():
             print("loading ", model_paths[i])
             trainer.load_checkpoint( model_paths[i], training_bool=False)
             # summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i], "testing")
-            summary_results, ind_results = trainer.run_inference(split="testing")
+            summary_results, ind_results = trainer.run_inference(split="testing", debug=cfg.INFERENCE.DEBUG)
+
+            # print(ind_results)
+            # print(summary_results)
 
             all_model_summaries[model_names[i]] = summary_results
             all_model_individuals[model_names[i]] = ind_results

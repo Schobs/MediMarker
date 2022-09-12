@@ -33,7 +33,8 @@ class PHDNetTrainer(NetworkTrainer):
         #global config variable
         self.trainer_config = trainer_config
 
-     
+        self.early_stop_patience = 1000
+
 
         #get model config parameters
         self.num_out_heatmaps = len(self.trainer_config.DATASET.LANDMARKS)
@@ -52,8 +53,8 @@ class PHDNetTrainer(NetworkTrainer):
 
         # maxpool_factor, full_heatmap_resolution, class_label_scheme, sample_grid_size
         #Label generator
-        self.train_label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.class_label_scheme, self.sample_patch_size )
-        self.eval_label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.class_label_scheme, self.training_resolution )
+        self.train_label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.class_label_scheme, self.sample_patch_size, self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS, clamp_dist=self.trainer_config.MODEL.PHDNET.CLAMP_DIST  )
+        self.eval_label_generator = PHDNetLabelGenerator(self.maxpool_factor,  self.training_resolution, self.class_label_scheme, self.training_resolution, self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS, clamp_dist=self.trainer_config.MODEL.PHDNET.CLAMP_DIST  )
 
         #scheduler, initialiser and optimiser params
         self.weight_inititialiser = InitWeights_KaimingUniform()
@@ -130,11 +131,14 @@ class PHDNetTrainer(NetworkTrainer):
 
         output = [x.detach().cpu().numpy() for x in output]
 
-        full_image_res = [output[0][0][0].shape[0]*(2**self.maxpool_factor),output[0][0][0].shape[1]*(2**self.maxpool_factor) ]
+        # full_image_res = [output[0][0][0].shape[0]*(2**self.maxpool_factor),output[0][0][0].shape[1]*(2**self.maxpool_factor) ]
+        full_image_res = [output[0][0][0].shape[1]*(2**self.maxpool_factor),output[0][0][0].shape[0]*(2**self.maxpool_factor) ]
+
         smoothed_candidate_maps = []
 
         for sample_idx in range(len(output[0])):
-            csm = candidate_smoothing([output[0][sample_idx], output[1][sample_idx]], full_image_res, self.maxpool_factor, debug=False)
+            #self.trainer_config.INFERENCE.DEBUG
+            csm = candidate_smoothing([output[0][sample_idx], output[1][sample_idx]], full_image_res, self.maxpool_factor, log_displacement_bool= self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS, debug=self.trainer_config.INFERENCE.DEBUG)
             if self.resize_first:
                 csm = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(csm)
 
@@ -154,6 +158,7 @@ class PHDNetTrainer(NetworkTrainer):
 
         pred_coords, max_values = get_coords(smoothed_candidate_maps)
         extra_info["hm_max"] = (max_values)
+        extra_info["debug_candidate_smoothed_maps"] = smoothed_candidate_maps
 
         # del final_heatmap
         

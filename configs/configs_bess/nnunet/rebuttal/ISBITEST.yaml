@@ -1,0 +1,23 @@
+
+OUTPUT_DIR: "/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/testing/testrebutt"
+# OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
+
+
+DATASET:
+  # DATA_AUG: None
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds'
+  NAME:  "ISBI 2015 Junior"
+  IMAGE_MODALITY: 'Cephalometric'
+  LANDMARKS: [8,9,2,11,14]
+  ORIGINAL_IMAGE_SIZE : [1935,2400]
+  
+ 
+TRAINER:
+  PERFORM_VALIDATION: False
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: False
+
+SAMPLER:
+  DEBUG: True
+  INPUT_SIZE : [512,512]

@@ -18,7 +18,7 @@ class DictLogger():
 
 
     def per_epoch_log_template(self):
-        logged_per_epoch =  {"valid_coord_error_mean": [], "epoch_time": []}
+        logged_per_epoch =  {"valid_coord_error_mean": [], "epoch_time": [], "lr": []}
         if self.is_regressing_sigma:
             logged_per_epoch["sigmas_mean"] =  []
             for sig in range(self.num_landmarks):
@@ -56,7 +56,10 @@ class DictLogger():
 
                 if key_ in vars_to_log:
                     log_dict[key_].append(value)
-                
+
+            # #log learning rate
+            # if "lr" in vars_to_log:
+            #     log_dict["lr"].append(extra_info["lr"])
             #2) If log_coords, get coords from output. Then, check for the keys for what to log.
             if log_coords:
                 
@@ -91,15 +94,27 @@ class DictLogger():
                         #any extra info returned by the child class when calculating coords from outputs e.g. heatmap_max
                         for key_ in list(extra_info.keys()):
                          
-
-                            ind_dict[key_] = ((extra_info[key_][idx].detach().cpu().numpy()))
+                            if "debug" not in key_:
+                                ind_dict[key_] = ((extra_info[key_][idx].detach().cpu().numpy()))
 
 
                         log_dict["individual_results"].append(ind_dict)
+                
+#                 if debug:
+#                     for idx in range(len(pred_coords)):
+#                         print("\n uid: %s. Mean Error: %s " % (data_dict["uid"][idx],(np.mean(coord_error[idx].detach().cpu().numpy())) ))
+#                         for coord_idx, er in enumerate(coord_error[idx]):
+#                             print("L%s: Prediction: %s, Target: %s, Error: %s" % (coord_idx, pred_coords[idx][coord_idx].detach().cpu().numpy(), 
+#                             target_coords[idx][coord_idx].detach().cpu().numpy(), er))
+# # self, input_dict, prediction_output, predicted_coords
+#                             label_generator.debug_sample(data_dict)
+                           
+
+
             
             return log_dict
 
-    def log_epoch_end_variables(self, per_epoch_logs, time, sigmas ):
+    def log_epoch_end_variables(self, per_epoch_logs, time, sigmas, learning_rate ):
         """Logs end of epoch variables. If given a list of things to log it generates the mean of the list.
 
         Args:
@@ -107,7 +122,8 @@ class DictLogger():
             time (float): time it took for epoch
             sigmas ([Tensor]): Sigmas for the heatmap.
         """
-
+        if "lr" in list(per_epoch_logs.keys()):
+            per_epoch_logs["lr"] =  learning_rate
         if "epoch_time" in list(per_epoch_logs.keys()):
             per_epoch_logs["epoch_time"] =  time
         if "sigmas_mean" in list(per_epoch_logs.keys()):
@@ -119,12 +135,11 @@ class DictLogger():
                     per_epoch_logs["sigma_"+str(idx)] = sig
 
         for key, value in per_epoch_logs.items():
-            print("end of epoch", key, value)
             #get the mean of all the batches from the training/validations. 
             if isinstance(value, list):
-                per_epoch_logs[key] = np.mean([x.detach().cpu().numpy() if torch.is_tensor(x) else x for x in value])
+                per_epoch_logs[key] = np.round(np.mean([x.detach().cpu().numpy() if torch.is_tensor(x) else x for x in value]),5)
             if torch.is_tensor(value):
-                per_epoch_logs[key] = value.detach().cpu().numpy()
+                per_epoch_logs[key] = np.round(value.detach().cpu().numpy(), 5)
             
         return per_epoch_logs
     

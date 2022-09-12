@@ -1,0 +1,65 @@
+
+OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/testing/phdnet_SA_4GS_AugAC_L0_lognoAMP"
+# OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
+
+SOLVER:
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 1
+  MAX_EPOCHS: 1000
+  # REGRESS_SIGMA: True
+  REGRESS_SIGMA_LOSS_WEIGHT: 0.005
+  AUTO_MIXED_PRECISION: False
+  MINI_BATCH_SIZE:  150
+
+  DEEP_SUPERVISION: False
+  NUM_RES_SUPERVISIONS: 1  
+  BASE_LR: 0.001  # Initial learning rate
+
+  
+# /mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2/ISBI_512F_512Res_3GS_4MFR_AugACEBS_DS5
+
+MODEL:
+  GAUSS_SIGMA: 4
+  ARCHITECTURE: "PHD-Net"
+  #model_latest_fold0
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/testing/phdnet_SA_4GS_AugAC_L0/model_best_valid_coord_error_fold0.model"
+  HM_LAMBDA_SCALE: 1.0
+
+DATASET:
+  ROOT: '/shared/tale2/Shared/data/CMRI/ASPIRE/'
+  SRC_TARGETS: '/shared/tale2/Shared/data/CMRI/ASPIRE/cardiacSA_labels_VPnC_CV'
+  NAME:  "ASPIRE_SA"
+  IMAGE_MODALITY: 'CMRI'
+  # LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+  LANDMARKS : [0]
+
+  ORIGINAL_IMAGE_SIZE : [512,512]
+  # TRAINSET_SIZE: 10
+
+
+SAMPLER:
+  DATA_AUG: 'AffineComplex'
+  INPUT_SIZE : [128,128]
+  SAMPLE_MODE: 'patch' # ['patch', 'full']
+  NUM_WORKERS: 8
+  DEBUG: False
+  PATCH:
+    SAMPLER_BIAS: 0.66
+    RESOLUTION_TO_SAMPLE_FROM:  [512,512]
+    SAMPLE_PATCH_SIZE: [128,504]
+
+
+# _C.SAMPLER.PATCH = CN() 
+# _C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [512,512]
+# _C.SAMPLER.PATCH.SAMPLE_FROM_RESOLUTION = _C.DATASET.ORIGINAL_IMAGE_SIZE #Default samples from full resolution image.
+# _C.SAMPLER.PATCH.SAMPLER_BIAS = 0.66
+TRAINER:
+  PERFORM_VALIDATION: False
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: False
+
+  INFERENCE_ONLY: True
+
+INFERENCE:
+  EVALUATION_MODE: "use_input_size" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: True

@@ -272,7 +272,7 @@ class MultiBranchPatchLoss(nn.Module):
 
     def weighted_mse_loss(self, input, target, weights):
       
-        return torch.mean(weights * (input - target) ** 2)    
+        return torch.mean(weights *torch.abs(input - target))    
 
 
     def forward(self, predictions, labels, sigmas):
@@ -290,8 +290,18 @@ class MultiBranchPatchLoss(nn.Module):
         # print()
         if self.branch_scheme == 'displacement' or self.branch_scheme == 'multi':
             if self.distance_weighted_bool:
-                weights = labels["patch_heatmap"]
+                weights = labels["displacement_weights"]
+
                 loss_disp = self.weighted_mse_loss(pred_displacements, labels['patch_displacements'], weights)
+
+                # intermediate_loss =  torch.abs(pred_displacements - labels['patch_displacements'])
+                # weighted_intermediate_loss = intermediate_loss * weights    
+                # print("\n Loss shapes: ",pred_displacements.shape, labels['patch_displacements'].shape, weights.shape, intermediate_loss.shape, weighted_intermediate_loss.shape )
+                # print("sample preds, targs and weights: ")
+                # print(pred_displacements[0,0,:,0,0], labels['patch_displacements'][0,0,:,0,0], weights[0,0,0,0])
+                # print(intermediate_loss[0,0,:,0,0], weighted_intermediate_loss[0,0,:,0,0])
+                # print("and the mean disp: ", torch.mean(weighted_intermediate_loss))
+
             else:
                 loss_disp = self.criterion_reg(pred_displacements, labels['patch_displacements'])
             

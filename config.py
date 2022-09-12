@@ -22,6 +22,7 @@ _C.DATASET.SRC_TARGETS = '/shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_label
 _C.DATASET.IMAGE_MODALITY= 'CMRI'
 _C.DATASET.LANDMARKS = [0,1,2]
 _C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512]
+_C.DATASET.TRAINSET_SIZE = -1 # -1 for full trainset size or int <= len(training_set)
 
 # _C.DATASET.DEBUG = False
 # _C.DATASET.DATA_AUG = None
@@ -59,7 +60,7 @@ _C.SOLVER = CN()
 _C.SOLVER.SEED = 42
 _C.SOLVER.BASE_LR = 0.01  # Initial learning rate
 _C.SOLVER.MOMENTUM = 0.99
-_C.SOLVER.DECAY_POLICY = "poly"
+_C.SOLVER.DECAY_POLICY = "poly" # ["poly", None]
 _C.SOLVER.NESTEROV = True
 _C.SOLVER.TYPE = "SGD"
 _C.SOLVER.MAX_EPOCHS = 1000 
@@ -105,12 +106,14 @@ _C.MODEL.PHDNET.BRANCH_SCHEME = 'multi' # ['multi', 'heatmap', 'displacement']
 _C.MODEL.PHDNET.MAXPOOL_FACTOR = 3 # ['multi', 'heatmap', 'displacement']
 _C.MODEL.PHDNET.CLASS_LABEL_SCHEME = "gaussian" # ['binary', 'binary_weighted', 'gaussian']
 _C.MODEL.PHDNET.WEIGHT_DISP_LOSS_BY_HEATMAP = True # ['binary', 'binary_weighted', 'gaussian']
+_C.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS = True # ['binary', 'binary_weighted', 'gaussian']
+_C.MODEL.PHDNET.CLAMP_DIST = None # [None, 48, 10] (none or any int. TODO: WRITE TEST FOR THIS)
 
 
 
 _C.INFERENCE = CN()
 _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
-
+_C.INFERENCE.DEBUG = False
 # ---------------------------------------------------------------------------- #
 # Misc options
 # ---------------------------------------------------------------------------- #

@@ -38,6 +38,7 @@ class UnetTrainer(NetworkTrainer):
       
         #global config variable
         self.trainer_config = trainer_config
+        self.early_stop_patience = 45
 
 
         #Label generator

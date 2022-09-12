@@ -19,7 +19,7 @@ from transforms.generate_labels import LabelGenerator, generate_heatmaps
 from load_data import get_datatype_load, load_aspire_datalist
 from visualisation import (visualize_heat_pred_coords, visualize_image_target,
                            visualize_image_trans_coords,
-                           visualize_image_trans_target, visualize_patch)
+                           visualize_image_trans_target, visualize_patch, visualize_image_all_coords)
 from time import time
 
 import multiprocessing as mp
@@ -70,6 +70,8 @@ class DatasetBase(data.Dataset):
         num_res_supervisions: int = 5,
         data_augmentation_strategy: str = None,
         data_augmentation_package: str = None,
+        dataset_split_size: int = -1
+
         ):
         
  
@@ -87,7 +89,7 @@ class DatasetBase(data.Dataset):
         self.sample_patch_bias = sample_patch_bias
         self.sample_patch_from_resolution = sample_patch_from_resolution
 
-
+        self.dataset_split_size = dataset_split_size
         # We need to define the resolution images load in at, and the input_size to the network
         # (this is same for full sampling, different for patch sampling.)
         self.original_image_size = original_image_size
@@ -163,6 +165,10 @@ class DatasetBase(data.Dataset):
             label_std = os.path.join('fold' + str(self.cv) +'.json' )
             print("Loading %s data for CV %s " % (self.split, os.path.join(self.annotation_path, label_std)))
             datalist = load_aspire_datalist(os.path.join(self.annotation_path, label_std), data_list_key=self.split, base_dir=self.root_path)
+
+            if self.dataset_split_size != -1:
+                datalist = datalist [:self.dataset_split_size]
+                print("datalist: ", datalist)
         
         else:
             raise NotImplementedError("Only cross validation is currently implemented. Put all training data as fold1 and use cv=1 instead.")
@@ -178,7 +184,8 @@ class DatasetBase(data.Dataset):
                 interested_landmarks = (np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
                 expanded_image = np.expand_dims(normalize_cmr(self.datatype_load(data["image"]).resize( self.load_im_size)), axis=0)
 
-               
+                # visualize_image_all_coords(expanded_image[0], interested_landmarks )
+                # exit()
 
                 self.images.append(expanded_image)
                 self.target_coordinates.append(interested_landmarks)
@@ -267,12 +274,12 @@ class DatasetBase(data.Dataset):
         else:
 
             input_coords = coords
-            input_image = torch.from_numpy(image)
+            input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
 
         s= time()
         if self.generate_hms_here:
-            
+
             label = self.LabelGenerator.generate_labels(input_coords, x_y_corner, landmarks_in_indicator,  self.heatmap_label_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
         else:
             label = []
@@ -290,7 +297,7 @@ class DatasetBase(data.Dataset):
 
         
 
-        if (self.debug or run_time_debug)  :
+        if (self.debug or run_time_debug):
             print("input coords: " , input_coords)
             self.LabelGenerator.debug_sample(sample,untransformed_im, untransformed_coords)
           

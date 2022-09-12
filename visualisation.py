@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.patches as patches
+import matplotlib.patheffects as path_effects
 
 def visualize_image_target(image, target, coordinates):
 
@@ -138,12 +139,41 @@ def visualize_heat_pred_coords(og_image, pred_coords, targ_coords):
     plt.close()
 
 
+def visualize_image_all_coords(image, coords):
+    '''
+    visualize an image and all landmark labels, with each landmark labelled by index.
+    
+    '''
+
+    # print("Shapes: ogimage %s, ogheatmap %s, upscaled heatmap %s, pred coords %s and targ coords %s " % (og_image.shape, og_heatmap.shape, upscaled_heatmap.shape, pred_coords.shape, targ_coords.shape))
+    print("Shapes: image", image.shape)
+    print("len: coords",  len(coords))
+    
+    
+    fig, ax = plt.subplots(nrows=1, ncols=1, squeeze=False)
+    ax[0,0].imshow(image, cmap='gray')
+    ax[0,0].set_title("Input Image with all coordinates labelled by index.")
+
+    
+
+  
+    # ax[0,2].imshow(trans_image, cmap='gray')
+    for co in range(len(coords)):
+        rect11 = patches.Rectangle((int(coords[co][0]), int(coords[co][1])),3,3,linewidth=2,edgecolor='r',facecolor='none')
+
+        ax[0,0].add_patch(rect11)
+        ax[0,0].text(int(coords[co][0]), int(coords[co][1]),co)
+
+  
+    plt.show()
+    plt.close()
+
 def visualize_image_trans_coords(untrans_image, untrans_coords, trans_image, trans_coords):
     '''
     visualize an image and the same image after it has been transformed. also shows the coordinates on the trans image and untrans image
     
     '''
-    fig, ax = plt.subplots(nrows=1, ncols=2, squeeze=False)
+    fig, ax = plt.subplots(nrows=1, ncols=1, squeeze=False)
     
     print("og im shape@ ", untrans_image.shape)
    
@@ -152,15 +182,27 @@ def visualize_image_trans_coords(untrans_image, untrans_coords, trans_image, tra
     print("Num coords:", len(untrans_coords))
 
     ax[0,0].imshow(untrans_image, cmap='gray')
-    ax[0,1].imshow(trans_image, cmap='gray')
+    # ax[0,1].imshow(trans_image, cmap='gray')
     # ax[0,2].imshow(trans_image, cmap='gray')
-    for co in untrans_coords:
-        rect1 = patches.Rectangle((int(co[0]), int(co[1])),3,3,linewidth=2,edgecolor='r',facecolor='none')
-        ax[0,0].add_patch(rect1)
-        
-    for co in trans_coords:
-        rect2 = patches.Rectangle((int(co[0]), int(co[1])),3,3,linewidth=2,edgecolor='g',facecolor='none')
-        ax[0,1].add_patch(rect2)
+    for coord_idx, co in enumerate(untrans_coords):
+        # rect1 = patches.Rectangle((int(co[0]), int(co[1])),9,9,linewidth=2,edgecolor='r',facecolor='none')
+        # ax[0,0].add_patch(rect1)
+        ax[0,0].plot(int(co[0]), int(co[1]), marker="+", mew=5, ms=40, color='red')
+        # ax[0,0].text(int(co[0]), int(co[1]), marker="+", markersize=20, linewidth=8, color='red')
+
+        text = ax[0,0].text(int(co[0])-30, int(co[1])-10, # Position
+            r"$L_{{{}}}$".format(str(coord_idx+1)), # Text
+            verticalalignment='bottom', # Centered bottom with line 
+            horizontalalignment='center', # Centered with horizontal line 
+            fontsize=55, # Font size
+            color='white', # Color
+        )
+        plt.axis('off')
+        # text.set_path_effects([path_effects.Stroke(linewidth=3, foreground='black'),
+        #                path_effects.Normal()])
+    # for co in trans_coords:
+    #     rect2 = patches.Rectangle((int(co[0]), int(co[1])),12,12,linewidth=2,edgecolor='g',facecolor='none')
+    #     ax[0,1].add_patch(rect2)
 
 
 
