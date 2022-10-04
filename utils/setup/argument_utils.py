@@ -214,13 +214,15 @@ def arg_parse():
         help="gpu id(s) to use. None/int(0) for cpu. list[x,y] for xth, yth GPU."
         "str(x) for the first x GPUs. str(-1)/int(-1) for all available GPUs",
     )
-    parser.add_argument("--fold", default=0, type=int)
+    parser.add_argument("--fold", type=int)
     args = parser.parse_args()
 
     # ---- setup configs ----
     cfg = get_cfg_defaults()
     cfg.merge_from_file(args.cfg)
-    cfg.TRAINER.FOLD = args.fold
+
+    if args.fold:
+        cfg.TRAINER.FOLD = args.fold
     # cfg.freeze()
     cfg = infer_additional_arguments(cfg)
 

@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import List
+import warnings
 
 import imgaug as ia
 import imgaug.augmenters as iaa
@@ -158,6 +159,7 @@ class DatasetBase(data.Dataset):
         self.full_res_coordinates = [] #full_res will be same as target if input and original image same size
         self.image_paths = []
         self.uids = []
+        self.annotation_available = []
 
 
 
@@ -171,17 +173,36 @@ class DatasetBase(data.Dataset):
                 print("datalist: ", datalist)
         
         else:
-            raise NotImplementedError("Only cross validation is currently implemented. Put all training data as fold1 and use cv=1 instead.")
+            print("Loading %s data (no CV) for %s " % (self.split, self.annotation_path))
+            datalist = load_aspire_datalist(self.annotation_path, data_list_key=self.split, base_dir=self.root_path)
+            # raise NotImplementedError("Only cross validation is currently implemented. Put all training data as fold1 and use cv=1 instead.")
 
         # based on first image extenstion, get the load function.
-        self.datatype_load = get_datatype_load(datalist[0]["image"]) 
+        self.datatype_load = get_datatype_load(datalist[0]["image"])
+
+        # Validate dataset
+        # self.validate_images(datalist)
+
         if self.cache_data:
             #If cached, no load function needed.
             self.load_function = lambda img: img 
 
             for idx, data in enumerate(datalist):
 
-                interested_landmarks = (np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
+                #case when data has no annotation, i.e. inference only  
+                if type(data["coordinates"]) != list or ("has_annotation" in data.keys() and data["has_annotation"] == False):
+                    interested_landmarks = np.array([[0,0]]*len(self.landmarks))
+                    self.annotation_available.append(False)
+                    self.full_res_coordinates.append(interested_landmarks)
+
+                    if self.split == "training" or self.split == "validation":
+                        raise ValueError("Training/Validation data must have annotations. Check your data. Sample that failed: ", data)
+                else:
+                    interested_landmarks = (np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
+                    self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
+                    self.annotation_available.append(True)
+
+
                 expanded_image = np.expand_dims(normalize_cmr(self.datatype_load(data["image"]).resize( self.load_im_size)), axis=0)
 
                 # visualize_image_all_coords(expanded_image[0], interested_landmarks )
@@ -189,7 +210,6 @@ class DatasetBase(data.Dataset):
 
                 self.images.append(expanded_image)
                 self.target_coordinates.append(interested_landmarks)
-                self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
                 self.image_paths.append(data["image"])
                 self.uids.append(data["id"])
 
@@ -199,10 +219,22 @@ class DatasetBase(data.Dataset):
 
             for idx, data in enumerate(datalist):
 
-                interested_landmarks = (np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
+                #case when data has no annotation, i.e. inference only  
+                if type(data["coordinates"]) != list or ("has_annotation" in data.keys() and data["has_annotation"] == False):
+                    interested_landmarks = np.array([[0,0]]*len(self.landmarks))
+                    self.annotation_available.append(False)
+                    self.full_res_coordinates.append(interested_landmarks)
+
+                    if self.split == "training" or self.split == "validation":
+                        raise ValueError("Training/Validation data must have annotations. Check your data. Sample that failed: ", data)
+                else:
+                    interested_landmarks = (np.array(data["coordinates"])[self.landmarks,:2] / self.downscale_factor)
+                    self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
+                    self.annotation_available.append(True)
+
+
                 self.images.append(data["image"]) #just appends the path, the load_function will load it later.
                 self.target_coordinates.append(interested_landmarks)
-                self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
                 self.image_paths.append(data["image"])
                 self.uids.append(data["id"])
             print("Not caching %s image data in memory, will load on the fly. Length of %s " % (self.split, len(self.images)))
@@ -245,6 +277,7 @@ class DatasetBase(data.Dataset):
         this_uid = self.uids[index]
         untransformed_im = image
         untransformed_coords = coords
+        is_annotation_available = self.annotation_available[index]
         x_y_corner = [0,0]
 
       
@@ -286,7 +319,7 @@ class DatasetBase(data.Dataset):
         # print("gen labels: ", time()-s)
 
         sample = {"image":input_image , "label":label, "target_coords": input_coords, "landmarks_in_indicator": landmarks_in_indicator,
-            "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid }
+            "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid, "annotation_available": is_annotation_available }
 
         #If coordinates are cutoff by augmentation throw a run time error. 
         # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
@@ -322,7 +355,37 @@ class DatasetBase(data.Dataset):
         x_y_corner = [0,0]
 
         return self.LabelGenerator.generate_labels(landmarks, x_y_corner, landmarks_in_indicator, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
-        
+    
+    def validate_images(self, datalist):
+        """ Validate images, check they are the right size and format. 
+
+        Args:
+            images (_type_): _description_
+
+        """
+
+        wrong_sizes_w_annotation = []
+        wrong_sizes_no_annotation = []
+
+        for idx, data in enumerate(datalist):
+
+            im = np.array(self.datatype_load(data["image"]))
+            if im.shape[0] != self.original_image_size[0] or im.shape[1] != self.original_image_size[1]:
+
+                if type(data["coordinates"]) != list or data["coordinates"] == [] or ("has_annotation" in data.keys() and data["has_annotation"] == False):
+                    wrong_sizes_w_annotation.append([data["id"], im.shape])
+                else:
+                    wrong_sizes_no_annotation.append([data["id"], im.shape])
+
+        if len(wrong_sizes_w_annotation) > 0:
+            raise ValueError("Not all images with annotations are config.DATASET.ORIGINAL_IMAGE_SIZE (%s). Offending images: %s. Please rectify, remembering to rescale their landmarks." % (self.original_image_size, wrong_sizes_w_annotation))
+
+        if len(wrong_sizes_no_annotation) > 0:
+            warnings.warn(f"""
+                Not all Images are config.DATASET.ORIGINAL_IMAGE_SIZE {self.original_image_size,}. These do not have annotations so will automatically be resized to {self.input_size}.
+                Offending images: {wrong_sizes_no_annotation}"""
+                , stacklevel=2
+            )
 
     def sample_patch(self, image, landmarks, lm_safe_region=0, safe_padding=128):
         """ Samples a patch from the image. It ensures a landmark is in a patch with a self.sample_patch_bias% chance.

@@ -31,7 +31,6 @@ from inference.fit_gaussian import fit_gauss
 
 
 def main():
-    """The main for this domain adaptation example, showing the workflow"""
     cfg = arg_parse()
 
 
@@ -57,7 +56,7 @@ def main():
     os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)  
 
     writer.set_name(cfg.OUTPUT_DIR.split('/')[-1])
-    writer.add_tag("aprilV2")
+    writer.add_tag("aspire")
 
 
 
@@ -67,7 +66,7 @@ def main():
     model_paths = []
     model_names = []
     for fname in os.listdir(cfg.OUTPUT_DIR):
-            if "fold"+fold in fname and ".model" in fname:
+            if "fold"+fold in fname and ".model" in fname and "ep" not in fname:
                 model_names.append(fname.split(".model")[0])
 
     for name in model_names:
@@ -91,9 +90,9 @@ def main():
         writer.log_metric(model_names[i].split("_fold")[0] + " Error All Std", summary_results.loc["Error Std", "All"])
 
         for k in summary_results.index.values:
-                if "SDR" in k:
-                    print(" %s : %s," % (k, summary_results.loc[k, "All"] ), end="")
-                    writer.log_metric(model_names[i].split("_fold")[0] + " " + k,summary_results.loc[k, "All"])
+            if "SDR" in k:
+                print(" %s : %s," % (k, summary_results.loc[k, "All"] ), end="")
+                writer.log_metric(model_names[i].split("_fold")[0] + " " + k,summary_results.loc[k, "All"])
 
         
         print("\n Individual Results: \n")
@@ -126,7 +125,7 @@ def main():
 
 
 
-
+ 
 
 
 def run_inference_model(logger, cfg, model_path, model_name, split):
@@ -137,16 +136,14 @@ def run_inference_model(logger, cfg, model_path, model_name, split):
         landmarks = cfg.DATASET.LANDMARKS,
         split = split,
         root_path = cfg.DATASET.ROOT,
-        sigma = cfg.MODEL.GAUSS_SIGMA,
         cv = cfg.TRAINER.FOLD,
         cache_data = cfg.TRAINER.CACHE_DATA,
         # cache_data = True,
         # data_augmentation =self.model_config.DATASET.DATA_AUG,
 
-        normalize=True,
         num_res_supervisions = cfg.SOLVER.NUM_RES_SUPERVISIONS,
         original_image_size= cfg.DATASET.ORIGINAL_IMAGE_SIZE,
-        input_size =  cfg.DATASET.INPUT_SIZE,
+        input_size =  cfg.SAMPLER.INPUT_SIZE,
         hm_lambda_scale = cfg.MODEL.HM_LAMBDA_SCALE,
         regress_sigma = cfg.SOLVER.REGRESS_SIGMA
 
@@ -191,7 +188,7 @@ def run_inference_model(logger, cfg, model_path, model_name, split):
 
         #If we don't resize the heatmap first and we want to evaluate on full image size, we need to scale coordinates up.
         if use_full_res_coords and not resize_first :
-            downscale_factor = [cfg.DATASET.ORIGINAL_IMAGE_SIZE[0]/cfg.DATASET.INPUT_SIZE[0], cfg.DATASET.ORIGINAL_IMAGE_SIZE[1]/cfg.DATASET.INPUT_SIZE[1]]
+            downscale_factor = [cfg.DATASET.ORIGINAL_IMAGE_SIZE[0]/cfg.SAMPLER.INPUT_SIZE[0], cfg.DATASET.ORIGINAL_IMAGE_SIZE[1]/cfg.SAMPLER.INPUT_SIZE[1]]
             pred_coords = pred_coords * downscale_factor
 
         coord_error = np.linalg.norm((pred_coords- targ_coords), axis=2)
@@ -215,7 +212,7 @@ def run_inference_model(logger, cfg, model_path, model_name, split):
 
             ind_results.append(ind_result_sample)
 
-        if cfg.DATASET.DEBUG:
+        if cfg.SAMPLER.DEBUG:
 
             if cfg.INFERENCE.EVALUATION_MODE == 'scale_heatmap_first' :
                 original_image = np.asarray(test_dataloader.dataset.datatype_load(data_dict["image_path"][0]))
@@ -241,19 +238,19 @@ def run_inference_model(logger, cfg, model_path, model_name, split):
 
     #### Caclulate evaluation metrics ####
 
-    # Success Detection Rate i.e. % images within error thresholds
-    radius_list = [20,25,30,40]
-    outlier_results = {}
-    for rad in radius_list:
-        out_res_rad = success_detection_rate(temp_results, rad)
-        outlier_results[rad] = (out_res_rad)    
+    # # Success Detection Rate i.e. % images within error thresholds
+    # radius_list = [1,2,3,4,5,6,7,8,9 10, 15, 20,25,30,40,45,]
+    # outlier_results = {}
+    # for rad in radius_list:
+    #     out_res_rad = success_detection_rate(temp_results, rad)
+    #     outlier_results[rad] = (out_res_rad)    
     
-    #Generate summary Results
-    summary_results = generate_summary_df(landmark_errors, outlier_results )
-    ind_results = pd.DataFrame(ind_results)
+    # #Generate summary Results
+    # summary_results = generate_summary_df(landmark_errors, outlier_results )
+    # ind_results = pd.DataFrame(ind_results)
     
 
-    return summary_results, ind_results
+    # return summary_results, ind_results
 
 
 

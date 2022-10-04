@@ -187,32 +187,32 @@ class PHDNetTrainer(NetworkTrainer):
 
         
 
-    def predict_heatmaps_and_coordinates(self, data_dict,  return_all_layers = False, resize_to_og=False,):
-        data =(data_dict['image']).to( self.device )
-        target = [x.to(self.device) for x in data_dict['label']]
-        from_which_level_supervision = self.num_res_supervision 
+    # def predict_heatmaps_and_coordinates(self, data_dict,  return_all_layers = False, resize_to_og=False,):
+    #     data =(data_dict['image']).to( self.device )
+    #     target = [x.to(self.device) for x in data_dict['label']]
+    #     from_which_level_supervision = self.num_res_supervision 
 
-        if self.deep_supervision:
-            output = self.network(data)[-from_which_level_supervision:]
-        else:
-            output = self.network(data)
+    #     if self.deep_supervision:
+    #         output = self.network(data)[-from_which_level_supervision:]
+    #     else:
+    #         output = self.network(data)
 
         
-        l, loss_dict = self.loss(output, target, self.sigmas)
+    #     l, loss_dict = self.loss(output, target, self.sigmas)
 
-        final_heatmap = output[-1]
-        if resize_to_og:
-            #torch resize does HxW so need to flip the dimesions for resize
-            final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+    #     final_heatmap = output[-1]
+    #     if resize_to_og:
+    #         #torch resize does HxW so need to flip the dimesions for resize
+    #         final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
 
-        predicted_coords, max_values = get_coords(final_heatmap)
+    #     predicted_coords, max_values = get_coords(final_heatmap)
 
-        heatmaps_return = output
-        if not return_all_layers:
-            heatmaps_return = output[-1] #only want final layer
+    #     heatmaps_return = output
+    #     if not return_all_layers:
+    #         heatmaps_return = output[-1] #only want final layer
 
 
-        return heatmaps_return, final_heatmap, predicted_coords, l.detach().cpu().numpy()
+    #     return heatmaps_return, final_heatmap, predicted_coords, l.detach().cpu().numpy()
 
     
 

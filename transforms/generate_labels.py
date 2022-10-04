@@ -145,18 +145,18 @@ class UNetLabelGenerator(LabelGenerator):
         transformed_input_image = input_dict["image"]
         predicted_heatmap = [x.cpu().detach().numpy()  for x in prediction_output][-1]#-1 to get the last layer only (ignore deep supervision predictions)
         predicted_coords = [x.cpu().detach().numpy()  for x in predicted_coords]
-        input_size_pred_coords =[x.cpu().detach().numpy()  for x in input_size_pred_coords]
+        input_size_pred_coords = extra_info["coords_og_size"] 
 
         for sample_idx, ind_sample in enumerate(logged_vars):
             print("\n uid: %s. Mean Error: %s " % (ind_sample["uid"], ind_sample["Error All Mean"] ))
             colours = np.arange(len(predicted_coords[sample_idx]))
 
             #Only show debug if any landmark error is >15 pixels!
-            if len([x for x in range(len(predicted_coords[sample_idx])) if (ind_sample["L"+str(x)]>30) ]) > 0:
-                fig, ax = plt.subplots(1, ncols=2, squeeze=False)
+            if len([x for x in range(len(predicted_coords[sample_idx])) if (ind_sample["L"+str(x)] != None and ind_sample["L"+str(x)]>10) ]) > 0:
+                fig, ax = plt.subplots(1, ncols=1, squeeze=False)
 
                 for coord_idx, pred_coord in enumerate(predicted_coords[sample_idx]):
-                    print("L%s: Full Res Prediction: %s, Full Res Target: %s, Error: %s. Input Res Pred %s, input res targ %s." % (coord_idx, pred_coord,  \
+                    print("L%s: Full Res Prediction: %s, Full Res Target: %s, Error: %s. Input Res targ %s, input res pred %s." % (coord_idx, pred_coord,  \
                         full_res_coords[sample_idx][coord_idx], ind_sample["L"+str(coord_idx)], transformed_targ_coords[sample_idx][coord_idx] , input_size_pred_coords[sample_idx][coord_idx] ))
                 
 
@@ -175,7 +175,7 @@ class UNetLabelGenerator(LabelGenerator):
                     ax[0,0].imshow(transformed_input_image[sample_idx][0])
                     rect1 = patchesplt.Rectangle(( transformed_targ_coords[sample_idx][coord_idx][0], transformed_targ_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='g',facecolor='none') 
                     ax[0,0].add_patch(rect1)
-                    rect2 = patchesplt.Rectangle(( input_size_pred_coords[sample_idx][coord_idx][0], input_size_pred_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='pink',facecolor='none') 
+                    rect2 = patchesplt.Rectangle(( input_size_pred_coords[sample_idx][coord_idx][0].detach().cpu().numpy(), input_size_pred_coords[sample_idx][coord_idx][1].detach().cpu().numpy()) ,6,6,linewidth=2,edgecolor='pink',facecolor='none') 
                     ax[0,0].add_patch(rect2)
 
                     ax[0,0].text(transformed_targ_coords[sample_idx][coord_idx][0], transformed_targ_coords[sample_idx][coord_idx][1]+10, # Position
@@ -183,20 +183,31 @@ class UNetLabelGenerator(LabelGenerator):
                         verticalalignment='bottom', # Centered bottom with line 
                         horizontalalignment='center', # Centered with horizontal line 
                         fontsize=12, # Font size
-                        color='white', # Color
+                        color='g', # Color
+                    )
+                    if ind_sample["L"+str(coord_idx)] > 10:
+                        pred_text= 'r'
+                    else:
+                        pred_text="pink"
+                    ax[0,0].text(input_size_pred_coords[sample_idx][coord_idx][0].detach().cpu().numpy(), input_size_pred_coords[sample_idx][coord_idx][1].detach().cpu().numpy()+10, # Position
+                        "L"+str(coord_idx)+" E="+ str(np.round(ind_sample["L"+str(coord_idx)],2)), # Text
+                        verticalalignment='bottom', # Centered bottom with line 
+                        horizontalalignment='center', # Centered with horizontal line 
+                        fontsize=12, # Font size
+                        color=pred_text, # Color
                     )
                     ax[0,0].set_title( "uid: %s. Mean Error: %s +/- %s" % (ind_sample["uid"], np.round(ind_sample["Error All Mean"],2), np.round(ind_sample["Error All Std"])))
 
 
 
-                    # #2)
-                    print("len of predicted heatmaps ", len(predicted_heatmap), " size of sample idx heatmaps ", predicted_heatmap[sample_idx].shape)
-                    ax[0,1].imshow(predicted_heatmap[sample_idx][coord_idx])
+                    # # #2)
+                    # print("len of predicted heatmaps ", len(predicted_heatmap), " size of sample idx heatmaps ", predicted_heatmap[sample_idx].shape)
+                    # ax[0,1].imshow(predicted_heatmap[sample_idx][coord_idx])
 
-                    rect45 = patchesplt.Rectangle(( predicted_coords[sample_idx][coord_idx][0], predicted_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='pink',facecolor='none') 
-                    ax[0,1].add_patch(rect45)
-                    rect46 = patchesplt.Rectangle((  full_res_coords[sample_idx][coord_idx][0], full_res_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='g',facecolor='none') 
-                    ax[0,1].add_patch(rect46)
+                    # rect45 = patchesplt.Rectangle(( predicted_coords[sample_idx][coord_idx][0], predicted_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='pink',facecolor='none') 
+                    # ax[0,1].add_patch(rect45)
+                    # rect46 = patchesplt.Rectangle((  full_res_coords[sample_idx][coord_idx][0], full_res_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='g',facecolor='none') 
+                    # ax[0,1].add_patch(rect46)
 
                     #3)
                     # ax[coord_idx,2].imshow(heatmap_label[sample_idx][coord_idx])
@@ -504,7 +515,7 @@ def gaussian_gen(landmark, resolution, step_size, std, dtype=np.float32, lambda_
     g *= 1.0/g.max() * lambda_scale
 
 
-
+    g[g <= 0] = -1
 
     return g
 

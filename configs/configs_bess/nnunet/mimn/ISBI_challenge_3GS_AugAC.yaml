@@ -1,0 +1,54 @@
+
+# OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_3GS_4MFR_AugAC_DS5"
+OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop/ISBI_challenge_3GS_AugAC_gneg"
+# OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
+
+SOLVER:
+  DEEP_SUPERVISION: True
+  NUM_RES_SUPERVISIONS: 5
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 12
+  # MAX_EPOCHS: 3 
+  # REGRESS_SIGMA: True
+
+
+
+
+
+DATASET:
+  # DEBUG: True
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  # SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/challenge_training.json'
+  # SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/challenge_test1.json'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/challenge_test2.json'
+
+
+  NAME:  "ISBI 2015 Junior"
+  IMAGE_MODALITY: 'Cephalometric'
+  LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+  ORIGINAL_IMAGE_SIZE : [1935,2400]
+  
+ 
+TRAINER:
+  PERFORM_VALIDATION: True
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: False
+  FOLD: -1
+  INFERENCE_ONLY: False
+
+SAMPLER:
+  DATA_AUG: 'AffineComplex'
+  INPUT_SIZE : [512,512]
+  NUM_WORKERS: 8 
+  # DEBUG: True
+
+MODEL:
+  GAUSS_SIGMA: 3
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop/ISBI_challenge_3GS_AugAC/model_best_valid_coord_error_fold-1.model"
+
+OUTPUT:
+  COMET_TAG: "mimn2"
+
+INFERENCE:
+  DEBUG: True
+  # EVALUATION_MODE: "use_input_size" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]

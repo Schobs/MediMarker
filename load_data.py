@@ -4,6 +4,8 @@ from typing import Optional
 import nibabel as nib
 from PIL import Image
 import pydicom as dicom
+import numpy as np
+
 
 def get_datatype_load(im_path):
     """Decides the image load function based on the suffix of the image path.
@@ -18,6 +20,8 @@ def get_datatype_load(im_path):
         return lambda pth: Image.fromarray(nib.load(pth).get_fdata())
     elif "dcm" in im_path:
         return lambda pth: Image.fromarray(dicom.dcmread(pth).pixel_array)
+    elif "npz" in im_path:
+        return lambda pth: Image.fromarray(np.load(pth)["arr_0"])
     else:
         return lambda pth: Image.open(pth)
 
@@ -85,6 +89,5 @@ def load_aspire_datalist(
  
     if base_dir is None:
         base_dir = os.path.dirname(data_list_file_path)
-    
     
     return _append_paths(base_dir, expected_data)

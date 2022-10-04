@@ -11,7 +11,7 @@ from yacs.config import CfgNode as CN
 # -----------------------------------------------------------------------------
 
 _C = CN()
-
+ 
 # -----------------------------------------------------------------------------
 # Dataset
 # -----------------------------------------------------------------------------
@@ -113,6 +113,8 @@ _C.MODEL.PHDNET.CLAMP_DIST = None # [None, 48, 10] (none or any int. TODO: WRITE
 
 _C.INFERENCE = CN()
 _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+_C.INFERENCE.FIT_GAUSS = False # If false, uses max, if true, first fits gaussian to output heatmap.
+
 _C.INFERENCE.DEBUG = False
 # ---------------------------------------------------------------------------- #
 # Misc options
@@ -122,6 +124,8 @@ _C.OUTPUT.VERBOSE = True
 _C.OUTPUT.FAST_DEV_RUN = False  # True for debug
 _C.OUTPUT_DIR = "/shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/template"
 _C.OUTPUT.TB_DIR = "./lightning_logs"
+_C.OUTPUT.COMET_TAG = "default"
+_C.OUTPUT.RESULTS_CSV_APPEND = None
 
 def get_cfg_defaults():
     return _C.clone()

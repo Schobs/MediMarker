@@ -55,7 +55,11 @@ def main():
     writer.set_name(cfg.OUTPUT_DIR.split('/')[-1] +"_Fold"+fold)
     writer.add_tag("testing")
     writer.add_tag("fold" + str(cfg.TRAINER.FOLD))
+    writer.add_tag("fold" + str(cfg.OUTPUT.COMET_TAG))
 
+ 
+    with open(os.path.join(cfg.OUTPUT_DIR, 'comet.txt'), 'w') as f:
+        f.write('link to exp: ' + writer.url)
 
     #clear cuda cache
     torch.cuda.empty_cache()
@@ -112,8 +116,10 @@ def main():
         #Load Models that were saved.
         model_paths = []
         model_names = []
+        models_to_test =   ["model_best_valid_loss", "model_best_valid_coord_error", "model_latest"]
+
         for fname in os.listdir(cfg.OUTPUT_DIR):
-            if "fold"+fold in fname and ".model" in fname:
+            if ("fold"+fold in fname and ".model" in fname) and any(substring in fname for substring in models_to_test):
                 model_names.append(fname.split(".model")[0])
 
         for name in model_names:
@@ -165,14 +171,18 @@ def main():
     html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
     writer.log_html(html_to_log)
     print("Logged all results to CometML.")
+    if cfg.OUTPUT.RESULTS_CSV_APPEND is not None:
+        output_append = "_"+ str(cfg.OUTPUT.RESULTS_CSV_APPEND)
+    else:
+        output_append = ""
 
     print("saving summary of results locally to: ", os.path.join(cfg.OUTPUT_DIR, "summary_results_fold"+fold +".xlsx"))
-    with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "summary_results_fold"+fold +".xlsx")) as writer:
+    with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "summary_results_fold"+fold+output_append +".xlsx")) as writer:
         for n, df in (all_model_summaries).items():
             df.to_excel(writer, n)
 
     print("saving individual sample results locally to: ", os.path.join(cfg.OUTPUT_DIR, "individual_results_fold"+fold +".xlsx"))
-    with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "individual_results_fold"+fold +".xlsx")) as writer:
+    with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "individual_results_fold"+fold +output_append+".xlsx")) as writer:
         for n, df in (all_model_individuals).items():
             df.to_excel(writer, n)
 

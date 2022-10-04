@@ -73,29 +73,49 @@ class DictLogger():
                     if "train_coord_error_mean" in vars_to_log:
                         log_dict["train_coord_error_mean" ].append(np.mean(coord_error.detach().cpu().numpy()))
 
-
                 #Save data for ecah sample individually
                 if "individual_results" in vars_to_log:
                     for idx in range(len(pred_coords)):
                         ind_dict = {}
-                        ind_dict["Error All Mean"] = (np.mean(coord_error[idx].detach().cpu().numpy()))
-                        ind_dict["Error All Std"] = (np.std(coord_error[idx].detach().cpu().numpy()))
-                        ind_dict["ind_errors"] = ((coord_error[idx].detach().cpu().numpy()))
+                        ind_dict["annotation_available"] = ((data_dict["annotation_available"][idx].detach().cpu()))
                         ind_dict["predicted_coords"] = ((pred_coords[idx].detach().cpu().numpy()))
-                        ind_dict["target_coords"] = ((target_coords[idx].detach().cpu().numpy()))
                         ind_dict["uid"] = ((data_dict["uid"][idx]))
 
-                        for coord_idx, er in enumerate(coord_error[idx]):
-                            ind_dict["L"+str(coord_idx)] = er.detach().cpu().numpy()
+                        #If target annotation not avaliable, we don't know the error
+                        if ind_dict["annotation_available"] == False:
+                            ind_dict["Error All Mean"] = None
+                            ind_dict["Error All Std"] = None
+                            ind_dict["ind_errors"] = None
+                            ind_dict["target_coords"] = None
 
-                            if "landmark_errors" in vars_to_log:
-                                log_dict["landmark_errors"][coord_idx].append(er.detach().cpu().numpy())
+                            for coord_idx, er in enumerate(coord_error[idx]):
+                                ind_dict["L"+str(coord_idx)] = None
+
+                              
+                        else:
+                            ind_dict["Error All Mean"] = (np.mean(coord_error[idx].detach().cpu().numpy()))
+                            ind_dict["Error All Std"] = (np.std(coord_error[idx].detach().cpu().numpy()))
+                            ind_dict["ind_errors"] = ((coord_error[idx].detach().cpu().numpy()))
+                            ind_dict["target_coords"] = ((target_coords[idx].detach().cpu().numpy()))
+
+
+                            for coord_idx, er in enumerate(coord_error[idx]):
+                                ind_dict["L"+str(coord_idx)] = er.detach().cpu().numpy()
+
+                                if "landmark_errors" in vars_to_log:
+                                    log_dict["landmark_errors"][coord_idx].append(er.detach().cpu().numpy())
 
                         #any extra info returned by the child class when calculating coords from outputs e.g. heatmap_max
                         for key_ in list(extra_info.keys()):
                          
                             if "debug" not in key_:
-                                ind_dict[key_] = ((extra_info[key_][idx].detach().cpu().numpy()))
+                                # if key_ == "coords_og_size":
+                                #     continue
+                                if type(extra_info[key_][idx]) != list:
+                                    ind_dict[key_] = ((extra_info[key_][idx].detach().cpu().numpy()))
+                               
+                                # else:
+                                #     ind_dict[key_] = [x.detach().cpu().numpy() for x in ((extra_info[key_][idx].detach().cpu().numpy()))]
 
 
                         log_dict["individual_results"].append(ind_dict)

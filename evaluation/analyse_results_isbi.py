@@ -15,22 +15,28 @@ def get_parameters(name):
         name (str): file name
     """
     split_name = name.split("_")
+# info_keys = ["Dataset","Split", "Gauss Sigma", "Aug", "zeros_to_minus_hm"]
 
     param_dict = {
-        "Name": name,
+        "name": name,
         "Dataset": split_name[0],
-        "Max Features": split_name[1],
-        "Resolution": split_name[2],
-        "Gauss Sigma": split_name[3],
-        "Min Feature Resolution": split_name[4],
-        "Aug": split_name[5],
-        "Deep Supervision": split_name[6],     
+        "Split": split_name[1],
+        # "Dataset": split_name[0],
+        # "Max Features": split_name[1],
+        # "Resolution": split_name[2],
+        "Gauss Sigma": split_name[2],
+        # "Min Feature Resolution": split_name[4],
+        "Aug": split_name[3],
+        "zeros_to_minus_hm": split_name[4],
+        "trainset size": split_name[5]
+        # "trainset size": split_name[5],
+        # "Deep Supervision": split_name[6],     
         }
 
     return param_dict
 
 
-def analyse_all_folds(root_path, name_of_exp, models_to_test, early_stop_strategy, folds):
+def analyse_all_folds(root_path, name_of_exp, models_to_test, early_stop_strategy, folds, collation_location):
     """Function that takes experiment name and selection of folds and summaries results.
 
 
@@ -69,8 +75,8 @@ def analyse_all_folds(root_path, name_of_exp, models_to_test, early_stop_strateg
         
     #For each fold load the results files
     for fold in folds:
-        summ_file_name = os.path.join(exp_path, "T_summary_results_fold"+str(fold) +".xlsx")
-        ind_file_name = os.path.join(exp_path, "T_individual_results_fold"+str(fold) +".xlsx")
+        summ_file_name = os.path.join(exp_path, "summary_results_fold"+str(fold) +".xlsx")
+        ind_file_name = os.path.join(exp_path, "individual_results_fold"+str(fold) +".xlsx")
 
         try:                                    
             summary_file = pd.ExcelFile(summ_file_name)
@@ -117,7 +123,7 @@ def analyse_all_folds(root_path, name_of_exp, models_to_test, early_stop_strateg
             list_res = [{"uid": int(x["uid"]), "ind_errors": x[all_lm_keys]} for idx, x in filter_df.iterrows()]
 
             #Get SDR results
-            radius_list = [5,10,15,20]
+            radius_list = [ 1, 2,3,4,5,6,7,8,9, 10, 15, 20,25,30,40,45, 50, 60, 75, 100 ]
             outlier_results = {}
             for rad in radius_list:
                 out_res_rad = success_detection_rate(list_res, rad)
@@ -151,7 +157,7 @@ def analyse_all_folds(root_path, name_of_exp, models_to_test, early_stop_strateg
     
 
     #Also save elsewhere
-    collation_location = os.path.join(root_path, "all_summaries")
+    # collation_location = os.path.join(root_path, "junior_all_summaries2")
     with ExcelWriter(os.path.join(collation_location, name_of_exp+"_individual.xlsx")) as writer:
         for n, df in (individual_dicts).items():
             df.to_excel(writer, n, index=False)
@@ -165,12 +171,14 @@ def analyse_all_folds(root_path, name_of_exp, models_to_test, early_stop_strateg
 
 
 # root_path = "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2"
-root_path = "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search"
+# root_path = "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22"
+root_path= "/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22"
+#/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22
 # name_of_exp = "ISBI_256F_512Res_8GS_32MFR_AugACEL_DS3"
 models_to_test = ["model_best_valid_coord_error", "model_best_valid_loss", "model_latest"]
 # models_to_test = ["model_best_valid_coord_error"]
 
-early_stop_strategy = "150 epochs val best coord error"
+early_stop_strategy = "250 epochs val best coord error"
 folds= [0,1,2,3]
 
 
@@ -180,17 +188,19 @@ folds= [0,1,2,3]
 
 
 #Walk through dir to get all exps
-all_exps =  [x for x in os.listdir(root_path) if "ISBI" in x]
-info_keys = ["Name","Dataset", "Max Features", "Resolution","Gauss Sigma",  "Min Feature Resolution","Aug", "Deep Supervision"]
+all_exps =  [x for x in os.listdir(root_path) if "_jun_" in x and  "gneg" in x]
+info_keys = ["Dataset","Split", "Gauss Sigma", "Aug", "zeros_to_minus_hm", "trainset size"]
+# print("all exps", all_exps)
+# exit()
 
-collation_location = os.path.join(root_path, "all_summaries")
+collation_location = os.path.join(root_path, "junior_all_summaries2")
 os.makedirs(collation_location, exist_ok=True)
 
 summary_of_summaries = {}
 failed_experiments = []
 for exp in all_exps:
     print("Analysing Experiment: ", exp)
-    summary_dicts, failed_exp = analyse_all_folds(root_path, exp, models_to_test, early_stop_strategy, folds)
+    summary_dicts, failed_exp = analyse_all_folds(root_path, exp, models_to_test, early_stop_strategy, folds, collation_location)
 
     if not failed_exp:
 

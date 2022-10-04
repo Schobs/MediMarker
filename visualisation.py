@@ -173,7 +173,7 @@ def visualize_image_trans_coords(untrans_image, untrans_coords, trans_image, tra
     visualize an image and the same image after it has been transformed. also shows the coordinates on the trans image and untrans image
     
     '''
-    fig, ax = plt.subplots(nrows=1, ncols=1, squeeze=False)
+    fig, ax = plt.subplots(nrows=1, ncols=2, squeeze=False)
     
     print("og im shape@ ", untrans_image.shape)
    
@@ -182,22 +182,30 @@ def visualize_image_trans_coords(untrans_image, untrans_coords, trans_image, tra
     print("Num coords:", len(untrans_coords))
 
     ax[0,0].imshow(untrans_image, cmap='gray')
-    # ax[0,1].imshow(trans_image, cmap='gray')
+    ax[0,1].imshow(trans_image, cmap='gray')
     # ax[0,2].imshow(trans_image, cmap='gray')
     for coord_idx, co in enumerate(untrans_coords):
         # rect1 = patches.Rectangle((int(co[0]), int(co[1])),9,9,linewidth=2,edgecolor='r',facecolor='none')
         # ax[0,0].add_patch(rect1)
-        ax[0,0].plot(int(co[0]), int(co[1]), marker="+", mew=5, ms=40, color='red')
-        # ax[0,0].text(int(co[0]), int(co[1]), marker="+", markersize=20, linewidth=8, color='red')
+        ax[0,0].plot(int(co[0]), int(co[1]), marker="+", mew=3, ms=10, color='red')
+        ax[0,1].plot(int(trans_coords[coord_idx][0]), int(trans_coords[coord_idx][1]), marker="+", markersize=20, linewidth=8, color='red')
 
         text = ax[0,0].text(int(co[0])-30, int(co[1])-10, # Position
             r"$L_{{{}}}$".format(str(coord_idx+1)), # Text
             verticalalignment='bottom', # Centered bottom with line 
             horizontalalignment='center', # Centered with horizontal line 
-            fontsize=55, # Font size
+            fontsize=15, # Font size
             color='white', # Color
         )
-        plt.axis('off')
+
+        text2 = ax[0,1].text(int(trans_coords[coord_idx][0])-30, int(trans_coords[coord_idx][1])-10, # Position
+            r"$L_{{{}}}$".format(str(coord_idx+1)), # Text
+            verticalalignment='bottom', # Centered bottom with line 
+            horizontalalignment='center', # Centered with horizontal line 
+            fontsize=15, # Font size
+            color='white', # Color
+        )
+        # plt.axis('off')
         # text.set_path_effects([path_effects.Stroke(linewidth=3, foreground='black'),
         #                path_effects.Normal()])
     # for co in trans_coords:

@@ -96,7 +96,8 @@ class NetworkTrainer(ABC):
         self.early_stop_patience = 150
         self.initial_lr = self.trainer_config.SOLVER.BASE_LR
 
-     
+        #Inference params
+        self.fit_gauss_inference = self.trainer_config.INFERENCE.FIT_GAUSS
 
         #Initialize
         self.epoch = 0
@@ -251,15 +252,15 @@ class NetworkTrainer(ABC):
 
 
 
-    @abstractmethod
-    def predict_heatmaps_and_coordinates(self, data_dict):
-        """ For inference. Predict heatmap and coordinates directly from a data_dict.
+    # @abstractmethod
+    # def predict_heatmaps_and_coordinates(self, data_dict):
+    #     """ For inference. Predict heatmap and coordinates directly from a data_dict.
 
-        Args:
-            data_dict (_type_): _description_
-            return_all_layers (bool, optional): _description_. Defaults to False.
-            resize_to_og (bool, optional): _description_. Defaults to False.
-        """
+    #     Args:
+    #         data_dict (_type_): _description_
+    #         return_all_layers (bool, optional): _description_. Defaults to False.
+    #         resize_to_og (bool, optional): _description_. Defaults to False.
+    #     """
 
 
     def run_iteration(self, generator, dataloader, backprop, split, log_coords, logged_vars=None, debug=False):
@@ -312,14 +313,20 @@ class NetworkTrainer(ABC):
         else:
             output = self.network(data)
             del data
-            l, loss_dict = self.loss(output, target, self.sigmas)
-        
-            if backprop:
-                l.backward()
-                torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
-                self.optimizer.step() 
-                if self.regress_sigma:
-                    self.update_dataloader_sigmas(self.sigmas)
+
+            #Only attempts loss if annotations avaliable for entire batch
+            if all(data_dict["annotation_available"]):
+                l, loss_dict = self.loss(output, target, self.sigmas)
+            
+                if backprop:
+                    l.backward()
+                    torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
+                    self.optimizer.step() 
+                    if self.regress_sigma:
+                        self.update_dataloader_sigmas(self.sigmas)
+            else:
+                l = torch.tensor(0).to(self.device)
+                loss_dict = {}
 
         # output = [target['patch_heatmap'], target['patch_displacements']]
         # print("displacement output type: ", output[1][0].dtype)
@@ -547,42 +554,10 @@ class NetworkTrainer(ABC):
  
         return summary_results, ind_results
 
-    # @abstractmethod 
-    # def run_inference_patch(self):
-    #     """ Function to run inference on a full sized input
-
-    #     #0) instantitate test dataset and dataloader
-    #     #1A) if FULL: 
-    #         i) iterate dataloader and run_iteration each time to go through and save results.
-    #         ii) should run using run_iteration with logged_vars to log
-    #     1B) if PATCHIFYING full_res_output  <- this can be fututre addition
-    #         i) use patchify_and_predict to stitch hm together with logged_vars to log
-
-    #     #2) need a way to deal with the key dictionary & combine all samples
-    #     #3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
-    #     #4) return individual results & do summary results.
-    #     """
-
-    #     #Load dataloader
-    #     #In patch case we load the full image we were sampling patches from
-    #     test_dataset = self.get_evaluation_dataset("testing", self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM)
-
-    #     if self.trainer_config.SAMPLER.PATCH.FULLY_CONVOLUTIONAL_INFERENCE:
-    #         # no need to patchify image
-    #         x = 1
-    #     else:
-    #         #patchify the image
-    #         x= 1
-
-    #     raise NotImplementedError()
-
-    #     #run inference direcly on image from dataloader.
-    #     x = 1
-    #     #and not self.trainer_config.SAMPLER.PATCH.FULLY_CONVOLUTIONAL_INFERENCE
 
     def evaluation_metrics(self, evaluation_dict):
         # Success Detection Rate i.e. % images within error thresholds
-        radius_list = [3,5,10,15,20,25,30,40]
+        radius_list = [1,2,3, 4,5, 6, 7, 8, 9, 10,15,20,25,30,40,50,100]
         outlier_results = {}
         for rad in radius_list:
             out_res_rad = success_detection_rate(evaluation_dict["individual_results"], rad)

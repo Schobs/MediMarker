@@ -14,7 +14,7 @@ from datasets.dataset import DatasetBase
 import ctypes
 import copy
 from torch.utils.data import DataLoader
-from utils.im_utils.heatmap_manipulation import get_coords
+from utils.im_utils.heatmap_manipulation import get_coords, get_coords_fit_gauss
 from torch.cuda.amp import GradScaler, autocast
 import imgaug
 import torch.multiprocessing as mp
@@ -38,7 +38,7 @@ class UnetTrainer(NetworkTrainer):
       
         #global config variable
         self.trainer_config = trainer_config
-        self.early_stop_patience = 45
+        self.early_stop_patience = 250
 
 
         #Label generator
@@ -55,6 +55,7 @@ class UnetTrainer(NetworkTrainer):
 
         #get arch config parameters
         self.num_resolution_layers = UnetTrainer.get_resolution_layers(self.input_size,  self.min_feature_res)
+
         self.num_input_channels = 1
         self.conv_per_stage = 2
         self.conv_operation = nn.Conv2d
@@ -172,16 +173,28 @@ class UnetTrainer(NetworkTrainer):
         output = output[-1]
 
         final_heatmap = output
+
+    #  get_coords_fit_gauss(images, predicted_coords_all, visualize=False)
+        input_size_coords, input_max_values = get_coords(output)
+        # if self.fit_gauss_inference:
+        #     input_size_coords, input_max_values, input_fitted_dicts = get_coords_fit_gauss(output, input_size_coords, visualize=True)
+        # else:
+        # print("input_size_coords", input_size_coords[0].shape, input_size_coords[1].shape)
+        # extra_info["coords_og_size"] = [[input_size_coords[0][idx], input_size_coords[1][idx]] for idx in range(len(input_size_coords[0]))]
+        extra_info["coords_og_size"] = input_size_coords
         if self.resize_first:
             #torch resize does HxW so need to flip the diemsions
             final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
         
+
         pred_coords, max_values = get_coords(final_heatmap)
+        if self.fit_gauss_inference:
+            pred_coords, max_values, fitted_dicts = get_coords_fit_gauss(final_heatmap, pred_coords, visualize=False)
+        # else:
         extra_info["hm_max"] = (max_values)
 
         del final_heatmap
   
-
         return pred_coords, extra_info
 
 
@@ -208,32 +221,32 @@ class UnetTrainer(NetworkTrainer):
 
         
 
-    def predict_heatmaps_and_coordinates(self, data_dict,  return_all_layers = False, resize_to_og=False,):
-        data =(data_dict['image']).to( self.device )
-        target = [x.to(self.device) for x in data_dict['label']]
-        from_which_level_supervision = self.num_res_supervision 
+    # def predict_heatmaps_and_coordinates(self, data_dict,  return_all_layers = False, resize_to_og=False,):
+    #     data =(data_dict['image']).to( self.device )
+    #     target = [x.to(self.device) for x in data_dict['label']]
+    #     from_which_level_supervision = self.num_res_supervision 
 
-        if self.deep_supervision:
-            output = self.network(data)[-from_which_level_supervision:]
-        else:
-            output = self.network(data)
+    #     if self.deep_supervision:
+    #         output = self.network(data)[-from_which_level_supervision:]
+    #     else:
+    #         output = self.network(data)
 
         
-        l, loss_dict = self.loss(output, target, self.sigmas)
+    #     l, loss_dict = self.loss(output, target, self.sigmas)
 
-        final_heatmap = output[-1]
-        if resize_to_og:
-            #torch resize does HxW so need to flip the dimesions for resize
-            final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+    #     final_heatmap = output[-1]
+    #     if resize_to_og:
+    #         #torch resize does HxW so need to flip the dimesions for resize
+    #         final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
 
-        predicted_coords, max_values = get_coords(final_heatmap)
+    #     predicted_coords, max_values = get_coords(final_heatmap)
 
-        heatmaps_return = output
-        if not return_all_layers:
-            heatmaps_return = output[-1] #only want final layer
+    #     heatmaps_return = output
+    #     if not return_all_layers:
+    #         heatmaps_return = output[-1] #only want final layer
 
 
-        return heatmaps_return, final_heatmap, predicted_coords, l.detach().cpu().numpy()
+    #     return heatmaps_return, final_heatmap, predicted_coords, l.detach().cpu().numpy()
 
     
     

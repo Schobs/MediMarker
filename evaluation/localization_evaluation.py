@@ -15,6 +15,10 @@ def success_detection_rate(sample_dicts, threshold):
         Each tensor consists of boolean variables to show if this prediction ranks top k with each value of k.
     """
 
+    #First filter out samples with no annotations (therefore no errors)
+    if "annotation_available" in sample_dicts[0].keys():
+        sample_dicts = [s for s in sample_dicts if (s["annotation_available"])]
+
     total_samples = len(sample_dicts)
     total_landmarks = len(sample_dicts[0]["ind_errors"])
 
@@ -35,6 +39,7 @@ def success_detection_rate(sample_dicts, threshold):
 
 
         for j, lm_err in enumerate(ind_errors):
+
             if lm_err > threshold:
                 images_over_thresh_per_lm[j].append(uid)
                 images_over_thresh_all.append(uid)
@@ -82,17 +87,27 @@ def generate_summary_df(ind_lms_results, sdr_dicts):
 
     # print("empty keys", results_dict)
 
+    # print(sdr_dicts)
 
     #First do Results over entire data
-    results_dict["Error Mean"]["All"] = np.mean(ind_lms_results)
-    results_dict["Error Std"]["All"] = np.std(ind_lms_results)
+    only_w_anns = []
+    for sublist in ind_lms_results:
+        only_w_anns.append([elem for elem in sublist if elem is not None])
+    # only_w_anns = [elem for elem in x for x in ind_lms_results if elem is not None]#filter out ones without GT annotations (i.e. None values)
+    
+    # for xidx, x in enumerate(only_w_anns):
+    #     print("full len %s, only_w_anns len %s" %( len(ind_lms_results[xidx]), len(x)))
+    #  [ind_lms_results[x][ind_lms_results[x] != None] for x in range(len(ind_lms_results))] 
+
+    results_dict["Error Mean"]["All"] = np.mean(only_w_anns)
+    results_dict["Error Std"]["All"] = np.std(only_w_anns)
 
     for key, sdr in (sdr_dicts).items():
         results_dict["SDR"+str(key)]["All"] = sdr["all"]
 
-
     #Now do individual landmarks
-    for i, lm_er in enumerate(ind_lms_results):
+    for i, lm_er in enumerate(only_w_anns):
+        print(i)
         results_dict["Error Mean"]["L"+str(i)] = np.mean(lm_er)
         results_dict["Error Std"]["L"+str(i)] = np.std(lm_er)
 
