@@ -634,7 +634,7 @@ def ASPIRE_FOLLOWUP_to_JSON(path_to_annotations, path_to_images, output_path, mo
     #Need to search the variable files structures to find the DICOMS
     filesDepth3 = glob.glob(path_to_images +'*/*/*/*')
     all_dirs_image_folder = list(filter(lambda f: os.path.isdir(f), filesDepth3))
-    print("dataaset len is: ", dataset_length, "uids are: ", len(uids), "and image directory length: ", len(all_dirs_image_folder))
+    print("dataset len is: ", dataset_length, "uids are: ", len(uids), "and image directory length: ", len(all_dirs_image_folder))
 
     #Sometimes the file struvtures are different for some, warn user and enforce they need to share the same structure.
     # (I have fixed the 2 cases that I found to be different.)
@@ -1207,18 +1207,18 @@ def combine_gen():
 
 
 
-path_to_jun_annotations= "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/all_junior.csv"
-# path_to_sen_annotations= "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/all_senior.csv"
-path_to_train_idx = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/train.txt"
-path_to_test1_idx = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/test1.txt"
-path_to_test2_idx = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/test2.txt"
+# path_to_jun_annotations= "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/all_junior.csv"
+# # path_to_sen_annotations= "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/all_senior.csv"
+# path_to_train_idx = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/train.txt"
+# path_to_test1_idx = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/test1.txt"
+# path_to_test2_idx = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/test2.txt"
 
-path_to_images =  "images/"
-output_path = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/lann_folds/"
-# ISBI2015_to_json_with_vals_challenge(path_to_jun_annotations, path_to_sen_annotations, path_to_train_idx, path_to_test1_idx, path_to_test2_idx, path_to_images, output_path, val_size=0.1)
-path_to_fold_infos = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/cv/"
+# path_to_images =  "images/"
+# output_path = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/lann_folds/"
+# # ISBI2015_to_json_with_vals_challenge(path_to_jun_annotations, path_to_sen_annotations, path_to_train_idx, path_to_test1_idx, path_to_test2_idx, path_to_images, output_path, val_size=0.1)
+# path_to_fold_infos = "/mnt/tale_shared/schobs/data/ISBI2015_landmarks/setup_ann/all_landmarks/cv/"
 
-ISBI2015_to_json_with_vals_vary_train(path_to_jun_annotations, path_to_fold_infos, path_to_images, output_path, val_size=0.1,num_folds=4)
+# ISBI2015_to_json_with_vals_vary_train(path_to_jun_annotations, path_to_fold_infos, path_to_images, output_path, val_size=0.1,num_folds=4)
 
 # aspire_followup_gen()
 # combine_gen()

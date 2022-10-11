@@ -76,11 +76,14 @@ def get_coords_fit_gauss(images, predicted_coords_all, visualize=False):
         all_final_coords.append(final_coords)
         all_hm_maxes.append(hm_maxes)
     return all_final_coords, all_hm_maxes, all_fitted_dicts
+
+
 def get_coords(images):
 
     ''' get predictions from score maps in torch Tensor
         return type: torch.LongTensor
     '''
+    # print("score map shape:", images.shape)  #  torch.Size([1, 3, 64, 64])
     assert images.dim() == 4, 'Score maps should be 4-dim'
     # print("score map shape:", images.shape)  #  torch.Size([1, 3, 64, 64])
     maxval, idx = torch.max(images.view(images.size(0), images.size(1), -1), 2)

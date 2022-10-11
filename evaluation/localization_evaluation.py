@@ -9,6 +9,8 @@ def success_detection_rate(sample_dicts, threshold):
             Each sample (dict in list) has "ind_errors" which is a list of all landmark errors
             and a "uid", a string representing a unique id.
         Threshold (int): Error threshold.
+        key_prepend (str): A string to prepend to the keys when looking at the ind errors e.g. smha emha or ecpv. 
+            Currently, only use when using ensembles. Will update single use to smha in future.
     Returns:
         Dict: results of "all" Landmarks  
         Dict: Results of the "individual" (landmark).
@@ -19,20 +21,27 @@ def success_detection_rate(sample_dicts, threshold):
     if "annotation_available" in sample_dicts[0].keys():
         sample_dicts = [s for s in sample_dicts if (s["annotation_available"])]
 
+        #If not annotations avaliable, we cannot measure SDR so return None
+        if len(sample_dicts) == 0:
+            # print("No samples with annotations available")
+            return None 
+
+    error_key = "ind_errors"
+   
     total_samples = len(sample_dicts)
-    total_landmarks = len(sample_dicts[0]["ind_errors"])
+    total_landmarks = len(sample_dicts[0][error_key])
 
 
     images_within_thresh_all = []
     images_over_thresh_all = []
 
-    images_over_thresh_per_lm = [ [] for x in sample_dicts[0]["ind_errors"]]
-    images_within_thresh_per_lm = [[] for x in sample_dicts[0]["ind_errors"]]
+    images_over_thresh_per_lm = [ [] for x in sample_dicts[0][error_key]]
+    images_within_thresh_per_lm = [[] for x in sample_dicts[0][error_key]]
 
     for i, sample_dict in enumerate(sample_dicts):
 
         uid = sample_dict["uid"]
-        ind_errors = sample_dict["ind_errors"]
+        ind_errors = sample_dict[error_key]
 
       
 
@@ -69,6 +78,7 @@ def generate_summary_df(ind_lms_results, sdr_dicts):
         ind_lms_results [[]]: A 2D list of all lm errors. A list for each landmark
         sdr_dicts ([Dict]): A list of dictionaries from the function 
             localization_evaluation.success_detection_rate().
+        key_append: string to specify which errors to use e.g. smha emha or ecpv. Currently, only use when using ensembles. Will update single use to smha in future.
     Returns:pd.DataFrame.from_dict({(i,j): user_dict[i][j] 
                            for i in user_dict.keys() 
                            for j in user_dict[i].keys()},
@@ -93,6 +103,13 @@ def generate_summary_df(ind_lms_results, sdr_dicts):
     only_w_anns = []
     for sublist in ind_lms_results:
         only_w_anns.append([elem for elem in sublist if elem is not None])
+
+    # print("only_w_anns", only_w_anns, len(only_w_anns))
+    #If no annotations, return a pd dataframe with all None
+    if not any(only_w_anns):
+        return pd.DataFrame.from_dict(results_dict, orient='index')
+
+
     # only_w_anns = [elem for elem in x for x in ind_lms_results if elem is not None]#filter out ones without GT annotations (i.e. None values)
     
     # for xidx, x in enumerate(only_w_anns):
@@ -107,7 +124,7 @@ def generate_summary_df(ind_lms_results, sdr_dicts):
 
     #Now do individual landmarks
     for i, lm_er in enumerate(only_w_anns):
-        print(i)
+        # print(i)
         results_dict["Error Mean"]["L"+str(i)] = np.mean(lm_er)
         results_dict["Error Std"]["L"+str(i)] = np.std(lm_er)
 

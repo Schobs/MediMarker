@@ -47,8 +47,7 @@ MODEL:
   # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop/ISBI_challenge_3GS_AugAC/model_best_valid_coord_error_fold-1.model"
 
 OUTPUT:
-  COMET_TAG: "mimn2"
-
+  COMET_TAGS: ["mimn2"]
 INFERENCE:
   DEBUG: True
   # EVALUATION_MODE: "use_input_size" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]

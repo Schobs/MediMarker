@@ -46,7 +46,7 @@ MODEL:
   # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop/ISBI_jun_3GS_AugAC_gneg_025TS/model_best_valid_loss_fold3.model"
 
 OUTPUT:
-  COMET_TAG: "mimn2"
+  COMET_TAGS: ["mimn2"]
 
 INFERENCE:
   DEBUG: False

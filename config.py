@@ -16,6 +16,8 @@ _C = CN()
 # Dataset
 # -----------------------------------------------------------------------------
 _C.DATASET = CN()
+_C.DATASET.DATASET_CLASS = 'generic' # see datasets.dataset_index for available datasets or add new ones yourself.
+
 _C.DATASET.ROOT ='/shared/tale2/Shared/data/CMRI/ASPIRE'
 _C.DATASET.NAME = "ASPIRE"
 _C.DATASET.SRC_TARGETS = '/shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV'
@@ -115,6 +117,9 @@ _C.INFERENCE = CN()
 _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
 _C.INFERENCE.FIT_GAUSS = False # If false, uses max, if true, first fits gaussian to output heatmap.
 
+_C.INFERENCE.ENSEMBLE_INFERENCE = False # average predictions from multiple models
+_C.INFERENCE.ENSEMBLE_CHECKPOINTS = [] # list of checkpoints to ensemble
+
 _C.INFERENCE.DEBUG = False
 # ---------------------------------------------------------------------------- #
 # Misc options
@@ -124,8 +129,9 @@ _C.OUTPUT.VERBOSE = True
 _C.OUTPUT.FAST_DEV_RUN = False  # True for debug
 _C.OUTPUT_DIR = "/shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/template"
 _C.OUTPUT.TB_DIR = "./lightning_logs"
-_C.OUTPUT.COMET_TAG = "default"
+_C.OUTPUT.COMET_TAGS = ["default"]
 _C.OUTPUT.RESULTS_CSV_APPEND = None
+_C.OUTPUT.COMET_PROJECT_NAME = "LannU-Net"
 
 def get_cfg_defaults():
     return _C.clone()

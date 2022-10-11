@@ -24,14 +24,14 @@ class PHDNetTrainer(NetworkTrainer):
     """ Class for the phdnet trainer stuff.
     """
 
-    def __init__(self, trainer_config= None, is_train=True, output_folder=None, comet_logger=None, profiler=None):
+    def __init__(self, **kwargs):
 
 
-        super(PHDNetTrainer, self).__init__(trainer_config, is_train, output_folder, comet_logger, profiler)
+        super(PHDNetTrainer, self).__init__(**kwargs)
 
       
         #global config variable
-        self.trainer_config = trainer_config
+        # self.trainer_config = trainer_config
 
         self.early_stop_patience = 1000
 
@@ -116,7 +116,7 @@ class PHDNetTrainer(NetworkTrainer):
 
 
     def get_coords_from_heatmap(self, output):
-        """ Gets x,y coordinates from a model output. Here we use the final layer prediction of the U-Net,
+        """ Gets x,y coordinates from a model output.
             maybe resize and get coords as the peak pixel. Also return value of peak pixel.
 
         Args:
@@ -158,6 +158,8 @@ class PHDNetTrainer(NetworkTrainer):
 
         pred_coords, max_values = get_coords(smoothed_candidate_maps)
         extra_info["hm_max"] = (max_values)
+        extra_info["final_heatmaps"] = smoothed_candidate_maps
+
         extra_info["debug_candidate_smoothed_maps"] = smoothed_candidate_maps
 
         # del final_heatmap

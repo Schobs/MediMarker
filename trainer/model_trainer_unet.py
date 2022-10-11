@@ -9,7 +9,6 @@ import torch
 import numpy as np
 from time import time
 # from dataset import ASPIRELandmarks
-from datasets.dataset import DatasetBase
 # import multiprocessing as mp
 import ctypes
 import copy
@@ -30,14 +29,13 @@ class UnetTrainer(NetworkTrainer):
     """ Class for the u-net trainer stuff.
     """
 
-    def __init__(self, trainer_config= None, is_train=True, output_folder=None, comet_logger=None, profiler=None):
+    def __init__(self, **kwargs):
 
 
-        super(UnetTrainer, self).__init__(trainer_config, is_train, output_folder, comet_logger, profiler)
+        super(UnetTrainer, self).__init__(**kwargs)
 
       
         #global config variable
-        self.trainer_config = trainer_config
         self.early_stop_patience = 250
 
 
@@ -120,7 +118,7 @@ class UnetTrainer(NetworkTrainer):
             print("Logged the model graph.")
 
      
-        print("Initialized network architecture. #parameters: ", sum(p.numel() for p in self.network .parameters()))
+        print("Initialized network architecture. #parameters: ", sum(p.numel() for p in self.network.parameters()))
 
     def initialize_optimizer_and_scheduler(self):
         assert self.network is not None, "self.initialize_network must be called first"
@@ -192,8 +190,9 @@ class UnetTrainer(NetworkTrainer):
             pred_coords, max_values, fitted_dicts = get_coords_fit_gauss(final_heatmap, pred_coords, visualize=False)
         # else:
         extra_info["hm_max"] = (max_values)
+        extra_info["final_heatmaps"] = final_heatmap
 
-        del final_heatmap
+        # del final_heatmap
   
         return pred_coords, extra_info
 

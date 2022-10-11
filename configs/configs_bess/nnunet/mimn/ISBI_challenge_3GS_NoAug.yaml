@@ -42,4 +42,4 @@ MODEL:
   GAUSS_SIGMA: 3
 
 OUTPUT:
-  COMET_TAG: "mimn"
+  COMET_TAGS: ["mimn"]

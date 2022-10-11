@@ -1,3 +1,4 @@
+from abc import abstractclassmethod
 import os
 from pathlib import Path
 from typing import List
@@ -29,9 +30,12 @@ import ctypes
 # import albumentations.augmentations.functional as F
 # from albumentations.pytorch import ToTensorV2
 
+from abc import ABC, abstractmethod, ABCMeta
 
+class DatasetMeta(ABCMeta, type(data.Dataset)):
+   pass
 
-class DatasetBase(data.Dataset):
+class DatasetBase(ABC, metaclass=DatasetMeta):
     """
     A custom dataset superclass for loading landmark localization data
 
@@ -71,7 +75,9 @@ class DatasetBase(data.Dataset):
         num_res_supervisions: int = 5,
         data_augmentation_strategy: str = None,
         data_augmentation_package: str = None,
-        dataset_split_size: int = -1
+        dataset_split_size: int = -1,
+        additional_sample_attribute_keys = []
+        
 
         ):
         
@@ -94,7 +100,11 @@ class DatasetBase(data.Dataset):
         # We need to define the resolution images load in at, and the input_size to the network
         # (this is same for full sampling, different for patch sampling.)
         self.original_image_size = original_image_size
+        self.additional_sample_attribute_keys = additional_sample_attribute_keys
+        # self.additional_sample_attributes = dict.fromkeys(self.additional_sample_attribute_keys, [])
+        self.additional_sample_attributes = {k: [] for k in self.additional_sample_attribute_keys}
 
+        # self.additional_sample_attribute_keys
         if self.sample_mode == "patch":
             assert sample_patch_size == input_size
 
@@ -160,9 +170,12 @@ class DatasetBase(data.Dataset):
         self.image_paths = []
         self.uids = []
         self.annotation_available = []
+        self.original_image_sizes = []
+        self.image_resizing_factors = []
 
 
 
+        #We are using cross-validation, following our convention of naming each json train with the append "foldX" where (X= self.cv)
         if cv >= 0:
             label_std = os.path.join('fold' + str(self.cv) +'.json' )
             print("Loading %s data for CV %s " % (self.split, os.path.join(self.annotation_path, label_std)))
@@ -171,11 +184,13 @@ class DatasetBase(data.Dataset):
             if self.dataset_split_size != -1:
                 datalist = datalist [:self.dataset_split_size]
                 print("datalist: ", datalist)
-        
+        #Not using CV, load the specified json file
         else:
             print("Loading %s data (no CV) for %s " % (self.split, self.annotation_path))
             datalist = load_aspire_datalist(self.annotation_path, data_list_key=self.split, base_dir=self.root_path)
-            # raise NotImplementedError("Only cross validation is currently implemented. Put all training data as fold1 and use cv=1 instead.")
+
+
+        # datalist = datalist[:20]
 
         # based on first image extenstion, get the load function.
         self.datatype_load = get_datatype_load(datalist[0]["image"])
@@ -184,12 +199,13 @@ class DatasetBase(data.Dataset):
         # self.validate_images(datalist)
 
         if self.cache_data:
-            #If cached, no load function needed.
+            #If cached, no load function needed so make identity function.
             self.load_function = lambda img: img 
 
             for idx, data in enumerate(datalist):
-
-                #case when data has no annotation, i.e. inference only  
+                
+                ### Add coordinate labels as sample attribute, if annotations available
+                #case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
                 if type(data["coordinates"]) != list or ("has_annotation" in data.keys() and data["has_annotation"] == False):
                     interested_landmarks = np.array([[0,0]]*len(self.landmarks))
                     self.annotation_available.append(False)
@@ -202,23 +218,35 @@ class DatasetBase(data.Dataset):
                     self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
                     self.annotation_available.append(True)
 
-
-                expanded_image = np.expand_dims(normalize_cmr(self.datatype_load(data["image"]).resize( self.load_im_size)), axis=0)
-
-                # visualize_image_all_coords(expanded_image[0], interested_landmarks )
-                # exit()
-
+                #Caching, so add image directly
+                original_image = self.datatype_load(data["image"])
+                expanded_image = np.expand_dims(normalize_cmr(original_image.resize( self.load_im_size)), axis=0)
                 self.images.append(expanded_image)
+
+
+                #Determine original size and log whether we needed to resize it
+                self.original_image_sizes.append(np.expand_dims(np.array(list(original_image.size)),1))
+                if list(original_image.size) != self.load_im_size:
+                    resizing_factor = [list(original_image.size)[0]/self.load_im_size[0], list(original_image.size)[1]/self.load_im_size[1]  ]
+                    self.image_resizing_factors.append(np.expand_dims(np.array(resizing_factor), axis=0))
+                else:
+                    self.image_resizing_factors.append(np.expand_dims(np.array([1,1]), axis=0))
+
                 self.target_coordinates.append(interested_landmarks)
                 self.image_paths.append(data["image"])
+
+                # self.uids.append(data["id"]+ "_PATHIS_" + data["image"])
                 self.uids.append(data["id"])
+
+                #Extended dataset class can add more attributes to each sample here
+                self.add_additional_sample_attributes(data)
 
             print("Cached all %s data in memory. Length of %s " % (self.split, len(self.images)))
         else:
-            self.load_function = lambda pth_: np.expand_dims(normalize_cmr(self.datatype_load(pth_).resize(self.load_im_size)), axis=0)
+            # self.load_function = lambda pth_: np.expand_dims(normalize_cmr(self.datatype_load(pth_).resize(self.load_im_size)), axis=0)
+            self.load_function = lambda img: img 
 
             for idx, data in enumerate(datalist):
-
                 #case when data has no annotation, i.e. inference only  
                 if type(data["coordinates"]) != list or ("has_annotation" in data.keys() and data["has_annotation"] == False):
                     interested_landmarks = np.array([[0,0]]*len(self.landmarks))
@@ -232,18 +260,52 @@ class DatasetBase(data.Dataset):
                     self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
                     self.annotation_available.append(True)
 
-
+           
+                #Not caching, so add image path.
                 self.images.append(data["image"]) #just appends the path, the load_function will load it later.
                 self.target_coordinates.append(interested_landmarks)
                 self.image_paths.append(data["image"])
+
+                # self.uids.append(data["id"]+ "_PATHIS_" + data["image"])
                 self.uids.append(data["id"])
+
+                #Extended dataset class can add more attributes to each sample here
+                self.add_additional_sample_attributes(data)
+                
             print("Not caching %s image data in memory, will load on the fly. Length of %s " % (self.split, len(self.images)))
+
+        # print("all image sizes@ ", self.original_image_sizes)
+        
+        
+        non_unique = ([[x,self.image_paths[x_idx]] for x_idx, x in enumerate(self.uids) if self.uids.count(x) > 1])
+        assert len(non_unique) == 0,  "Not all uids are unique! Check your data. %s non-unqiue uids , they are: %s \n " % (len(non_unique), non_unique) 
 
     def __len__(self):
         return len(self.images)
 
     def set_use_cache(self, use_cache):
         self.use_cache = use_cache
+
+
+    # @abstractmethod
+    def add_additional_sample_attributes(self, data):
+        '''
+        add more attributes to each sample here
+
+        ''' 
+
+        #Extended dataset class can add more attributes to each sample here
+
+        # print("\n dataaaa ", data)
+        # PRINT("")
+        # print(self.additional_sample_attributes)
+        # print("keys: ", self.additional_sample_attribute_keys, self.additional_sample_attributes.keys() )
+        for k_ in self.additional_sample_attribute_keys:
+            keyed_data = data[k_]
+            # print(k_, keyed_data)
+            self.additional_sample_attributes[k_].append(keyed_data)
+        # print( self.additional_sample_attributes)
+        # return data  
 
     def __getitem__(self, index):
         """ Implement method to get a data sample. Also give an option to debug here.
@@ -268,20 +330,49 @@ class DatasetBase(data.Dataset):
         sorgin= time()
 
         hm_sigmas = self.sigmas
-        image = self.load_function(self.images[index])
         # print("load time: " , (time()-sorgin))
         coords = self.target_coordinates[index]
         full_res_coods = self.full_res_coordinates[index]
         im_path = self.image_paths[index]
         run_time_debug= False
         this_uid = self.uids[index]
-        untransformed_im = image
         untransformed_coords = coords
         is_annotation_available = self.annotation_available[index]
         x_y_corner = [0,0]
+        image = self.load_function(self.images[index])
 
-      
 
+        #If we cached the data, we don't need to get original image size. If not, we need to load it here.
+        if self.cache_data:
+            resized_factor = self.image_resizing_factors[index]
+            original_size = self.original_image_sizes[index]
+
+        else:
+            original_image  = self.datatype_load(image)
+            original_size = np.expand_dims(np.array(list(original_image.size)),1)
+            if list(original_image.size) != self.load_im_size:
+                resizing_factor = [list(original_image.size)[0]/self.load_im_size[0], list(original_image.size)[1]/self.load_im_size[1]]
+                resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
+            else:
+                resized_factor = np.expand_dims(np.array([1,1]), axis=0)                
+
+            image = np.expand_dims(normalize_cmr(original_image.resize(self.load_im_size)), axis=0)
+        #    lambda pth_: np.expand_dims(normalize_cmr(self.datatype_load(pth_).resize(self.load_im_size)), axis=0)
+
+            # resized_landmarks = coords * resized_factor
+            # was_resized = self.was_image_resized_bools[index]
+        #     original_size = self.original_image_sizes[index]
+
+                           # original_image = self.datatype_load(data["image"])
+
+                # # print("am appending@ ", list(original_image.size))
+                # self.original_image_sizes.append(np.expand_dims(np.array(list(original_image.size)),1))
+                # if list(original_image.size) != self.load_im_size:
+                #     self.was_image_resized_bools.append(True)
+                # else:
+                #     self.was_image_
+
+        untransformed_im = image
 
 
         #Do data augmentation
@@ -319,8 +410,15 @@ class DatasetBase(data.Dataset):
         # print("gen labels: ", time()-s)
 
         sample = {"image":input_image , "label":label, "target_coords": input_coords, "landmarks_in_indicator": landmarks_in_indicator,
-            "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid, "annotation_available": is_annotation_available }
+            "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid, "annotation_available": is_annotation_available,
+            "resizing_factor": resized_factor, "original_image_size": original_size }
 
+        #add additional sample attributes from child class.
+        for key_ in list(self.additional_sample_attributes.keys()):
+            # print(key_,  self.additional_sample_attributes[key_][index])
+            sample[key_] = self.additional_sample_attributes[key_][index]
+        
+        # print("returning sample:", sample)
         #If coordinates are cutoff by augmentation throw a run time error. 
         # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
         #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
