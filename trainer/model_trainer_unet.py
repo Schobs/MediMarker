@@ -193,21 +193,19 @@ class UnetTrainer(NetworkTrainer):
         # extra_info["coords_og_size"] = [[input_size_coords[0][idx], input_size_coords[1][idx]] for idx in range(len(input_size_coords[0]))]
         extra_info["coords_og_size"] = input_size_coords
         if self.resize_first:
-            #torch resize does HxW so need to flip the diemsions
-            print("original image size: ", original_image_size)
+       
 
             hms_list = []
             if all_ims_same_size:
-                final_heatmap = Resize(original_image_size, interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+                final_heatmap = Resize([original_image_size[0][0][0], original_image_size[0][1][0]], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
             else:
                 for im_idx, im_size in enumerate(original_image_size):
-                    print("im idx, im_size, final_heatmap shape ", im_idx, im_size, final_heatmap[im_idx].shape)
-                    hms_list.append(Resize(im_size, interpolation=  InterpolationMode.BICUBIC)(final_heatmap[im_idx]))
-        
-                final_heatmap = torch.tensor(hms_list)
-
-            print("final heatmap shape and type: ", final_heatmap.shape, final_heatmap.dtype)
-
+                    # print("this needs to be tested: model_trainer_unet.py  get_coords_from_heatmap when images are different sizes!")
+                    # print("im idx, im_size, final_heatmap shape ", im_idx, im_size, final_heatmap[im_idx].shape)
+                    hms_list.append(Resize([im_size[0][0], im_size[1][0]], interpolation=  InterpolationMode.BICUBIC)(final_heatmap[im_idx]))
+                    # print("shape : ", hms_list[-1].shape)
+                final_heatmap = torch.stack(hms_list)
+         
         pred_coords, max_values = get_coords(final_heatmap)
         if self.fit_gauss_inference:
             pred_coords, max_values, fitted_dicts = get_coords_fit_gauss(final_heatmap, pred_coords, visualize=False)
