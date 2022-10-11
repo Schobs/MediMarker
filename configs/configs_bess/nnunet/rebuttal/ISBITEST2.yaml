@@ -1,6 +1,6 @@
 
 # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_3GS_4MFR_AugAC_DS5"
-OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop2"
+OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing2"
 # OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
 
 SOLVER:
@@ -8,7 +8,7 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE: 12
-  # MAX_EPOCHS: 3 
+  MAX_EPOCHS: 3 
   # REGRESS_SIGMA: True
 
 
@@ -28,12 +28,14 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: True
+  CACHE_DATA: False
+  INFERENCE_ONLY: True
 
 SAMPLER:
   DATA_AUG: 'AffineComplex'
   INPUT_SIZE : [512,512]
   NUM_WORKERS: 8 
+  # DEBUG: True
 
 MODEL:
   GAUSS_SIGMA: 3

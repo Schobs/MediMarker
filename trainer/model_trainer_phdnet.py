@@ -42,7 +42,6 @@ class PHDNetTrainer(NetworkTrainer):
         self.min_feature_res = self.trainer_config.MODEL.UNET.MIN_FEATURE_RESOLUTION
         self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
         self.input_size = self.trainer_config.SAMPLER.INPUT_SIZE
-        self.orginal_im_size = self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE
         self.sample_patch_size = self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE
 
 
@@ -115,7 +114,7 @@ class PHDNetTrainer(NetworkTrainer):
 
 
 
-    def get_coords_from_heatmap(self, output):
+    def get_coords_from_heatmap(self, output, original_image_size):
         """ Gets x,y coordinates from a model output.
             maybe resize and get coords as the peak pixel. Also return value of peak pixel.
 
@@ -140,7 +139,7 @@ class PHDNetTrainer(NetworkTrainer):
             #self.trainer_config.INFERENCE.DEBUG
             csm = candidate_smoothing([output[0][sample_idx], output[1][sample_idx]], full_image_res, self.maxpool_factor, log_displacement_bool= self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS, debug=self.trainer_config.INFERENCE.DEBUG)
             if self.resize_first:
-                csm = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(csm)
+                csm = Resize(original_image_size[::-1], interpolation=  InterpolationMode.BICUBIC)(csm)
 
             smoothed_candidate_maps.append(csm)
         
@@ -173,7 +172,7 @@ class PHDNetTrainer(NetworkTrainer):
         Use model outputs from a patchified image to stitch together a full resolution heatmap
         
         '''
-
+        raise NotImplementedError("need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo")
 
         full_heatmap = np.zeros((self.orginal_im_size[1], self.orginal_im_size[0]))
         patch_size_x = patch_predictions[0].shape[0]

@@ -48,7 +48,7 @@ class UnetTrainer(NetworkTrainer):
         self.min_feature_res = self.trainer_config.MODEL.UNET.MIN_FEATURE_RESOLUTION
         self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
         self.input_size = self.trainer_config.SAMPLER.INPUT_SIZE
-        self.orginal_im_size = self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE
+        # self.orginal_im_size = self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE
 
 
         #get arch config parameters
@@ -154,7 +154,7 @@ class UnetTrainer(NetworkTrainer):
 
 
 
-    def get_coords_from_heatmap(self, output):
+    def get_coords_from_heatmap(self, output, original_image_size):
         """ Gets x,y coordinates from a model output. Here we use the final layer prediction of the U-Net,
             maybe resize and get coords as the peak pixel. Also return value of peak pixel.
 
@@ -172,6 +172,18 @@ class UnetTrainer(NetworkTrainer):
 
         final_heatmap = output
 
+        print("num final hms ", len(final_heatmap))
+        print("len og im sizes ", len(original_image_size))
+        print(" og im shapes ", original_image_size.shape)
+
+        # original_image_size =  torch.flip(original_image_size, dims=[1]).cpu().detach().numpy()
+                # original_image_size =  torch.flip(original_image_size, dims=[1]).cpu().detach().numpy()
+
+        original_image_size = original_image_size.cpu().detach().numpy()[:,::-1,:]
+
+        all_ims_same_size = np.all(original_image_size[0] == original_image_size)
+
+        print("all_ims_same_size ", all_ims_same_size)
     #  get_coords_fit_gauss(images, predicted_coords_all, visualize=False)
         input_size_coords, input_max_values = get_coords(output)
         # if self.fit_gauss_inference:
@@ -182,8 +194,19 @@ class UnetTrainer(NetworkTrainer):
         extra_info["coords_og_size"] = input_size_coords
         if self.resize_first:
             #torch resize does HxW so need to flip the diemsions
-            final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+            print("original image size: ", original_image_size)
+
+            hms_list = []
+            if all_ims_same_size:
+                final_heatmap = Resize(original_image_size, interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+            else:
+                for im_idx, im_size in enumerate(original_image_size):
+                    print("im idx, im_size, final_heatmap shape ", im_idx, im_size, final_heatmap[im_idx].shape)
+                    hms_list.append(Resize(im_size, interpolation=  InterpolationMode.BICUBIC)(final_heatmap[im_idx]))
         
+                final_heatmap = torch.tensor(hms_list)
+
+            print("final heatmap shape and type: ", final_heatmap.shape, final_heatmap.dtype)
 
         pred_coords, max_values = get_coords(final_heatmap)
         if self.fit_gauss_inference:
@@ -205,6 +228,7 @@ class UnetTrainer(NetworkTrainer):
         
         '''
 
+        raise NotImplementedError("need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo")
 
         full_heatmap = np.zeros((self.orginal_im_size[1], self.orginal_im_size[0]))
         patch_size_x = patch_predictions[0].shape[0]

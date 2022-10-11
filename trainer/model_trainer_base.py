@@ -199,7 +199,7 @@ class NetworkTrainer(ABC):
             print(msg)
 
     @abstractmethod
-    def get_coords_from_heatmap(self, model_output):
+    def get_coords_from_heatmap(self, model_output, original_image_size):
 
         """
         Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
@@ -341,11 +341,6 @@ class NetworkTrainer(ABC):
                 l = torch.tensor(0).to(self.device)
                 loss_dict = {}
 
-        # output = [target['patch_heatmap'], target['patch_displacements']]
-        # print("displacement output type: ", output[1][0].dtype)
-        # print("displacement output examnple: ", output[1][0][0][0])
-
-        # print("the data dict original_image_size: ", data_dict["original_image_size"])
         #Log info from this iteration.
         s= time()
         if list(logged_vars.keys()) != []:
@@ -385,7 +380,7 @@ class NetworkTrainer(ABC):
             _type_: _description_
         """
         if log_coords:
-            pred_coords_input_size, extra_info = self.get_coords_from_heatmap(output)
+            pred_coords_input_size, extra_info = self.get_coords_from_heatmap(output, data_dict["original_image_size"])
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)                 
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
@@ -498,7 +493,7 @@ class NetworkTrainer(ABC):
 
         # C2
         if self.use_full_res_coords and not self.resize_first :
-            upscale_factor = torch.tensor([self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[0]/self.trainer_config.SAMPLER.INPUT_SIZE[0], self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE[1]/self.trainer_config.SAMPLER.INPUT_SIZE[1]]).to(self.device)
+            upscale_factor = torch.tensor([data_dict["resizing_factor"][0],data_dict["resizing_factor"][1]]).to(self.device)
             # upscaled_coords = torch.tensor([pred_coords[x]*upscale_factor[x] for x in range(len(pred_coords))]).to(self.device)
             upscaled_coords = torch.mul(pred_coords,upscale_factor)
             pred_coords = torch.round(upscaled_coords)
@@ -968,110 +963,7 @@ class NetworkTrainer(ABC):
 
         return all_ensemble_results_dicts, ind_errors
 
-            #log variables
-
-        # all_ensembled_heatmaps = np.array(all_ensembled_heatmaps)
-
-
-        # #at the end of the batch, get coords and log key variables.
-        # pred_coords, pred_coords_input_size, extra_info, target_coords = self.maybe_get_coords(all_ensembled_heatmaps, log_coords=True, data_dict=direct_data_dict)
-        
-        # ensemble_evaluation_logs = self.dict_logger.log_key_variables(ensemble_evaluation_logs, pred_coords, extra_info, target_coords, loss_dict={}, data_dict=direct_data_dict, log_coords=True, split=split)
-        # results_dict_list["emha predicted_coords"] = np.round(average_coords)
-        # results_dict_list["emha uncertainty"] = all_coord_vars
-
-        # # self.dict_logger.log_key_variables(self, log_dict, pred_coords, extra_info, target_coords, loss_dict, data_dict, log_coords, split)
-        # run_iteration(self, generator, dataloader, backprop, split, log_coords, logged_vars=None, debug=False, direct_data_dict=None)
-        # def ensemble_maps_with_variance_unet(map_dict, args, ensemble_conf_model=None):
-
-	# all_results = {}
-
-	# #Gets the av map and activation of it.
-	# for aa, (key, all_landmarks) in enumerate(map_dict.items()):
-	# 	u_id = key
-	# 	all_results[u_id] = {}
-
-	# 	for bb, (landmark, entries) in enumerate(all_landmarks.items()):
-
-	# 		# print(landmark)
-	# 		# print(entries, "\n \n")
-	# 		#All predicted maps
-	# 		# print("maps len@ ",  len(entries['maps']), " and shape of idx 0", entries['maps'][0].shape )
-	# 		maps = np.array([t for t in entries['maps']])
-	# 		# print(" and after maps shape ", maps.shape)
-
-
-	# 		# Get y and x min from the sampled maps, as we need to build the full map
-	# 		y_mins = np.array([t for t in entries['y_mins']]) 
-	# 		x_mins = np.array([t for t in entries['x_mins']])
-
-	# 		# print(" x and y mins shape", x_mins.shape, y_mins.shape)
-	# 		big_map = torch.tensor(np.zeros((inp_res[0], inp_res[1])))
-	# 		# print("the inp res is: ", inp_res)
-	# 		for i in range(maps.shape[0]):
-	# 			# print("x and y mins: ", x_mins[i], y_mins[i])
-	# 			big_map[x_mins[i]:(x_mins[i]+maps[i].shape[0]), y_mins[i]:(y_mins[i]+maps[i].shape[1])] += maps[i]
-			
-	# 		#Av map
-	# 		big_map = big_map/maps.shape[0]
-
-	# 		confidence = big_map.max()
-			
-	# 		big_map_expanded =  torch.Tensor(np.expand_dims(np.expand_dims(big_map, axis=0), axis=0))
-	# 		av_coord  = get_coords_from_hm(big_map_expanded, args)[0,0] 			 	
-	# 		# print("pred before round: ", av_coord)
-
-	# 		# av_coord = np.round(av_coord)
-	# 		# print("av coord ", av_coord)
-
-	# 		error = np.linalg.norm((av_coord- entries['label_coord']))
-			
-
-	# 		#Now lets go through all the predicted maps and get the heatmap value at the final coord predicted location
-	# 		individual_confidences = []
-	# 		for i in range(maps.shape[0]):
-	# 			inner_big_map = (np.zeros((inp_res[0], inp_res[1])))
-
-	# 			inner_big_map[x_mins[i]:(x_mins[i]+maps[i].shape[0]), y_mins[i]:(y_mins[i]+maps[i].shape[1])] += maps[i]
-	# 			# inner_big_map[x_mins[i]:(x_mins[i]+maps[i].shape[0]), y_mins[i]:(y_mins[i]+maps[i].shape[1])] += maps[i]
-
-	# 			# print("inner big map shape: ", inner_big_map.shape, " and: ", av_coord.numpy(), "maps i shape", maps[i].shape)
-	# 			av_coord_slice = av_coord.numpy()
-	# 			# print("av coord slice: ", av_coord_slice, av_coord_slice[0], av_coord_slice[1])
-	# 			inner_conf = inner_big_map[int(av_coord_slice[1]), int(av_coord_slice[0])]
-	# 			# print("inner conf", inner_conf)
-	# 			individual_confidences.append(inner_conf)
-	# 			# confidence_variance += np.linalg.norm((pred- mean_coord))
-
-	# 		av_conf = sum(individual_confidences) / len(individual_confidences)
-
-	# 		var_conf = sum((xi - av_conf) ** 2 for xi in individual_confidences) / len(individual_confidences)
-			
-	# 		# np_var = np.var(individual_confidences)
-	# 		# print("the av map conf and calc av conf (should be same)", confidence, av_conf, " and the list of confs", individual_confidences, " and var: ", var_conf)
-
-	# 		# smoothed_candidates_input =(smoothed_candidate_maps.clone().detach().float())
-
-	# 		if ensemble_conf_model != None:
-	# 			output_conf = ensemble_conf_model(big_map_expanded)[0,0]
-	# 			is_confident_prediction_cnn = [1 if output_conf >= 0.5 else 0][0]
-
-	# 			# print("is conf pred:", is_confident_prediction_cnn )
-
-	# 			all_results[u_id][landmark] = {'label':entries['label_coord'], 'prediction': av_coord, 'error': error, 'mean_confidence': confidence, 'confidence_variance': var_conf, 'cnn_ensemble_conf': is_confident_prediction_cnn }
-	# 		else:
-	# 			all_results[u_id][landmark] = {'label':entries['label_coord'], 'prediction': av_coord, 'error': error, 'confidence_variance': var_conf, 'mean_confidence': confidence}
-
-	# 		del big_map
-	# 		del big_map_expanded
-
-	# print("size of  ensemble_maps_with_variance_unet all_results dictionary: ", get_deep_size(all_results))
-
-
-
-
-	
-	# return all_results
+         
 
 
     def maybe_load_checkpoint(self):
@@ -1194,7 +1086,6 @@ class NetworkTrainer(ABC):
             cache_data = self.trainer_config.TRAINER.CACHE_DATA,
             num_res_supervisions = self.num_res_supervision,
             debug=self.trainer_config.SAMPLER.DEBUG ,
-            original_image_size= self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE,
             input_size =  self.trainer_config.SAMPLER.INPUT_SIZE,
             hm_lambda_scale = self.trainer_config.MODEL.HM_LAMBDA_SCALE,
             data_augmentation_strategy = self.trainer_config.SAMPLER.DATA_AUG,
@@ -1252,7 +1143,6 @@ class NetworkTrainer(ABC):
                 num_res_supervisions = self.num_res_supervision,
                 debug=self.trainer_config.SAMPLER.DEBUG,
                 data_augmentation_strategy =None,
-                original_image_size= self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE,
                 input_size =  load_im_size,
                 hm_lambda_scale = self.trainer_config.MODEL.HM_LAMBDA_SCALE,
                 dataset_split_size= dataset_split_size
