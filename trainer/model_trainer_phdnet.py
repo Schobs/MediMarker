@@ -126,6 +126,28 @@ class PHDNetTrainer(NetworkTrainer):
         """
 
 
+
+
+    # all_ims_same_size = np.all(original_image_size[0] == original_image_size)
+
+
+    
+    #         hms_list = []
+    #         if all_ims_same_size:
+    #             final_heatmap = Resize([original_image_size[0][0][0], original_image_size[0][1][0]], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+    #         else:
+    #             for im_idx, im_size in enumerate(original_image_size):
+    #                 # print("this needs to be tested: model_trainer_unet.py  get_coords_from_heatmap when images are different sizes!")
+    #                 # print("im idx, im_size, final_heatmap shape ", im_idx, im_size, final_heatmap[im_idx].shape)
+    #                 hms_list.append(Resize([im_size[0][0], im_size[1][0]], interpolation=  InterpolationMode.BICUBIC)(final_heatmap[im_idx]))
+    #                 # print("shape : ", hms_list[-1].shape)
+    #             final_heatmap = torch.stack(hms_list)
+
+
+
+        raise NotImplementedError("not implemented the original_image_size properly. see aboe and the model_trainer_unet.py version of this function")
+
+
         extra_info = {"hm_max": None}
 
         output = [x.detach().cpu().numpy() for x in output]

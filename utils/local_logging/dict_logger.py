@@ -91,10 +91,10 @@ class DictLogger():
                 #Get coord error of the input resolution to network
                 coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
 
-                #Get coord error of the original image resolution
-                pred_coords_original_resolution = ((pred_coords.detach().cpu())) * data_dict["resizing_factor"]
-                target_coords_original_resolution = data_dict["full_res_coords"]
-                coord_error_og_size = torch.linalg.norm((pred_coords_original_resolution- target_coords_original_resolution), axis=2)
+                # #Get coord error of the original image resolution
+                # pred_coords_original_resolution = ((pred_coords.detach().cpu())) * data_dict["resizing_factor"]
+                # target_coords_original_resolution = data_dict["full_res_coords"]
+                # coord_error_og_size = torch.linalg.norm((pred_coords_original_resolution- target_coords_original_resolution), axis=2)
 
                 # print("PCOR %s TCOR %s ER %s" % (pred_coords_original_resolution, target_coords_original_resolution, coord_error_og_size))
         
@@ -133,7 +133,7 @@ class DictLogger():
 
                         ind_dict["predicted_coords"] = ((pred_coords[idx].detach().cpu().numpy()))
 
-                        ind_dict["predicted_coords_original_resolution"] = pred_coords_original_resolution[idx].detach().cpu().numpy()
+                        # ind_dict["predicted_coords_original_resolution"] = pred_coords_original_resolution[idx].detach().cpu().numpy()
 
                         # print("pred coords, resize factor, resized coords: ",ind_dict["predicted_coords"],  data_dict["resizing_factor"][idx], ind_dict["predicted_coords_original_resolution"] )
                         # if "predicted_heatmaps" in vars_to_log:
@@ -151,14 +151,14 @@ class DictLogger():
                             for coord_idx, er in enumerate(coord_error[idx]):
                                 ind_dict["L"+str(coord_idx)] = None
 
-                            #Save for original image size resolution
-                            ind_dict["Error All Mean (Original Resolution)"] = None
-                            ind_dict["Error All Std (Original Resolution)"] = None
-                            ind_dict["ind_errors (Original Resolution)"] = None
-                            ind_dict["target_coords (Original Resolution)"] = None
+                            # #Save for original image size resolution
+                            # ind_dict["Error All Mean (Original Resolution)"] = None
+                            # ind_dict["Error All Std (Original Resolution)"] = None
+                            # ind_dict["ind_errors (Original Resolution)"] = None
+                            # ind_dict["target_coords (Original Resolution)"] = None
 
-                            for coord_idx, er in enumerate(coord_error[idx]):
-                                ind_dict["L"+str(coord_idx)+ " (Original Resolution)"] = None
+                            # for coord_idx, er in enumerate(coord_error[idx]):
+                            #     ind_dict["L"+str(coord_idx)+ " (Original Resolution)"] = None
 
 
                               
@@ -176,18 +176,18 @@ class DictLogger():
                                 if "landmark_errors" in vars_to_log:
                                     log_dict["landmark_errors"][coord_idx].append(er.detach().cpu().numpy())
 
-                            #Save for original image size resolution
-                            ind_dict["Error All Mean (Original Resolution)"] = (np.mean(coord_error_og_size[idx].detach().cpu().numpy()))
-                            ind_dict["Error All Std (Original Resolution)"] = (np.std(coord_error_og_size[idx].detach().cpu().numpy()))
-                            ind_dict["ind_errors (Original Resolution)"] = ((coord_error_og_size[idx].detach().cpu().numpy()))
-                            ind_dict["target_coords (Original Resolution)"] = ((target_coords_original_resolution[idx].detach().cpu().numpy()))
+                            # #Save for original image size resolution
+                            # ind_dict["Error All Mean (Original Resolution)"] = (np.mean(coord_error_og_size[idx].detach().cpu().numpy()))
+                            # ind_dict["Error All Std (Original Resolution)"] = (np.std(coord_error_og_size[idx].detach().cpu().numpy()))
+                            # ind_dict["ind_errors (Original Resolution)"] = ((coord_error_og_size[idx].detach().cpu().numpy()))
+                            # ind_dict["target_coords (Original Resolution)"] = ((target_coords_original_resolution[idx].detach().cpu().numpy()))
 
 
-                            for coord_idx, er in enumerate(coord_error_og_size[idx]):
-                                ind_dict["L"+str(coord_idx)+ " (Original Resolution)"] = er.detach().cpu().numpy()
+                            # for coord_idx, er in enumerate(coord_error_og_size[idx]):
+                            #     ind_dict["L"+str(coord_idx)+ " (Original Resolution)"] = er.detach().cpu().numpy()
 
-                                if "landmark_errors" in vars_to_log:
-                                    log_dict["landmark_errors_original_resolution"][coord_idx].append(er.detach().cpu().numpy())
+                            #     if "landmark_errors" in vars_to_log:
+                            #         log_dict["landmark_errors_original_resolution"][coord_idx].append(er.detach().cpu().numpy())
 
                         #any extra info returned by the child class when calculating coords from outputs e.g. heatmap_max
                         for key_ in list(extra_info.keys()):

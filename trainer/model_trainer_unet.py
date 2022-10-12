@@ -172,9 +172,9 @@ class UnetTrainer(NetworkTrainer):
 
         final_heatmap = output
 
-        print("num final hms ", len(final_heatmap))
-        print("len og im sizes ", len(original_image_size))
-        print(" og im shapes ", original_image_size.shape)
+        # print("num final hms ", len(final_heatmap))
+        # print("len og im sizes ", len(original_image_size))
+        # print(" og im shapes ", original_image_size.shape)
 
         # original_image_size =  torch.flip(original_image_size, dims=[1]).cpu().detach().numpy()
                 # original_image_size =  torch.flip(original_image_size, dims=[1]).cpu().detach().numpy()
@@ -183,7 +183,7 @@ class UnetTrainer(NetworkTrainer):
 
         all_ims_same_size = np.all(original_image_size[0] == original_image_size)
 
-        print("all_ims_same_size ", all_ims_same_size)
+        # print("all_ims_same_size ", all_ims_same_size)
     #  get_coords_fit_gauss(images, predicted_coords_all, visualize=False)
         input_size_coords, input_max_values = get_coords(output)
         # if self.fit_gauss_inference:
