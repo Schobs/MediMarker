@@ -7,7 +7,7 @@ from config import get_cfg_defaults
 import warnings
 from yacs.config import CfgNode as CN
 
-def get_evaluation_mode(eval_mode, og_im_size, inp_size):
+def get_evaluation_mode(eval_mode):
     """_summary_
 
     Args:
@@ -26,11 +26,11 @@ def get_evaluation_mode(eval_mode, og_im_size, inp_size):
     if eval_mode == 'use_input_size':
         use_full_res_coords =False
         resize_first = False
-    # Force "use_input_size" settings if the input size and og image size are the same
-    elif og_im_size == inp_size: 
-        print("your DATASET.ORIGINAL_IMAGE_SIZE == SAMPLER.INPUT_SIZE, therefore defaulting evaluation mode to \"use_input_size\"")
-        use_full_res_coords =False
-        resize_first = False
+    # # Force "use_input_size" settings if the input size and og image size are the same
+    # elif og_im_size == inp_size: 
+    #     print("your DATASET.ORIGINAL_IMAGE_SIZE == SAMPLER.INPUT_SIZE, therefore defaulting evaluation mode to \"use_input_size\"")
+    #     use_full_res_coords =False
+    #     resize_first = False
     # Scale model predicted sized heatmap up to full resolution and then obtain coordinates (recommended)
     elif eval_mode== 'scale_heatmap_first':
         use_full_res_coords =True
@@ -52,7 +52,7 @@ def infer_additional_arguments(yaml_args):
     if yaml_args.SAMPLER.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
         yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = True
 
-    use_full_res_coords, resize_first = get_evaluation_mode(yaml_args.INFERENCE.EVALUATION_MODE, yaml_args.DATASET.ORIGINAL_IMAGE_SIZE, yaml_args.SAMPLER.INPUT_SIZE)
+    use_full_res_coords, resize_first = get_evaluation_mode(yaml_args.INFERENCE.EVALUATION_MODE)
     
     yaml_args.INFERRED_ARGS.USE_FULL_RES_COORDS = use_full_res_coords
     yaml_args.INFERRED_ARGS.RESIZE_FIRST = resize_first

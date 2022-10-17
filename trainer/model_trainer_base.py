@@ -347,7 +347,7 @@ class NetworkTrainer(ABC):
             with torch.no_grad():
 
                 pred_coords, pred_coords_input_size, extra_info, target_coords = self.maybe_get_coords(output, log_coords, data_dict)
-            
+                
                 logged_vars = self.dict_logger.log_key_variables(logged_vars, pred_coords, extra_info, target_coords, loss_dict, data_dict, log_coords, split)
                 if debug:
                     # print("logged_vars ind resyults: ", logged_vars["individual_results"][0]["uid"])
@@ -484,10 +484,12 @@ class NetworkTrainer(ABC):
             tensor, tensor: predicted coordinates and target coordinates for evaluation
         """
         
+        
         #Don't worry in case annotations are not present since these are 0,0 anyway. this is handled elesewhere
-        if self.use_full_res_coords:
+        #C1 or C2
+        if self.use_full_res_coords: 
             target_coords =data_dict['full_res_coords'].to( self.device ) #C1
-        else:
+        else: 
             target_coords =np.round(data_dict['target_coords']).to( self.device ) #C3 (and C1 if input size == full res size so full & target the same)
        
 
@@ -639,16 +641,14 @@ class NetworkTrainer(ABC):
         #then iterate through dataloader and save to log
 
         #Save ensemble logs, seperated by uncertainty coordinate resolutions
-        ensemble_result_dicts = {"smha": [], "emha": [], "ecpv": [], "smha_orig_im_res": [], "emha_orig_im_res": [], "ecpv_orig_im_res": []}
+        ensemble_result_dicts = {"smha": [], "emha": [], "ecpv": []}
 
         #Also save just the landmark errors, seperated by uncertainty coordinate resolutions
         all_ind_errors = {
                 "smha": [[] for x in range(len(self.landmarks))], 
                 "emha": [[] for x in range(len(self.landmarks))], 
                 "ecpv": [[] for x in range(len(self.landmarks))],
-                "smha_orig_im_res": [[] for x in range(len(self.landmarks))], 
-                "emha_orig_im_res": [[] for x in range(len(self.landmarks))], 
-                "ecpv_orig_im_res": [[] for x in range(len(self.landmarks))]
+               
                 }
         
         
@@ -766,14 +766,11 @@ class NetworkTrainer(ABC):
                 sorted_dict_by_uid[uid]["ind_preds"] = []
             sorted_dict_by_uid[uid]["ind_preds"].append(ind_res)
 
-        all_ensemble_results_dicts= {"smha": [], "emha": [], "ecpv": [],  "smha_orig_im_res": [],  "emha_orig_im_res": [],  "ecpv_orig_im_res": []}
+        all_ensemble_results_dicts= {"smha": [], "emha": [], "ecpv": []}
         ind_errors = {
                 "smha": [[] for x in range(len(self.landmarks))], 
                 "emha": [[] for x in range(len(self.landmarks))], 
                 "ecpv": [[] for x in range(len(self.landmarks))],
-                "smha_orig_im_res": [[] for x in range(len(self.landmarks))], 
-                "emha_orig_im_res": [[] for x in range(len(self.landmarks))], 
-                "ecpv_orig_im_res": [[] for x in range(len(self.landmarks))]
                 }
         
         #go through each sample (uid) and get the ensemble results
@@ -799,24 +796,24 @@ class NetworkTrainer(ABC):
             if calc_error:
                 assert all([y.all()==True for y in [(ind_res["target_coords"] == individual_results[0]["target_coords"]) for ind_res in individual_results]]), "Target coords are not the same for all models in the ensemble"
                 target_coords = individual_results[0]["target_coords"]
-                target_coords_original_resolution = individual_results[0]["target_coords_original_resolution"]
+                # target_coords_original_resolution = individual_results[0]["target_coords_original_resolution"]
 
             ################## 1) S-MHA ###########################
                 
             ensemble_results_dict["smha"]["predicted_coords"] = individual_results[smha_choice_idx]["predicted_coords"]
             ensemble_results_dict["smha"]["uncertainty"] = individual_results[smha_choice_idx]["hm_max"]
-            ensemble_results_dict["smha_orig_im_res"]["predicted_coords"] = individual_results[smha_choice_idx]["predicted_coords_original_resolution"]       
-            ensemble_results_dict["smha_orig_im_res"]["uncertainty"] = individual_results[smha_choice_idx]["hm_max"]
+            # ensemble_results_dict["smha_orig_im_res"]["predicted_coords"] = individual_results[smha_choice_idx]["predicted_coords_original_resolution"]       
+            # ensemble_results_dict["smha_orig_im_res"]["uncertainty"] = individual_results[smha_choice_idx]["hm_max"]
 
             #Save inference resolution results for each landmark individually
             for c_idx, pred_coord_t in enumerate(individual_results[smha_choice_idx]["predicted_coords"]):
                 ensemble_results_dict["smha"]["predicted_L"+str(c_idx)] = pred_coord_t
                 ensemble_results_dict["smha"]["uncertainty_L"+str(c_idx)] = ensemble_results_dict["smha"]["uncertainty"][c_idx][0]
 
-            #Save original image resolution results for each landmark individually
-            for c_idx, pred_coord_t in enumerate(individual_results[smha_choice_idx]["predicted_coords_original_resolution"]):
-                ensemble_results_dict["smha_orig_im_res"]["predicted_L"+str(c_idx)] = pred_coord_t
-                ensemble_results_dict["smha_orig_im_res"]["uncertainty_L"+str(c_idx)] = ensemble_results_dict["smha_orig_im_res"]["uncertainty"][c_idx][0]
+            # #Save original image resolution results for each landmark individually
+            # for c_idx, pred_coord_t in enumerate(individual_results[smha_choice_idx]["predicted_coords_original_resolution"]):
+            #     ensemble_results_dict["smha_orig_im_res"]["predicted_L"+str(c_idx)] = pred_coord_t
+            #     ensemble_results_dict["smha_orig_im_res"]["uncertainty_L"+str(c_idx)] = ensemble_results_dict["smha_orig_im_res"]["uncertainty"][c_idx][0]
 
             ####Calculate the error if annotation available
             if calc_error:
@@ -830,22 +827,22 @@ class NetworkTrainer(ABC):
                     ensemble_results_dict["smha"]["uncertainty L"+str(cidx)] = individual_results[smha_choice_idx]["hm_max"][cidx]
                     ind_errors["smha"][cidx].append(p_coord)
 
-                #Error for original image resolution
-                ensemble_results_dict["smha_orig_im_res"]["ind_errors"] = individual_results[smha_choice_idx]["ind_errors (Original Resolution)"]
-                ensemble_results_dict["smha_orig_im_res"]["Error All Mean"] = np.mean(individual_results[smha_choice_idx]["ind_errors (Original Resolution)"])
-                ensemble_results_dict["smha_orig_im_res"]["Error All Std"] = np.std(individual_results[smha_choice_idx]["ind_errors (Original Resolution)"])
+                # #Error for original image resolution
+                # ensemble_results_dict["smha_orig_im_res"]["ind_errors"] = individual_results[smha_choice_idx]["ind_errors (Original Resolution)"]
+                # ensemble_results_dict["smha_orig_im_res"]["Error All Mean"] = np.mean(individual_results[smha_choice_idx]["ind_errors (Original Resolution)"])
+                # ensemble_results_dict["smha_orig_im_res"]["Error All Std"] = np.std(individual_results[smha_choice_idx]["ind_errors (Original Resolution)"])
 
-                for cidx, p_coord in enumerate(individual_results[smha_choice_idx]["ind_errors (Original Resolution)"]):
-                    ensemble_results_dict["smha_orig_im_res"]["L"+str(cidx)] = p_coord
-                    # ensemble_results_dict["smha"]["uncertainty L"+str(cidx)] = individual_results[smha_choice_idx]["hm_max"][cidx]
-                    ind_errors["smha_orig_im_res"][cidx].append(p_coord)
+                # for cidx, p_coord in enumerate(individual_results[smha_choice_idx]["ind_errors (Original Resolution)"]):
+                #     ensemble_results_dict["smha_orig_im_res"]["L"+str(cidx)] = p_coord
+                #     # ensemble_results_dict["smha"]["uncertainty L"+str(cidx)] = individual_results[smha_choice_idx]["hm_max"][cidx]
+                #     ind_errors["smha_orig_im_res"][cidx].append(p_coord)
 
            
             ################## 2) E_CPV ###########################
 
             #Calculate the E-CPV
             average_coords = np.mean([dic['predicted_coords'] for dic in individual_results] , axis=0)
-            average_coords_og_resolution = np.mean([dic['predicted_coords_original_resolution'] for dic in individual_results] , axis=0)
+            # average_coords_og_resolution = np.mean([dic['predicted_coords_original_resolution'] for dic in individual_results] , axis=0)
 
             #the actual e-cpv uncertainty measure should be the same for both inference and resized to maintain the same scaling between all images.
             all_coord_vars = []
@@ -855,18 +852,18 @@ class NetworkTrainer(ABC):
 
             ensemble_results_dict["ecpv"]["predicted_coords"] = np.round(average_coords)
             ensemble_results_dict["ecpv"]["uncertainty"] = all_coord_vars
-            ensemble_results_dict["ecpv_orig_im_res"]["predicted_coords"] = np.round(average_coords_og_resolution)
-            ensemble_results_dict["ecpv_orig_im_res"]["uncertainty"] = all_coord_vars
+            # ensemble_results_dict["ecpv_orig_im_res"]["predicted_coords"] = np.round(average_coords_og_resolution)
+            # ensemble_results_dict["ecpv_orig_im_res"]["uncertainty"] = all_coord_vars
 
             #Save inference resolution results for each landmark individually
             for c_idx, pred_coord_t in enumerate(ensemble_results_dict["ecpv"]["predicted_coords"]):
                 ensemble_results_dict["ecpv"]["predicted_L"+str(c_idx)] = pred_coord_t
                 ensemble_results_dict["ecpv"]["uncertainty_L"+str(c_idx)] = ensemble_results_dict["ecpv"]["uncertainty"][c_idx]
 
-            #Save original image resolution results for each landmark individually
-            for c_idx, pred_coord_t in enumerate(ensemble_results_dict["ecpv_orig_im_res"]["predicted_coords"]):
-                ensemble_results_dict["ecpv_orig_im_res"]["predicted_L"+str(c_idx)] = pred_coord_t
-                ensemble_results_dict["ecpv_orig_im_res"]["uncertainty_L"+str(c_idx)] = ensemble_results_dict["ecpv_orig_im_res"]["uncertainty"][c_idx]
+            # #Save original image resolution results for each landmark individually
+            # for c_idx, pred_coord_t in enumerate(ensemble_results_dict["ecpv_orig_im_res"]["predicted_coords"]):
+            #     ensemble_results_dict["ecpv_orig_im_res"]["predicted_L"+str(c_idx)] = pred_coord_t
+            #     ensemble_results_dict["ecpv_orig_im_res"]["uncertainty_L"+str(c_idx)] = ensemble_results_dict["ecpv_orig_im_res"]["uncertainty"][c_idx]
 
             ####Calculate the error if annotation available
             if calc_error:
@@ -883,15 +880,15 @@ class NetworkTrainer(ABC):
 
 
                 #Error for original image resolution
-                ecpv_errors_og_res = np.linalg.norm(ensemble_results_dict["ecpv_orig_im_res"]["predicted_coords"] - target_coords_original_resolution, axis=1)
-                ensemble_results_dict["ecpv_orig_im_res"]["ind_errors"] =ecpv_errors_og_res
-                ensemble_results_dict["ecpv_orig_im_res"]["Error All Mean"] = np.mean(ecpv_errors_og_res)
-                ensemble_results_dict["ecpv_orig_im_res"]["Error All Std"] = np.std(ecpv_errors_og_res)
+                # ecpv_errors_og_res = np.linalg.norm(ensemble_results_dict["ecpv_orig_im_res"]["predicted_coords"] - target_coords_original_resolution, axis=1)
+                # ensemble_results_dict["ecpv_orig_im_res"]["ind_errors"] =ecpv_errors_og_res
+                # ensemble_results_dict["ecpv_orig_im_res"]["Error All Mean"] = np.mean(ecpv_errors_og_res)
+                # ensemble_results_dict["ecpv_orig_im_res"]["Error All Std"] = np.std(ecpv_errors_og_res)
 
-                for cidx, p_coord in enumerate(ecpv_errors_og_res):
-                    ensemble_results_dict["ecpv_orig_im_res"]["L"+str(cidx)] = p_coord[0]
-                    # ensemble_results_dict["ecpv"]["uncertainty L"+str(cidx)+"_orig_im_res"] = all_coord_vars[cidx]
-                    ind_errors["ecpv_orig_im_res"][cidx].append(p_coord)
+                # for cidx, p_coord in enumerate(ecpv_errors_og_res):
+                #     ensemble_results_dict["ecpv_orig_im_res"]["L"+str(cidx)] = p_coord[0]
+                #     # ensemble_results_dict["ecpv"]["uncertainty L"+str(cidx)+"_orig_im_res"] = all_coord_vars[cidx]
+                #     ind_errors["ecpv_orig_im_res"][cidx].append(p_coord)
             
             ################## 3) E_MHA ###########################
 
@@ -911,7 +908,7 @@ class NetworkTrainer(ABC):
             # 3.2) Extract the coords from the averaged heatmaps
             pred_coords, max_values = get_coords(ensemble_map)
             #resize the coords to the original image resolution as well
-            pred_coords_original_resolution = np.round(((pred_coords.detach().cpu().numpy())) * individual_results[0]["resizing_factor"])[0]
+            # pred_coords_original_resolution = np.round(((pred_coords.detach().cpu().numpy())) * individual_results[0]["resizing_factor"])[0]
             
             pred_coords =  np.round(pred_coords).cpu().detach().numpy()[0]
             max_values = max_values.cpu().detach().numpy()[0]
@@ -919,8 +916,8 @@ class NetworkTrainer(ABC):
             ensemble_results_dict["emha"]["predicted_coords"] = pred_coords
             ensemble_results_dict["emha"]["uncertainty"] = max_values
 
-            ensemble_results_dict["emha_orig_im_res"]["predicted_coords"] = pred_coords_original_resolution
-            ensemble_results_dict["emha_orig_im_res"]["uncertainty"] = max_values
+            # ensemble_results_dict["emha_orig_im_res"]["predicted_coords"] = pred_coords_original_resolution
+            # ensemble_results_dict["emha_orig_im_res"]["uncertainty"] = max_values
 
 
 
@@ -930,9 +927,9 @@ class NetworkTrainer(ABC):
                 ensemble_results_dict["emha"]["uncertainty_L"+str(c_idx)] = ensemble_results_dict["emha"]["uncertainty"][c_idx][0]
             
             #Save original image resolution results for each landmark individually
-            for c_idx, pred_coord_t in enumerate(ensemble_results_dict["emha_orig_im_res"]["predicted_coords"]):
-                ensemble_results_dict["emha_orig_im_res"]["predicted_L"+str(c_idx)] = pred_coord_t
-                ensemble_results_dict["emha_orig_im_res"]["uncertainty_L"+str(c_idx)] = ensemble_results_dict["emha_orig_im_res"]["uncertainty"][c_idx][0]
+            # for c_idx, pred_coord_t in enumerate(ensemble_results_dict["emha_orig_im_res"]["predicted_coords"]):
+            #     ensemble_results_dict["emha_orig_im_res"]["predicted_L"+str(c_idx)] = pred_coord_t
+            #     ensemble_results_dict["emha_orig_im_res"]["uncertainty_L"+str(c_idx)] = ensemble_results_dict["emha_orig_im_res"]["uncertainty"][c_idx][0]
 
             if calc_error:
                 #Error for inference resolution
@@ -947,15 +944,15 @@ class NetworkTrainer(ABC):
                     ind_errors["emha"][cidx].append(p_coord)
 
 
-                #Error for original image resolution
-                emha_errors_og_res = np.linalg.norm(ensemble_results_dict["emha_orig_im_res"]["predicted_coords"] - target_coords_original_resolution, axis=1)
-                ensemble_results_dict["emha_orig_im_res"]["ind_errors"] = emha_errors_og_res
-                ensemble_results_dict["emha_orig_im_res"]["Error All Mean"] = np.mean(emha_errors_og_res)
-                ensemble_results_dict["emha_orig_im_res"]["Error All Std"] = np.std(emha_errors_og_res)
+                # #Error for original image resolution
+                # emha_errors_og_res = np.linalg.norm(ensemble_results_dict["emha_orig_im_res"]["predicted_coords"] - target_coords_original_resolution, axis=1)
+                # ensemble_results_dict["emha_orig_im_res"]["ind_errors"] = emha_errors_og_res
+                # ensemble_results_dict["emha_orig_im_res"]["Error All Mean"] = np.mean(emha_errors_og_res)
+                # ensemble_results_dict["emha_orig_im_res"]["Error All Std"] = np.std(emha_errors_og_res)
 
-                for cidx, p_coord in enumerate(emha_errors_og_res):
-                    ensemble_results_dict["emha_orig_im_res"]["L"+str(cidx)] = p_coord[0]
-                    ind_errors["emha_orig_im_res"][cidx].append(p_coord)
+                # for cidx, p_coord in enumerate(emha_errors_og_res):
+                #     ensemble_results_dict["emha_orig_im_res"]["L"+str(cidx)] = p_coord[0]
+                #     ind_errors["emha_orig_im_res"][cidx].append(p_coord)
 
             for k_ in list(all_ensemble_results_dicts.keys()):
                 all_ensemble_results_dicts[k_].append(ensemble_results_dict[k_])

@@ -84,7 +84,7 @@ def get_coords(images):
         return type: torch.LongTensor
     '''
     # print("score map shape:", images.shape)  #  torch.Size([1, 3, 64, 64])
-    assert images.dim() == 4, 'Score maps should be 4-dim'
+    assert images.dim() == 4, 'Score maps should be 4-dim not shape %s' % images.shape
     # print("score map shape:", images.shape)  #  torch.Size([1, 3, 64, 64])
     maxval, idx = torch.max(images.view(images.size(0), images.size(1), -1), 2)
     # print("maxval & idx is: ", maxval, idx) #  tensor([[0.0394, 0.0333, 0.0242]]) tensor([[2207, 1695, 2071]])

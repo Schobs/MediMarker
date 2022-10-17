@@ -38,7 +38,7 @@ class DictLogger():
     def evaluation_log_template(self):
         return {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
             "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
-            "sample_info_log_keys": self.standard_info_keys}
+            "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['hm_max', 'coords_og_size']}
 
 
 
@@ -50,7 +50,7 @@ class DictLogger():
         # print("standard_info_keys", standard_info_keys)
         return {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)], 
         "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
-        "sample_info_log_keys": self.standard_info_keys}
+        "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['final_heatmaps', 'hm_max', 'coords_og_size']}
 
 
     def get_epoch_logger(self):
@@ -85,6 +85,12 @@ class DictLogger():
             # if "lr" in vars_to_log:
             #     log_dict["lr"].append(extra_info["lr"])
             #2) If log_coords, get coords from output. Then, check for the keys for what to log.
+
+            #Only log info we requested in the evaluation/ensemble templates
+            # print("before extra info filter", extra_info.keys())
+            extra_info = {k: extra_info[k] for k in log_dict['individual_results_extra_keys'] if k in extra_info}
+            # print("after extra info filter", extra_info.keys())
+
             if log_coords:
                 
 

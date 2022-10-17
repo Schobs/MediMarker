@@ -192,25 +192,43 @@ class UnetTrainer(NetworkTrainer):
         # print("input_size_coords", input_size_coords[0].shape, input_size_coords[1].shape)
         # extra_info["coords_og_size"] = [[input_size_coords[0][idx], input_size_coords[1][idx]] for idx in range(len(input_size_coords[0]))]
         extra_info["coords_og_size"] = input_size_coords
+        # print("self resize first: ", self.resize_first)
         if self.resize_first:
-       
-
-            hms_list = []
             if all_ims_same_size:
+                # print("all ims same size", original_image_size)
                 final_heatmap = Resize([original_image_size[0][0][0], original_image_size[0][1][0]], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+                pred_coords, max_values = get_coords(final_heatmap)
+                # print("al ims same size final_heatmap ", final_heatmap.shape)
             else:
+                # print("not all same size: ", original_image_size)
+                pred_coords = []
+                max_values = []
+                resized_heatmaps = []
                 for im_idx, im_size in enumerate(original_image_size):
                     # print("this needs to be tested: model_trainer_unet.py  get_coords_from_heatmap when images are different sizes!")
-                    # print("im idx, im_size, final_heatmap shape ", im_idx, im_size, final_heatmap[im_idx].shape)
-                    hms_list.append(Resize([im_size[0][0], im_size[1][0]], interpolation=  InterpolationMode.BICUBIC)(final_heatmap[im_idx]))
+                    resized_hm = Resize([im_size[0][0], im_size[1][0]], interpolation=  InterpolationMode.BICUBIC)(final_heatmap[im_idx])
+                    # print("im idx, im_size, resized_hm shape ", im_idx, im_size, resized_hm.shape, torch.unsqueeze(resized_hm, 0).shape)
+                    pc, mv = get_coords(torch.unsqueeze(resized_hm, 0))
+                    # print("pc mv shapes ", pc.shape, mv.shape)
+                    pred_coords.append(torch.squeeze(pc,0))
+                    max_values.append(torch.squeeze(mv,0))
+                    resized_heatmaps.append(resized_hm)
+                pred_coords = torch.stack(pred_coords)
+                max_values = torch.stack(max_values)
+                final_heatmap = resized_heatmaps
                     # print("shape : ", hms_list[-1].shape)
-                final_heatmap = torch.stack(hms_list)
-         
-        pred_coords, max_values = get_coords(final_heatmap)
+                # final_heatmap = torch.nested_tensor(hms_list)
+            # print("pred_coords , max_values shape", pred_coords.shape, max_values.shape)
         if self.fit_gauss_inference:
             pred_coords, max_values, fitted_dicts = get_coords_fit_gauss(final_heatmap, pred_coords, visualize=False)
+        
+        # print("max values before %s and after %s" % (input_max_values, max_values))
+
         # else:
-        extra_info["hm_max"] = (max_values)
+        #USED TO USE THE MAX_VALUES, NOW USE INPUT SIZE. SEE OBSIDIAN [[# Landmark nnU-Net]] SHEET FOR MORE INFO.
+        # extra_info["hm_max"] = (max_values)
+
+        extra_info["hm_max"] = (input_max_values)
         extra_info["final_heatmaps"] = final_heatmap
 
         # del final_heatmap
