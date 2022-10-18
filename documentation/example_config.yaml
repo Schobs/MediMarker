@@ -1,0 +1,18 @@
+
+OUTPUT_DIR: "/path_to_output_folder/results"
+
+SOLVER:
+  DATA_LOADER_BATCH_SIZE: 32
+
+DATASET:
+  ROOT: '/path_to_image_root/root_image_folder'
+  SRC_TARGETS: '/path_to_annotation_root/root_annotation_folder/'
+  LANDMARKS : [0,1,2,3,]
+ 
+TRAINER:
+  CACHE_DATA: False
+  FOLD: -1 #no cv
+
+SAMPLER:
+  INPUT_SIZE : [512,512]
+

@@ -1,0 +1,79 @@
+
+{
+    "//comment1": "Minimum json file includes the name of the dataset, a description and a fold number and lists for splits.", 
+    "//comment2": "Training, validation and (optionally) testing should be a list of dicts, each dict is a sample.", 
+    "//comment3": "At minimum each sample shold have a unique id, coordinates of landmarks, path to image and has_annotation bool.", 
+    "//comment4": "More information can be included in each sample, like in the validation list.", 
+    "//comment5": "If the testing data has no coordinates labelled set coordinates to null and has_annotation to false.", 
+    "//comment6": "See README for more information.", 
+
+    "name": "ASPIRE BASELINE + FOLLOWUP",
+    "description": "Cardiac MRI 4ch View Images.",
+    "fold": 0,
+    "training": [
+        {
+            "id": "PHD_430",
+            "coordinates": [
+                [
+                    320.0,
+                    316.0
+                ],
+                [
+                    228.0,
+                    339.0
+                ],
+                [
+                    259.0,
+                    220.0
+                ],
+                [
+                    138.0,
+                    347.0
+                ]
+            ],
+            "image": "PAH-Baseline/Proc/4ch/PHD_430/phase_1.npz",
+            "has_annotation": true
+
+        }
+    ],
+    "validation": [
+        {
+            "patient_id": "P-G88QC",
+            "id": "PHD_430",
+            "coordinates": [
+                [
+                    320.0,
+                    316.0
+                ],
+                [
+                    228.0,
+                    339.0
+                ],
+                [
+                    259.0,
+                    220.0
+                ],
+                [
+                    138.0,
+                    347.0
+                ]
+            ],
+            "image": "PAH-Baseline/Proc/4ch/PHD_430/phase_1.npz",
+            "suid": "1.2.840.113619.2.312.2807.4259692.12440.1659507727.690",
+            "has_annotation": true
+
+        }
+        
+    ],
+    "testing": [
+        {
+            "patient_id": "P-G88QC",
+            "id": "1.2.840.113619.2.312.2807.4259692.12440.1659507727.690",
+            "image": "PAH-Large/4ch 3/155276/7/DICOM/MR000000.dcm",
+            "modality": "4ch",
+            "has_annotation": false,
+            "coordinates": null,
+            "suid": "1.2.840.113619.2.312.2807.4259692.12440.1659507727.690"
+        }
+    ]
+}

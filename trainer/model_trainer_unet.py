@@ -48,7 +48,6 @@ class UnetTrainer(NetworkTrainer):
         self.min_feature_res = self.trainer_config.MODEL.UNET.MIN_FEATURE_RESOLUTION
         self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
         self.input_size = self.trainer_config.SAMPLER.INPUT_SIZE
-        # self.orginal_im_size = self.trainer_config.DATASET.ORIGINAL_IMAGE_SIZE
 
 
         #get arch config parameters
