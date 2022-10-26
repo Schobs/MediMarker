@@ -16,7 +16,7 @@ import time
 import torch.nn.functional as F
 import cv2
 from PIL import Image
-
+ 
 class LabelGenerator(ABC):
     """ Super class that defines some methods for generating landmark labels.
     """
@@ -32,7 +32,7 @@ class LabelGenerator(ABC):
             The hms are scaled by float hm_lambda_scale
 
         Args:
-            landmarks [int, int]: list of landmarks to gen heatmaps for
+            landmarks [[int, int]]: list of landmarks to gen heatmaps for
             input_size [int, int]: size of first heatmap
             hm_sigmas [float]: gaussian sigmas of heatmaps, 1 for each landmark
             num_res_supervisions int: number of heatmaps to generate, each half resolution of previous.
@@ -40,7 +40,7 @@ class LabelGenerator(ABC):
 
         """
     @abstractmethod
-    def debug_sample(self, sample_dict, landmarks, image):
+    def debug_sample(self, sample_dict, image, coordinates):
         """ Visually debug a sample. Provide logging and visualisation of the sample.
 
         Args:
@@ -245,7 +245,7 @@ class PHDNetLabelGenerator(LabelGenerator):
     
 
     def generate_labels(self, landmarks, xy_patch_corner, landmarks_in_indicator, image_size, sigmas, num_res_levels, lambda_scale=100, dtype=np.float32, to_tensor=True):
-
+ 
 
         return_dict = {"patch_heatmap": [], "patch_displacements": [], "displacement_weights":[]}
         for idx, lm in enumerate(landmarks):

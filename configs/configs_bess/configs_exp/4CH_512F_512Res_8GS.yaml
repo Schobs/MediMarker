@@ -1,6 +1,7 @@
 
-OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/4CH_512F_512Res_8GS"
-# OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_512F_512Res_8GS"
+OUTPUT: 
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/4CH_512F_512Res_8GS"
+ 
 
 SOLVER:
   DEEP_SUPERVISION: False

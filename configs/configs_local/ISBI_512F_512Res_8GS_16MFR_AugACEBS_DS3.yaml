@@ -1,6 +1,7 @@
 
-OUTPUT_DIR: "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/ISBI_512F_512Res_8GS_16MFR_AugACEBS_DS3"
-# OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
+OUTPUT: 
+  OUTPUT_DIR: "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/ISBI_512F_512Res_8GS_16MFR_AugACEBS_DS3"
+ 
 
 SOLVER:
   DEEP_SUPERVISION: True

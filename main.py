@@ -11,8 +11,8 @@ from pytorch_lightning.utilities.seed import seed_everything
 from torch.utils.tensorboard import SummaryWriter
 
 from config import get_cfg_defaults
-from trainer.model_trainer_unet import UnetTrainer
-from trainer.model_trainer_phdnet import PHDNetTrainer
+# from trainer.model_trainer_unet import UnetTrainer
+# from trainer.model_trainer_phdnet import PHDNetTrainer
 
 from visualisation import visualize_predicted_heatmaps
 from pandas import ExcelWriter
@@ -23,6 +23,7 @@ from utils.comet_logging.logging_utils import save_comet_html
 
 
 from datasets.dataset_index import DATASET_INDEX
+from trainer.model_trainer_index import MODEL_TRAINER_INDEX
 
 
 def main():
@@ -42,25 +43,25 @@ def main():
 
     #Set up cometml writer
     writer = Experiment(
-        api_key="B5Nk91E6iCmWvBznXXq3Ijhhp",
+        api_key=cfg.OUTPUT.API_KEY,
         project_name=cfg.OUTPUT.COMET_PROJECT_NAME,
-        workspace="schobs",
+        workspace=cfg.OUTPUT.WORKSPACE,
         )
 
 
     fold = str(cfg.TRAINER.FOLD)
 
-    os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)  
+    os.makedirs(cfg.OUTPUT.OUTPUT_DIR, exist_ok=True)  
     time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    
-    exp_name = cfg.OUTPUT_DIR.split('/')[-1] +"_Fold"+fold+"_" + str(time)
+     
+    exp_name = cfg.OUTPUT.OUTPUT_DIR.split('/')[-1] +"_Fold"+fold+"_" + str(time)
     writer.set_name(exp_name)
     writer.add_tag("fold" + str(cfg.TRAINER.FOLD))
 
     for tag_ in cfg.OUTPUT.COMET_TAGS:
         writer.add_tag(str(tag_))
 
-    with open(os.path.join(cfg.OUTPUT_DIR, 'comet_'+exp_name+'.txt'), 'w') as f:
+    with open(os.path.join(cfg.OUTPUT.OUTPUT_DIR, 'comet_'+exp_name+'.txt'), 'w') as f:
         f.write('link to exp: ' + writer.url)
 
     #clear cuda cache
@@ -80,13 +81,15 @@ def main():
     #get dataset class based on dataset, it defaults to datasets.dataset_generic
 
     dataset_class=  DATASET_INDEX[cfg.DATASET.DATASET_CLASS]
-    #Get model trainer (u-net or phdnet)
-    if cfg.MODEL.ARCHITECTURE == "U-Net":
-        trainer = UnetTrainer
-    elif cfg.MODEL.ARCHITECTURE == "PHD-Net":
-        trainer = PHDNetTrainer
-    else:
-        raise ValueError("trainer not recognised.")
+
+    trainer = MODEL_TRAINER_INDEX[cfg.MODEL.ARCHITECTURE]
+    # #Get model trainer (u-net or phdnet)
+    # if cfg.MODEL.ARCHITECTURE == "U-Net":
+    #     trainer = UnetTrainer
+    # elif cfg.MODEL.ARCHITECTURE == "PHD-Net":
+    #     trainer = PHDNetTrainer
+    # else:
+    #     raise ValueError("trainer not recognised.")
 
     #Trainer 
 
@@ -94,7 +97,7 @@ def main():
     if not cfg.TRAINER.INFERENCE_ONLY:
         writer.add_tag("training")
 
-        trainer = trainer(trainer_config= cfg, is_train=True, dataset_class=dataset_class, output_folder=cfg.OUTPUT_DIR, comet_logger=writer)
+        trainer = trainer(trainer_config= cfg, is_train=True, dataset_class=dataset_class, output_folder=cfg.OUTPUT.OUTPUT_DIR, comet_logger=writer)
         trainer.initialize(training_bool=True)
         trainer.train()
 
@@ -102,7 +105,7 @@ def main():
 
     else:
         writer.add_tag("inference only")
-        trainer = trainer(trainer_config= cfg, is_train=False, dataset_class=dataset_class, output_folder=cfg.OUTPUT_DIR, comet_logger=writer)
+        trainer = trainer(trainer_config= cfg, is_train=False, dataset_class=dataset_class, output_folder=cfg.OUTPUT.OUTPUT_DIR, comet_logger=writer)
         trainer.initialize(training_bool=False)
 
     ########### Testing ##############
@@ -132,13 +135,13 @@ def main():
         else:
             output_append = ""
 
-        print("saving summary of results locally to: ", os.path.join(cfg.OUTPUT_DIR, "summary_results_fold"+fold +".xlsx"))
-        with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "ensemble_summary_results_fold"+fold+output_append +".xlsx")) as writer_:
+        print("saving summary of results locally to: ", os.path.join(cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold"+fold +".xlsx"))
+        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "ensemble_summary_results_fold"+fold+output_append +".xlsx")) as writer_:
             for n, df in (all_summary_results).items():
                 df.to_excel(writer_, n)
 
-        print("saving individual sample results locally to: ", os.path.join(cfg.OUTPUT_DIR, "ensemble_individual_results_fold"+fold +".xlsx"))
-        with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "ensemble_individual_results_fold"+fold +output_append+".xlsx")) as writer_:
+        print("saving individual sample results locally to: ", os.path.join(cfg.OUTPUT.OUTPUT_DIR, "ensemble_individual_results_fold"+fold +".xlsx"))
+        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "ensemble_individual_results_fold"+fold +output_append+".xlsx")) as writer_:
             for n, df in (ind_results).items():
                 df.to_excel(writer_, n)
         writer.add_tag("completed ensemble_inference")
@@ -159,18 +162,18 @@ def main():
             all_model_individuals[model_name] = ind_results
 
         else:
-            print("Loading all models in cfg.OUTPUT_DIR: ", cfg.OUTPUT_DIR)
+            print("Loading all models in cfg.OUTPUT.OUTPUT_DIR: ", cfg.OUTPUT.OUTPUT_DIR)
             #Load Models that were saved.
             model_paths = []
             model_names = []
             models_to_test =   ["model_best_valid_loss", "model_best_valid_coord_error", "model_latest"]
 
-            for fname in os.listdir(cfg.OUTPUT_DIR):
+            for fname in os.listdir(cfg.OUTPUT.OUTPUT_DIR):
                 if ("fold"+fold in fname and ".model" in fname) and any(substring in fname for substring in models_to_test):
                     model_names.append(fname.split(".model")[0])
 
             for name in model_names:
-                model_paths.append(os.path.join(cfg.OUTPUT_DIR, (name+ ".model")))
+                model_paths.append(os.path.join(cfg.OUTPUT.OUTPUT_DIR, (name+ ".model")))
 
 
 
@@ -200,13 +203,13 @@ def main():
         else:
             output_append = ""
 
-        print("saving summary of results locally to: ", os.path.join(cfg.OUTPUT_DIR, "summary_results_fold"+fold +".xlsx"))
-        with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "summary_results_fold"+fold+output_append +".xlsx")) as writer_:
+        print("saving summary of results locally to: ", os.path.join(cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold"+fold +".xlsx"))
+        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold"+fold+output_append +".xlsx")) as writer_:
             for n, df in (all_model_summaries).items():
                 df.to_excel(writer_, n)
 
-        print("saving individual sample results locally to: ", os.path.join(cfg.OUTPUT_DIR, "individual_results_fold"+fold +".xlsx"))
-        with ExcelWriter(os.path.join(cfg.OUTPUT_DIR, "individual_results_fold"+fold +output_append+".xlsx")) as writer_:
+        print("saving individual sample results locally to: ", os.path.join(cfg.OUTPUT.OUTPUT_DIR, "individual_results_fold"+fold +".xlsx"))
+        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "individual_results_fold"+fold +output_append+".xlsx")) as writer_:
             for n, df in (all_model_individuals).items():
                 df.to_excel(writer_, n)
 

@@ -1,6 +1,7 @@
 
-# OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/ensemble/outputs/base_case_256_big_gauss"
-OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/256F_12gauss"
+ 
+OUTPUT: 
+  OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/256F_12gauss"
 
 SOLVER:
   DEEP_SUPERVISION: False

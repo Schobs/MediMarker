@@ -1,7 +1,8 @@
 
-# OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_3GS_4MFR_AugAC_DS5"
-OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/ISBI_jun_8GS_AugAC_gneg_075TS"
-# OUTPUT_DIR: "/home/schobs/Documents/PhD/landmark_ensemble/outputs/4CH_256F_256Res_8GS_AugV1"
+ 
+OUTPUT: 
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/ISBI_jun_8GS_AugAC_gneg_075TS"
+ 
 
 SOLVER:
   DEEP_SUPERVISION: True

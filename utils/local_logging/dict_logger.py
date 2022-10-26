@@ -22,7 +22,7 @@ class DictLogger():
         self.standard_info_keys = self.standard_info_keys + self.add_sample_att_keys
 
     def per_epoch_log_template(self):
-        logged_per_epoch =  {"valid_coord_error_mean": [], "epoch_time": [], "lr": []}
+        logged_per_epoch =  {"valid_coord_error_mean": [], "epoch_time": [], "lr": [], "individual_results_extra_keys": []}
         if self.is_regressing_sigma:
             logged_per_epoch["sigmas_mean"] =  []
             for sig in range(self.num_landmarks):

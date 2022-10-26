@@ -1,5 +1,5 @@
-
-OUTPUT_DIR: "/path_to_output_folder/results"
+OUTPUT:
+  OUTPUT_DIR: "/path_to_output_folder/results"
 
 SOLVER:
   DATA_LOADER_BATCH_SIZE: 32
