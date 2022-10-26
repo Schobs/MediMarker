@@ -130,6 +130,9 @@ _C.OUTPUT.VERBOSE = True
 # _C.OUTPUT.FAST_DEV_RUN = False  # True for debug
 _C.OUTPUT.OUTPUT_DIR = "/output/"
 # _C.OUTPUT.TB_DIR = "./lightning_logs"
+
+# _C.OUTPUT.USE_COMET = True 
+
 _C.OUTPUT.API_KEY = "B5Nk91E6iCmWvBznXXq3Ijhhp"
 _C.OUTPUT.WORKSPACE = "schobs"
 

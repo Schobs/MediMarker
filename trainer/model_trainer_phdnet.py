@@ -2,7 +2,7 @@
 from torch import nn
 import os
 from utils.setup.initialization import InitWeights_KaimingUniform
-from losses import MultiBranchPatchLoss
+from losses.losses import MultiBranchPatchLoss
 from models.PHD_Net import PHDNet
 import torch
 import numpy as np

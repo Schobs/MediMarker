@@ -16,7 +16,7 @@ I provide easy instructions with examples on exactly what you need to do. You ca
 
 
 For advanced users, we provide the following features:
-- Support for new arhcitectures by extending a few classes.
+- Support for new architectures by extending a few classes.
 - Data augmentation strength.
 - Regress Sigma for Gaussian loss (Beta).
 - Patch-based sampling (Beta).
@@ -90,7 +90,7 @@ Currently, we support dicom, npz and png image formats. However, all images in o
         ↳ ...
 
 
-Essentially, the exact directory format does not matter, as long as all images have a common root folder (root_image_folder). However, for simplicity I recommend keeping the directories conisistent since it will make the JSON generation easier. In the JSON file, you need to specify the route from the root_image_folder to each sample's image.
+Essentially, the exact directory format does not matter, as long as all images have a common root folder (root_image_folder). However, for simplicity I recommend keeping the directories consistent since it will make the JSON generation easier. In the JSON file, you need to specify the route from the root_image_folder to each sample's image.
 
 
 
@@ -110,7 +110,7 @@ The *minimum* JSON file should include the name of the dataset, a short descript
 
 
 
-Here is an example of a dataset JSON file. The *training* list shows the minumum information needed per sample: a unique id, a 2D list of coordinates (landmarks), and the path to the image. The *validation* and *testing* lists should follow the same format. The image path ("image") should connect the root_image_folder from above in subsection *1) Expected Directory Format* to the sample's image. If you want to add more attributes to each sample see [[Advanced JSON format]].
+Here is an example of a dataset JSON file. The *training* list shows the minimum information needed per sample: a unique id, a 2D list of coordinates (landmarks), and the path to the image. The *validation* and *testing* lists should follow the same format. The image path ("image") should connect the root_image_folder from above in subsection *1) Expected Directory Format* to the sample's image. If you want to add more attributes to each sample see [[Advanced JSON format]].
 
 
     
@@ -209,7 +209,7 @@ Now your dataset is in the correct directory structure and you have the JSON ann
 - OUTPUT.OUTPUT_DIR: The path to the folder where the model checkpoints and results will be saved. 
 - DATASET_ROOT.ROOT: The path to the root_image_folder from above in subsection *1) Expected Directory Format*.
 - DATASET.SRC_TARGETS: The path to the root_annotation_folder from above in subsection *2) Create a JSON file*. If you are not using CV, specify the exact JSON file like in the example above. If you are using CV, just specify the root_annotation_folder and the TRAINER.FOLD information will be used to select the correct JSON file.
-- DATASET.LANDMARKS: The indicies of the landmarks in the JSON file. For example, if the JSON file has 4 landmarks, and you want to use the first 3, then the list should be [0,1,2].
+- DATASET.LANDMARKS: The indices of the landmarks in the JSON file. For example, if the JSON file has 4 landmarks, and you want to use the first 3, then the list should be [0,1,2].
 - TRAINER.FOLD: The fold number to use for training. This number will match the number in fold0.json, fold1.json etc. **If you are using cross-validation, set this to -1**.
 - TRAINER.CACHE_DATA: If you are using a small dataset, it is recommended to set this to True. This will cache the dataset in memory, which will speed up training. However, if you are using a large dataset, you may run out of memory. *Try as True first.*
 - TRAINER.INFERENCE_ONLY: If you want to train first, set this to False. If you have already trained a model and want to run inference on a new dataset, set this to True.
@@ -256,9 +256,9 @@ If you want to perform inference on a specific model checkpoint, also add the fo
 
 *If you omit MODEL.CHECKPOINT or set MODEL.CHECKPOINT=None, LannU-Net will perform inference over all model checkpoints in the OUTPUT.OUTPUT_DIR directory.*
 
-If you did include a *testing* list in your JSON, and simply want to re-run the inference, you can soley perform inference by leaving the yaml file the same and just changing TRAINER.INFERENCE_ONLY = True. You can also pick and choose which model checkpoint to perform inference on too. 
+If you did include a *testing* list in your JSON, and simply want to re-run the inference, you can solely perform inference by leaving the yaml file the same and just changing TRAINER.INFERENCE_ONLY = True. You can also pick and choose which model checkpoint to perform inference on too. 
 
-Note, here you are *editing* the yaml config file from training, not creating one with only these fields. Alternatively, you can copy the training yaml and have two seperate yaml files: one for training, one for testing. Just remember to add the correct one to the command line as the cfg parameter when running the programme.
+Note, here you are *editing* the yaml config file from training, not creating one with only these fields. Alternatively, you can copy the training yaml and have two separate yaml files: one for training, one for testing. Just remember to add the correct one to the command line as the cfg parameter when running the programme.
 
 Now, Run the same command as above.
 
@@ -267,7 +267,7 @@ Now, Run the same command as above.
 # Implemented Models (U-Net & PHD-Net)
 
 ## U-Net
-U-Net follows the encoder-decoder architecure, originally proposed by Ronneberger et al , [here](https://arxiv.org/abs/1505.04597).    
+U-Net follows the encoder-decoder architecture, originally proposed by Ronneberger et al , [here](https://arxiv.org/abs/1505.04597).    
 
 It learns an image-to-image translation between the input image and a heatmap centered on the landmark of interest.
 
@@ -321,6 +321,8 @@ First, when you generate your JSON file, simply add an additional key in each sa
 
 Then, extend [dataset_base.py](./datasets/dataset_base.py) and define a list called additional_sample_attribute_keys with the keys you want to save in the output csv files. Pass these through to super.\__init__ function.See [dataset_aspire.py](./datasets/dataset_aspire.py)  of an example of how to do this. In that example we wanted to save the suid of the CMRI along with the patient ID in the output csv file so the doctor's could match the patient and scan to their database.
 
+Make sure you set the DATASET.DATASET_CLASS to the name of your new dataset class in the yaml file and add the key to [dataset_index.py](./datasets/dataset_index.py).
+
 ![dataset path](./documentation/images/datasets_path.png)
 
 
@@ -337,7 +339,7 @@ Parameters concerning dataset details and dataset paths.
     
      *Default:* "generic" - This should be good for the average user.
 
-- **ROOT** (str): The path to the root image folder. Organised as described [here](#expected-directory-format).
+- **ROOT** (str): The path to the root image folder. Organized as described [here](#expected-directory-format).
     
      *Default:* '''
 
@@ -353,11 +355,11 @@ Parameters concerning dataset details and dataset paths.
     
      *Default:* 'CMRI'
 
-- **LANDMARKS** (str): The indicies of the landmarks in the JSON file. For example, if the JSON file has 4 landmarks, and you want to use the first 3, then the list should be [0,1,2].
+- **LANDMARKS** (str): The indices of the landmarks in the JSON file. For example, if the JSON file has 4 landmarks, and you want to use the first 3, then the list should be [0,1,2].
     
      *Default:* [ ]
 
-- **LANDMARKS** ([int]): The indicies of the landmarks in the JSON file. For example, if the JSON file has 4 landmarks, and you want to use the first 3, then the list should be [0,1,2].
+- **LANDMARKS** ([int]): The indices of the landmarks in the JSON file. For example, if the JSON file has 4 landmarks, and you want to use the first 3, then the list should be [0,1,2].
     
      *Default:* [ ]
 
@@ -511,7 +513,7 @@ Configurations relating to model choice. Includes sub-configurations for each mo
 
      *Default:* "U-Net"
 
-- **GAUSS_SIGMA** (int): The sigma value for the Gaussian heatmap label. This is a fixed hyperparameter. If REGRESS_SIGMA is set to True, sigma will be initially set to this value but be optimised.
+- **GAUSS_SIGMA** (int): The sigma value for the Gaussian heatmap label. This is a fixed hyperparameter. If REGRESS_SIGMA is set to True, sigma will be initially set to this value but be optimized.
 
      *Default:* 4
 
@@ -526,7 +528,7 @@ Configurations relating to model choice. Includes sub-configurations for each mo
 
 #### MODEL.UNET
 Config parameters for the default U-Net model found [here](./models/UNet_Classic.py)
- - **MIN_FEATURE_RESOLUTION** (int): This relates to the automatic configuration of the U-Net architecture. The architecure will continuoually downsample the feature resolution and add a symmetrical layer until the feature resolution reaches a minimum resolution of ([int, int]). For example, if you set MIN_FEATURE_RESOLUTION = 4 and your SAMPLER.INPUT_SIZE = [512,512], the architecture will downsample the feature resolution until it reaches 4x4 i.e. 512 -> 256 -> 128 -> 64 -> 32 -> 16 -> 8 -> 4. Therefore, the archtecture will have 8 layers.
+ - **MIN_FEATURE_RESOLUTION** (int): This relates to the automatic configuration of the U-Net architecture. The architecture will continuously downsample the feature resolution and add a symmetrical layer until the feature resolution reaches a minimum resolution of ([int, int]). For example, if you set MIN_FEATURE_RESOLUTION = 4 and your SAMPLER.INPUT_SIZE = [512,512], the architecture will downsample the feature resolution until it reaches 4x4 i.e. 512 -> 256 -> 128 -> 64 -> 32 -> 16 -> 8 -> 4. Therefore, the architecture will have 8 layers.
 
 
      *Default:* 4
@@ -570,7 +572,7 @@ Parameters relating to inference time.
 
 - **ENSEMBLE_INFERENCE** (bool):
 
-    *False*: Performs inference using a single model. If MODEL.CHECKPOINT **is not** None it will use that model checkpoint for inference. If  MODEL.CHECKPOINT is None it will perform inference over all model checkpoints in OUTPUT.OUTPUT_DIR and save results seperately.
+    *False*: Performs inference using a single model. If MODEL.CHECKPOINT **is not** None it will use that model checkpoint for inference. If  MODEL.CHECKPOINT is None it will perform inference over all model checkpoints in OUTPUT.OUTPUT_DIR and save results separately.
 
     *True*: Performs inference using an ensemble of models, whose paths are defined in INFERENCE.ENSEMBLE_CHECKPOINTS. More details of this process are found under Section [Ensembling and Uncertainty](#ensembling-and-uncertainty).
 
@@ -627,7 +629,7 @@ LannU-Net follows the strategy in [Uncertainty Estimation for Heatmap-based Land
 **If not ensembling, only the S-MHA is saved.**
 
 ## Adding Your Own Model Architecture and Task
-To add your own model architecture, you need to add the Model, The Model Trainer, and the Label Generator. LannU-Net uses super classes with a series of functions you must implement for each of these classes. You can look at model_trainer_unet (U-Net) and model_trainer_phdnet (PHD-Net) as examples on how to implement them yourself. U-Net is the standard method, and PHD-Net is extremely different, so there is a lot of flexability here. If doing normal heatmap regression but using a new architecture, you will likely be able to copy a lot of the U-Net related functions in the Model Trainer class and the Lavel Generator class and just create a new Model Class.
+To add your own model architecture, you need to add the Model, The Model Trainer, and the Label Generator. LannU-Net uses super classes with a series of functions you must implement for each of these classes. You can look at model_trainer_unet (U-Net) and model_trainer_phdnet (PHD-Net) as examples on how to implement them yourself. U-Net is the standard method, and PHD-Net is extremely different, so there is a lot of flexibility here. If doing normal heatmap regression but using a new architecture, you will likely be able to copy a lot of the U-Net related functions in the Model Trainer class and the Lavel Generator class and just create a new Model Class.
 
 ### The Model Class
 Here, you define the architecture and forward pass of your model. Save your model under /LaNNU-Net/models. There are no LannU-Net superclasses to extend here since this is a simple one. 
@@ -649,12 +651,12 @@ When creating your own model trainer, there are 7 functions you must override: \
 If you are using classical heatmap regression (like U-Net) and just changing the model, you can most likely copy all the implementations from trainer/model_trainer_unet.py.
 
 
-- \__init__: Here you can overide any parameters in the \__init__ function in model_trainer_base.py e.g. early_stop_patience. You can also define any hyperparameters model you are using (or load them from your custom config file). Here, define your loss function too. Importantly, load in your training and evaluation Label Generators as self.train_label_generator and self.eval_label_generator, respectively. See the next section for the details. **Naming convention matters, match the variable names you are overriding from model_trainer_base.py exactly otherwise LannU-Net will not find them!**
+- \__init__: Here you can override any parameters in the \__init__ function in model_trainer_base.py e.g. early_stop_patience. You can also define any hyperparameters model you are using (or load them from your custom config file). Here, define your loss function too. Importantly, load in your training and evaluation Label Generators as self.train_label_generator and self.eval_label_generator, respectively. See the next section for the details. **Naming convention matters, match the variable names you are overriding from model_trainer_base.py exactly otherwise LannU-Net will not find them!**
 
 - initialise_network(): Load in your initialized network here called *self.network*. You can reference variables you defined in \__init__. Send it to the device you are using.
 
 
-- initialize_optimizer_and_scheduler(): Define your list of learnable paramters and initialise your self.optimizer useing them.
+- initialize_optimizer_and_scheduler(): Define your list of learnable parameters and initialize your self.optimizer using them.
 
 
 - initialize_loss_function(): Initialise your deep supervision weights (if using!) and your loss function: self.loss.
@@ -774,7 +776,7 @@ You can also use it to check your GPU utilization and memory usage throughtout t
 
 ## Inference: Fitting a Gaussian to the Predicted Heatmap
 
-At inference we can fit a Gaussian using a robust least squares method onto the predicted heatmap. Then, the landmark is extraced. In the config change INFERENCE.FIT_GAUSS = True. *This is very slow*
+At inference we can fit a Gaussian using a robust least squares method onto the predicted heatmap. Then, the landmark is extracted. In the config change INFERENCE.FIT_GAUSS = True. *This is very slow*
 
 ## Debugging
 There are various debugging methods built into the code. Change the config files to enable them:
