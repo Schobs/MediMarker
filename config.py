@@ -23,7 +23,7 @@ _C.DATASET.NAME = "ASPIRE"
 _C.DATASET.SRC_TARGETS = '/shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV'
 _C.DATASET.IMAGE_MODALITY= 'CMRI'
 _C.DATASET.LANDMARKS = []
-_C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512]
+_C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512] #legacy, can ignore.
 _C.DATASET.TRAINSET_SIZE = -1 # -1 for full trainset size or int <= len(training_set)
 
 # _C.DATASET.DEBUG = False

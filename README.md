@@ -8,7 +8,7 @@ The pipeline is simple, and based on the [U-Net architecture](https://link.sprin
 
 As a researcher/developer, you can extend this framework to add your own models, loss functions, training schemes etc. by extending a few classes. The advantage of this is that there is a *lot* of code you don't have to write that is specific to landmark localization and you can concentrate on implementing the important stuff. 
 
-I provide easy instructions with examples on exactly what you need to do. You can use this framework to evaluate your own models over many datasets in a controlled environment.  So far, we have added PHD-Net, which is a completely different paradigm of landmark localization, but can be integrated seamlessly with this framework.
+I provide easy instructions with examples on exactly what you need to do. You can use this framework to evaluate your own models over many datasets in a controlled environment.  So far, beyond U-Net we have also added PHD-Net, which is a completely different paradigm of landmark localization, but can be integrated seamlessly with this framework.
 
 
 
@@ -17,22 +17,28 @@ I provide easy instructions with examples on exactly what you need to do. You ca
 
 For advanced users, we provide the following features:
 - Support for new architectures by extending a few classes.
+- Extensive, easy configuration using .yaml files.
 - Data augmentation strength.
-- Regress Sigma for Gaussian loss (Beta).
+- Regress Sigma for Gaussian Heatmap (Beta).
 - Patch-based sampling (Beta).
+- Ensembling.
+- Uncertainty Estimation.
+- Comet.ML logging
 
 
 # Table of Contents
 - [LaNNU-Net](#lannu-net)
 - [Table of Contents](#table-of-contents)
 - [Installation](#installation)
+- [Running an Example](#running-an-example)
+  - [Inference (Testing)](#inference-testing)
 - [Using Your Own Dataset](#using-your-own-dataset)
   - [1) Expected Directory Format](#1-expected-directory-format)
   - [2) Create a JSON file](#2-create-a-json-file)
   - [3) Create a .yaml config file](#3-create-a-yaml-config-file)
 - [Train your model!](#train-your-model)
   - [Training](#training)
-  - [Inference (Testing)](#inference-testing)
+  - [Inference (Testing)](#inference-testing-1)
 - [Implemented Models (U-Net \& PHD-Net)](#implemented-models-u-net--phd-net)
   - [U-Net](#u-net)
   - [PHD-Net](#phd-net)
@@ -67,8 +73,37 @@ For advanced users, we provide the following features:
   - [Debugging](#debugging)
 
 # Installation
+1) Clone the repo
+2) cd into the repo
+3) Create and activate conda environment
+```
+conda create --name my_env
+conda activate my_env
+```
+3) Install from the environments .yaml file
+```
+conda env update --name my_env --file environment.yml
+```
 
+That's it!
 
+# Running an Example
+If you have a config .yaml file and data accessible, you can run the following command to train a model:
+    
+    python main.py --cfg /configs/some_config.yaml
+
+For students at the University of Sheffield using the Bessemer on the HPC, you have to load conda and CUDA. I have written a script to do this and then run the command above. Run the following:
+```
+    cd scripts/scripts_bess
+    source run_train_config.sh --cfg ../../configs/some_config.yaml
+```
+## Inference (Testing) 
+If you included a *testing* list in your JSON, inference will be completed after training and the results will be saved in the OUTPUT.OUTPUT_DIR.
+
+ If you did not include a *testing* list, you can run inference on a separate json file by:
+1) Setting TRAINER.INFERENCE_ONLY= True. 
+2) Setting DATASET.SRC_TARGETS to the path of the new JSON file with the *testing* list.
+3) Setting TRAINER.FOLD to -1 (remember, if it is not -1 it will automatically try to find the fold0.json, fold1.json etc. files from the SRC_TARGETS folder). 
 # Using Your Own Dataset
 As a user, all you need to do is provide your data in the correct format, fill in a config file, and LannU-Net will take care of the rest. 
 
@@ -226,7 +261,11 @@ You are now ready to train your landmark localization model! From /LannU-Net/ ru
     
     python main.py --cfg /configs/my_dataset_config.yaml
 
-
+For students at the University of Sheffield using the Bessemer on the HPC, you have to load conda and CUDA. I have written a script to do this and then run the command above. Run the following:
+```
+    cd scripts/scripts_bess
+    source run_train_config.sh --cfg ../../configs/my_dataset_config.yaml
+```
 ## Inference (Testing) 
 If you included a *testing* list in your JSON, inference will be completed after training and the results will be saved in the OUTPUT.OUTPUT_DIR.
 
@@ -706,7 +745,7 @@ Here, extend LabelGenerator in /LaNNU-Net/transforms/generate_labels.py. We use 
 ## Changing the Loss Function
 To add a new loss function, simply add it to the [losses/](./losses) directory or directly to [losses.py](./losses/losses.py). 
 
-Then in you model_trainer class, load it in. This is the only place you should be using your loss function. Use a string identifier in your config file in SOLVER.LOSS_FUNCTION for this. See [model_trainer_unet](./trainer/model_trainer_unet.py) and model_trainer_phdnet](./trainer/model_trainer_phdnet.py) for examples.
+Then in you model_trainer class, load it in. This is the only place you should be using your loss function. Use a string identifier in your config file in SOLVER.LOSS_FUNCTION for this. See [model_trainer_unet](./trainer/model_trainer_unet.py) and [model_trainer_phdnet](./trainer/model_trainer_phdnet.py) for examples.
 
 ## Changing Training Schedule
 LannU-Net uses poly scheduler as default. This smoothly reduces the learning rate from the initial learning rate throughout training. 
@@ -719,7 +758,7 @@ Data augmentation will improve your results, but you have to be careful not to o
 By default, I have written several schemes of various intensity. They transform the image as well as the target landmarks to the new transformed image.
 
 You can see them all in detail in [get_imgaug_transforms.py](./transforms/dataloader_transforms.py).  To set which scheme to use, set SAMPLER.DATA_AUG to the corresponding string key.
-**I recommend strongly recommend starting with "AffineComplex" **.
+**I  strongly recommend starting with "AffineComplex"**.
 
 
 ## Full Image vs. Patch-based Training
