@@ -190,10 +190,11 @@ class NetworkTrainer(ABC):
 
 
     def _maybe_init_amp(self):
+        """Initialize automatic mixed precision training if enabled.
+        """
         if self.auto_mixed_precision and self.amp_grad_scaler is None:
             self.amp_grad_scaler = GradScaler()
             msg = "initialized auto mixed precision."
-            # print()
         else:
             msg = "Not initialized auto mixed precision."
 
@@ -262,18 +263,28 @@ class NetworkTrainer(ABC):
 
 
 
-    # @abstractmethod
-    # def predict_heatmaps_and_coordinates(self, data_dict):
-    #     """ For inference. Predict heatmap and coordinates directly from a data_dict.
-
-    #     Args:
-    #         data_dict (_type_): _description_
-    #         return_all_layers (bool, optional): _description_. Defaults to False.
-    #         resize_to_og (bool, optional): _description_. Defaults to False.
-    #     """
 
 
     def run_iteration(self, generator, dataloader, backprop, split, log_coords, logged_vars=None, debug=False, direct_data_dict=None):
+        """ Runs a single iteration of a forward pass. It can perform back-propagation (training) or not (validation, testing), indicated w/ bool backprop.
+            It can also retrieve coordindates from predicted heatmap and log variables using DictLogger, dictated by the keys in the logged_vars dict.
+            It will generate a batch of samples from the generator, unless a direct_data_dict is provided, in which case it will use that instead.   
+
+        Args:
+            generator (Iterable): An iterable that generates a batch of samples (use a Pytorch DataLoader as the iterable type)
+            dataloader (Pytorch Dataloader): The python dataloader that can be reinitialized if the generator runs out of samples.
+            backprop (bool): Whether to perform backpropagation or not.
+            split (str): String for split  (training, validation or testing)
+            log_coords (bool): Whether to extract and log coordinates from the predicted heatmap.
+            logged_vars (Dict, optional): A Dictionary with keys to log, derived from a template in the class DictLogger. Defaults to None.
+            debug (bool, optional): Whether to debug the function. Defaults to False.
+            direct_data_dict (Dict, optional): If not None, will directly perform forward pass on this rather than iterate the generator. Defaults to None.
+
+        Returns:
+            loss: The loss value for the iteration
+            generator: The generator, which is now one iteration ahead from the input generator, or may have been reinitialized if it ran out of samples (if training).
+        """
+
         so = time()
 
         #We can either give the generator to be iterated or a data_dict directly
@@ -303,7 +314,9 @@ class NetworkTrainer(ABC):
 
         
         self.optimizer.zero_grad()
+        
 
+        #Run the forward pass, using auto mixed precision if enabled
         so = time()
         if self.auto_mixed_precision:
             with autocast():
@@ -352,11 +365,7 @@ class NetworkTrainer(ABC):
                 
                 logged_vars = self.dict_logger.log_key_variables(logged_vars, pred_coords, extra_info, target_coords, loss_dict, data_dict, log_coords, split)
                 if debug:
-                    # print("logged_vars ind resyults: ", logged_vars["individual_results"][0]["uid"])
-                    # print("data_dict['uid']: ", data_dict['uid'])
-
                     debug_vars = [x for x in logged_vars["individual_results"]  if x["uid"] in data_dict['uid']]
-                    # self, input_dict, prediction_output, predicted_coords
                     self.eval_label_generator.debug_prediction(data_dict, output, pred_coords,pred_coords_input_size, debug_vars, extra_info)
                            
         e = time()
@@ -579,7 +588,8 @@ class NetworkTrainer(ABC):
 
 
     def evaluation_metrics(self, individual_results, landmark_errors):
-        # Success Detection Rate i.e. % images within error thresholds
+        """ Function to calculate evaluation metrics.
+        """
         radius_list = [1,2,3, 4,5, 6, 7, 8, 9, 10,15,20,25,30,40,50,100]
         outlier_results = {}
         for rad in radius_list:
@@ -675,7 +685,6 @@ class NetworkTrainer(ABC):
                 try:
                     evaluation_logs =  self.dict_logger.ensemble_inference_log_template()
                     direct_data_dict = next(generator)
-                    # print("direct data dict: ", direct_data_dict)
                     for ckpt in checkpoint_list:
                         self.load_checkpoint(ckpt, training_bool=False)
                         #Directly pass the next data_dict to run_iteration rather than iterate it within.
@@ -691,10 +700,8 @@ class NetworkTrainer(ABC):
                         
                     for ens_key, coord_extact_methods in ind_landmark_errors.items():
                         for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
-                            # print(ens_key, ile_idx, (ind_lm_ers))
                             all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
-
-             
+         
                 except StopIteration:
                     generator = None
                 print("-", end="")      
@@ -713,28 +720,7 @@ class NetworkTrainer(ABC):
             ind_results[u_key] = ind_results_this
             all_summary_results[u_key] = summary_results
 
-        # ##### Success Detection Rate i.e. % images within error thresholds ####
-        # radius_list = [1,2,3, 4,5, 6, 7, 8, 9, 10,15,20,25,30,40,50,100]
 
-        # #save SDR for each of the uncertainty coordinate extraction techniques
-        # all_outlier_results = {}
-
-        # all_summary_results = {}
-        #     outlier_results = {}
-
-        #     for rad in radius_list:
-        #         out_res_rad = success_detection_rate(ensemble_result_dicts[u_key], rad)
-        #         outlier_results[rad] = (out_res_rad)    
-        #     all_outlier_results[u_key] = outlier_results
-
-
-
-        #     #Generate summary Results
-        #     summary_results = generate_summary_df(all_ind_errors[u_key], outlier_results)
-        #     all_summary_results[u_key] = summary_results
-        # # ind_results = {}
-        # for k_, v_ in ensemble_result_dicts.items():
-        #     ind_results[k_] = pd.DataFrame(v_)
        
         return all_summary_results, ind_results
 
@@ -745,10 +731,14 @@ class NetworkTrainer(ABC):
 
 
     def maybe_load_checkpoint(self):
+        """ Helper function from initialisation that loads checkpoint
+        """
         if self.continue_checkpoint:
             self.load_checkpoint(self.continue_checkpoint, self.is_train)
     
     def update_dataloader_sigmas(self, new_sigmas):
+        """ Update the dataset sigmas, used if regressing sigmas
+        """
         np_sigmas = [x.cpu().detach().numpy() for x in new_sigmas]
         self.train_dataloader.dataset.sigmas = (np_sigmas)
         self.valid_dataloader.dataset.sigmas = (np_sigmas)
@@ -756,6 +746,12 @@ class NetworkTrainer(ABC):
 
 
     def load_checkpoint(self, model_path, training_bool):
+        """Load checkpoint from path.
+
+        Args:
+            model_path (str): path to checjpoint
+            training_bool (bool): If training or not.
+        """
         if not self.was_initialized:
             self.initialize(training_bool)
 
@@ -771,11 +767,6 @@ class NetworkTrainer(ABC):
             self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
             self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
 
-            # self.best_valid_loss = 0
-            # self.best_valid_loss_epoch = 0
-            # self.best_valid_coord_error = 0
-            # self.best_valid_coords_epoch = 0
-            # self.epochs_wo_val_improv = 0
         
         #Allow legacy models to be loaded (they didn't use to save sigmas)
         if "sigmas" in checkpoint_info:
@@ -899,7 +890,7 @@ class NetworkTrainer(ABC):
             split (string): Which split of data to return ( "validation" or "testing")
 
         Returns:
-            _type_: Dataset object
+            dataset: Dataset object
         """
 
         # assert split in ["validation", "testing"]
@@ -929,6 +920,16 @@ class NetworkTrainer(ABC):
         return dataset
 
     def generate_heatmaps_batch(self, data_dict, dataloader):
+        """Generate heatmaps from the main thread. Used only when regressing sigmas, because we can't update the sigma values in the dataloader workers.
+            This is a workaround to allow us to update the sigmas in the main thread, and then generate the heatmaps in the main thread.
+
+        Args:
+            data_dict (dict): List of dictionaries of samples to generate heatmap labels from.  
+            dataloader (Dataloader): Dataloader where the generate_labels function is defined.
+
+        Returns:
+            batch_hms: The batch of heatmaps generated from the data_dict to use as target labels.
+        """
         batch_hms = []
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
         b_= [dataloader.dataset.generate_labels(x, np_sigmas) for x in data_dict["target_coords"]]
@@ -944,5 +945,11 @@ class NetworkTrainer(ABC):
 
     @staticmethod
     def worker_init_fn(worker_id):
+        """Function to set the seed for each worker. This is used to ensure that each worker has a different seed, 
+        so that the random sampling is different for each worker.
+
+        Args:
+            worker_id (int): dataloader worker id
+        """
         imgaug.seed(np.random.get_state()[1][0] + worker_id)
 

@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing/"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing3/"
  
 
 SOLVER:
@@ -9,7 +9,7 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE: 12
-  MAX_EPOCHS: 1000
+  MAX_EPOCHS: 3
   # REGRESS_SIGMA: True
 
 
@@ -29,8 +29,8 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: False
-  INFERENCE_ONLY: True
+  CACHE_DATA: True
+  INFERENCE_ONLY: False
 
 SAMPLER:
   DATA_AUG: 'AffineComplex'
