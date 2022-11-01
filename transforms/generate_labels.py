@@ -38,6 +38,19 @@ class LabelGenerator(ABC):
             num_res_supervisions int: number of heatmaps to generate, each half resolution of previous.
             hm_lambda_scale float: value to scale heatmaps by.
 
+
+            landmarks ([[int,int]]): A 2D list of ints where each entry is the [x,y] coordinate of a landmark.
+            x_y_corner_patch ([int, int]): The coordinates of the top left of the image sample you are creating a heatmap for.
+            landmarks_in_indicator ([int]): A list of 1s and 0s where 1 indicates the landmark was in the model input image and 0 if not.
+            image_size ([int, int]): Size of the heatmap to produce.
+            sigmas ([float]): List of sigmas for the size of the heatmap. Each sigma is for the heatmap for a level of deep supervision. 
+                            The first sigma defines the sigma for the full-size resolution heatmap, the next for the half-resolution heatmap, 
+                            the next for the 1/8 resolution heatmap etc.
+            num_res_levels (int): Number of deep supervision levels (so should be the length of the list of sigmas. Kind-of redundant).
+            lambda_scale (float): Scaler to multiply the heatmap magnitudes by.
+            dtype: datatype of the output label
+            to_tensor (bool): Whether to output the label as a tensor object or numpy object.
+
         """
     @abstractmethod
     def debug_sample(self, sample_dict, image, coordinates):
@@ -66,6 +79,9 @@ class UNetLabelGenerator(LabelGenerator):
 
 
     def generate_labels(self, landmarks, x_y_corner_patch, landmarks_in_indicator, image_size, sigmas, num_res_levels, lambda_scale=100, dtype=np.float32, to_tensor=True):
+        """ Generates Gassuan heatmaps for given landmarks of size input_size, using sigma hm_sigmas.
+        """
+        
         return_dict = {"heatmaps": []}
 
         heatmap_list = []
@@ -82,7 +98,6 @@ class UNetLabelGenerator(LabelGenerator):
 
                     intermediate_heatmaps.append(gaussian_gen(lm, downsample_size, 1, down_sigma, dtype, lambda_scale))
                 else:
-                    # print("downsample size: ", downsample_size, (int(downsample_size[0]), int(downsample_size[1])))
                     intermediate_heatmaps.append(np.zeros((int(downsample_size[0]), int(downsample_size[1]))))
             heatmap_list.append(np.array(intermediate_heatmaps))
 
