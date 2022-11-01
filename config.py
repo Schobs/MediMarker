@@ -119,6 +119,9 @@ _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first" # ["scale_heatmap_first", "
 _C.INFERENCE.FIT_GAUSS = False # If false, uses max, if true, first fits gaussian to output heatmap.
 
 _C.INFERENCE.ENSEMBLE_INFERENCE = False # average predictions from multiple models
+_C.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS = ["smha", "emha", "ecpv"] #keys for uncertainty estimation. 
+_C.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX = 0 #keys for uncertainty estimation. 
+
 _C.INFERENCE.ENSEMBLE_CHECKPOINTS = [] # list of checkpoints to ensemble
 
 _C.INFERENCE.DEBUG = False

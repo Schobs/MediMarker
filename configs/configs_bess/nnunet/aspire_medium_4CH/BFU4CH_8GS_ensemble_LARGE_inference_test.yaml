@@ -1,7 +1,5 @@
 
  
-OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/MSA/testing/nnuent/BFU4CH_8GS_ensemble_LARGE_inference_test"
 
  
 
@@ -64,4 +62,4 @@ SAMPLER:
 
 OUTPUT:
   COMET_TAGS: ["comet_aspire_large_test"]
-  #TODO: boolean for performing validation or not. its false in the isbi one because it is tested directly instead.
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/MSA/testing/nnuent/BFU4CH_8GS_ensemble_LARGE_inference_test2"

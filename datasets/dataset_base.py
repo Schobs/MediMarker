@@ -186,7 +186,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             datalist = load_aspire_datalist(self.annotation_path, data_list_key=self.split, base_dir=self.root_path)
 
 
-        datalist = datalist[:1000]
+        # datalist = datalist[:24]
 
         # based on first image extenstion, get the load function.
         self.datatype_load = get_datatype_load(datalist[0]["image"])
