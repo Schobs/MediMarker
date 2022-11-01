@@ -23,7 +23,7 @@ _C.DATASET.NAME = "ASPIRE"
 _C.DATASET.SRC_TARGETS = '/shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV'
 _C.DATASET.IMAGE_MODALITY= 'CMRI'
 _C.DATASET.LANDMARKS = []
-_C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512] #legacy, can ignore.
+# _C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512] #legacy, can ignore.
 _C.DATASET.TRAINSET_SIZE = -1 # -1 for full trainset size or int <= len(training_set)
 
 # _C.DATASET.DEBUG = False
@@ -134,14 +134,14 @@ _C.OUTPUT.VERBOSE = True
 _C.OUTPUT.OUTPUT_DIR = "/output/"
 # _C.OUTPUT.TB_DIR = "./lightning_logs"
 
-# _C.OUTPUT.USE_COMET = True 
+_C.OUTPUT.USE_COMETML_LOGGING = False 
 
-_C.OUTPUT.API_KEY = "B5Nk91E6iCmWvBznXXq3Ijhhp"
-_C.OUTPUT.WORKSPACE = "schobs"
+_C.OUTPUT.COMET_API_KEY = None
+_C.OUTPUT.COMET_WORKSPACE = "default"
+_C.OUTPUT.COMET_PROJECT_NAME = "LannU-Net"
 
 _C.OUTPUT.COMET_TAGS = ["default"]
 _C.OUTPUT.RESULTS_CSV_APPEND = None
-_C.OUTPUT.COMET_PROJECT_NAME = "LannU-Net"
 
 def get_cfg_defaults():
     return _C.clone()

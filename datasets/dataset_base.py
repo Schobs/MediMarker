@@ -238,7 +238,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
 
         non_unique = ([[x,self.image_paths[x_idx]] for x_idx, x in enumerate(self.uids) if self.uids.count(x) > 1])
-        assert len(non_unique) == 0,  "Not all uids are unique! Check your data. %s non-unqiue uids , they are: %s \n " % (len(non_unique), non_unique) 
+        assert len(non_unique) == 0,  "Not all uids are unique! Check your data. %s non-unqiue uids from %s samples , they are: %s \n " % (len(non_unique), len(self.uids), non_unique) 
 
     def __len__(self):
         return len(self.images)
@@ -375,7 +375,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
         #     print("input coords: ", input_coords)
         #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
-            # run_time_debug = True
+            run_time_debug = True
         # else:
         #     print("ok")  
 

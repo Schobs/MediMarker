@@ -2,7 +2,9 @@
  
 OUTPUT: 
   OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/MSA/testing/nnuent/BFU4CH_8GS_testing"
-
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
+  COMET_WORKSPACE: "schobs"
  
 
 SOLVER:
@@ -23,8 +25,7 @@ DATASET:
   NAME:  "APSIRE_MEDIUM_4CH"
   IMAGE_MODALITY: 'CMRI'
   LANDMARKS : [0,1,2,3,]
-  ORIGINAL_IMAGE_SIZE : [512,512]
-  
+    
  
 TRAINER:
   PERFORM_VALIDATION: True
@@ -63,8 +64,7 @@ SAMPLER:
 #   NAME:  "APSIRE_MEDIUM_4CH"
 #   IMAGE_MODALITY: 'CMRI'
 #   LANDMARKS : [0,1,2,3,]
-#   ORIGINAL_IMAGE_SIZE : [512,512]
-  
+#     
  
 # TRAINER:
 #   PERFORM_VALIDATION: True

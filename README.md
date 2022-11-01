@@ -69,6 +69,7 @@ For advanced users, we provide the following features:
     - [Patch-Based](#patch-based)
   - [Sigma Regression](#sigma-regression)
   - [Logging](#logging)
+    - [How to Use Comet.ml](#how-to-use-cometml)
   - [Inference: Fitting a Gaussian to the Predicted Heatmap](#inference-fitting-a-gaussian-to-the-predicted-heatmap)
   - [Debugging](#debugging)
 
@@ -398,9 +399,7 @@ Parameters concerning dataset details and dataset paths.
     
      *Default:* [ ]
 
-- **LANDMARKS** ([int]): The indices of the landmarks in the JSON file. For example, if the JSON file has 4 landmarks, and you want to use the first 3, then the list should be [0,1,2].
-    
-     *Default:* [ ]
+
 
 
 - **TRAINSET_SIZE** (int): The number of samples to use from your training set. If you want to use all samples, leave this as -1.
@@ -440,9 +439,9 @@ Parameters concerning both full image & patch sampling, data augmentation and cp
 Parameters concerning patch sampling strategy
 
 - **RESOLUTION_TO_SAMPLE_FROM** ('full' OR 'input_size'): Whether to sample patches from the full resolution image ('full'), or to resize all images to SAMPLER.INPUT_SIZE and then sample patches from there.
-- 
-     *Default:* 'full'
-     TODO: FIX, THIS IS NOT IMPLEMENTED YET.
+
+    *Default:* 'full'
+        ** TODO: FIX, THIS IS NOT IMPLEMENTED YET.**
 
 - **SAMPLE_PATCH_SIZE** ([int, int]): The size of the patches to sample from the loaded image of size SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM. e.g. if you want to sample patches of size 256x256 from the whole image, then set this to [256, 256] 
     
@@ -617,6 +616,18 @@ Parameters relating to inference time.
 
     *Default*: False
 
+- **ENSEMBLE_CHECKPOINTS** ([str]): List of paths to model checkpoints to use for ensemble inference. If INFERENCE.ENSEMBLE_INFERENCE = True, these checkpoints are loaded for ensemble inference, ignoring the path in MODEL.CHECKPOINT.
+
+    *Default*: None
+
+- **ENSEMBLE_UNCERTAINTY_KEYS** ([str]): Keys for the uncertainty estimation methods to use. So far, only S-MHA (key: "smha"), E-MHA (key: "emha"), and E-CPV (key: "ecpv")are implemented. See Section [Ensembling and Uncertainty](#ensembling-and-uncertainty) for more details.
+
+    *Default*: ["smha", "emha", "ecpv"]
+
+- **UNCERTAINTY_SMHA_MODEL_IDX** (int): The index of the model you want to use for S-MHA e.g. if you choose the value 2, and your INFERENCE.ENSEMBLE_CHECKPOINTS is a list of 5 models, this will select the third model to calculate S-MHA.
+  
+    *Default:* 0
+
 - **DEBUG** (bool): If True, shows inference debug information e.g. plots of predicted heatmaps and landmarks. See [Debugging](#debugging) for more info.
 
     *Default*: False
@@ -635,6 +646,21 @@ Parameters relating to where and how to save model outputs, and the Comet.ml log
 - **OUTPUT_DIR** (str): Path to the directory to save model outputs, model checkpoints and final results to.
 
     *Default*: "/output/"
+
+- **USE_COMETML_LOGGING** (bool): If True, logs to Comet.ml. If False, does not log to Comet.ml. **Strongly recommended for researchers/developers**. See [Logging](#logging) for more info.
+
+    *Default*: True
+
+- **COMET_API_KEY** (str): Your Comet.ML API key. 
+    
+    *Default*: None
+
+- **COMET_WORKSPACE** (str): Your Comet.ML workspace to save experiments to.
+    *Default*: "default"
+
+- **COMET_PROJECT_NAME** (str) The Comet.ML project name to save experiments to.
+
+    *Default*: "LannU-Net"
 
 - **COMET_TAGS** ([str]): List of tags to save to your comet.ml experiment.
 
@@ -800,7 +826,17 @@ LannU-Net uses [comet.ml](https://www.comet.com/site/) for logging. This is a gr
 
 ![Screenshot from comet.ml](./documentation/images/cometml.png)
 
-First, you must sign up to comet.ml. Then, override the OUTPUT.API_KEY in your yaml file with your own API key. Change your workspace in the OUTPUT.WORKSPACE too. After this, you are good to go and use comet.ml with all the features I have implemented!
+
+### How to Use Comet.ml
+First, you must sign up to comet.ml. Then:
+
+1) Sign up to [comet.ml](https://www.comet.com/site/).
+2) Set OUTPUT.USE_COMETML_LOGGING = True
+3) Override the yaml file OUTPUT.COMET_API_KEY with the key tied to you comet.ml account.
+
+*Optionally*:
+   1) Customize OUTPUT.COMET_WORKSPACE to some string.
+   2) Customize OUTPUT.COMET_PROJECT_NAME to some string.
 
 Every time you run the main.py file, it generates an experiment you can track online. The URL to find the experiment is printed on the terminal, or you can find it saved in a .txt file in the OUTPUT.OUTPUT_DIR file, in a file named with the timestamp of when you run the code. 
 

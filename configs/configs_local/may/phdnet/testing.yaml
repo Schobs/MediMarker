@@ -22,8 +22,7 @@ DATASET:
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0]
-  ORIGINAL_IMAGE_SIZE : [512,512]
-  
+    
   INPUT_SIZE : [512,512]
  
 TRAINER:

@@ -40,29 +40,38 @@ def main():
 
     seed = cfg.SOLVER.SEED
     seed_everything(seed)
-
-    #Set up cometml writer
-    writer = Experiment(
-        api_key=cfg.OUTPUT.API_KEY,
-        project_name=cfg.OUTPUT.COMET_PROJECT_NAME,
-        workspace=cfg.OUTPUT.WORKSPACE,
-        )
-
-
-    fold = str(cfg.TRAINER.FOLD)
+    
 
     os.makedirs(cfg.OUTPUT.OUTPUT_DIR, exist_ok=True)  
     time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-     
+    fold = str(cfg.TRAINER.FOLD)
+
     exp_name = cfg.OUTPUT.OUTPUT_DIR.split('/')[-1] +"_Fold"+fold+"_" + str(time)
-    writer.set_name(exp_name)
-    writer.add_tag("fold" + str(cfg.TRAINER.FOLD))
 
-    for tag_ in cfg.OUTPUT.COMET_TAGS:
-        writer.add_tag(str(tag_))
 
-    with open(os.path.join(cfg.OUTPUT.OUTPUT_DIR, 'comet_'+exp_name+'.txt'), 'w') as f:
-        f.write('link to exp: ' + writer.url)
+    #Set up Comet logging
+    if cfg.OUTPUT.USE_COMETML_LOGGING:
+        #Set up cometml writer
+        writer = Experiment(
+            api_key=cfg.OUTPUT.COMET_API_KEY,
+            project_name=cfg.OUTPUT.COMET_PROJECT_NAME,
+            workspace=cfg.OUTPUT.COMET_WORKSPACE,
+        )
+        writer.set_name(exp_name)
+        writer.add_tag("fold" + str(cfg.TRAINER.FOLD))
+
+        for tag_ in cfg.OUTPUT.COMET_TAGS:
+            writer.add_tag(str(tag_))
+
+        with open(os.path.join(cfg.OUTPUT.OUTPUT_DIR, 'comet_'+exp_name+'.txt'), 'w') as f:
+            f.write('link to exp: ' + writer.url)
+    else:
+        writer = None
+
+
+
+
+    
 
     #clear cuda cache
     torch.cuda.empty_cache()
@@ -95,16 +104,20 @@ def main():
 
     ############ Training ############
     if not cfg.TRAINER.INFERENCE_ONLY:
-        writer.add_tag("training")
+        if writer is not None:
+            writer.add_tag("training")
 
         trainer = trainer(trainer_config= cfg, is_train=True, dataset_class=dataset_class, output_folder=cfg.OUTPUT.OUTPUT_DIR, comet_logger=writer)
         trainer.initialize(training_bool=True)
         trainer.train()
 
-        writer.add_tag("completed training")
+        if writer is not None:
+            writer.add_tag("completed training")
 
     else:
-        writer.add_tag("inference only")
+        if writer is not None:
+            writer.add_tag("inference only")
+
         trainer = trainer(trainer_config= cfg, is_train=False, dataset_class=dataset_class, output_folder=cfg.OUTPUT.OUTPUT_DIR, comet_logger=writer)
         trainer.initialize(training_bool=False)
 
@@ -120,7 +133,9 @@ def main():
     # Then I need to update a csv file per minibatch, NOT save to a list and write at the end.
     # Use the first model in the list as S-MHA.
     if cfg.INFERENCE.ENSEMBLE_INFERENCE:
-        writer.add_tag("ensemble_inference")
+
+        if writer is not None:
+            writer.add_tag("ensemble_inference")
 
         # run_inference_ensemble_models(self, split, checkpoint_list, debug=False)
         all_summary_results, ind_results = trainer.run_inference_ensemble_models(split="testing", checkpoint_list=cfg.INFERENCE.ENSEMBLE_CHECKPOINTS, debug=cfg.INFERENCE.DEBUG)
@@ -195,9 +210,11 @@ def main():
 
 
         #Now Save all model results to a spreadsheet
-        html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
-        writer.log_html(html_to_log)
-        print("Logged all results to CometML.")
+        if writer is not None:
+            html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
+            writer.log_html(html_to_log)
+            print("Logged all results to CometML.")
+
         if cfg.OUTPUT.RESULTS_CSV_APPEND is not None:
             output_append = "_"+ str(cfg.OUTPUT.RESULTS_CSV_APPEND)
         else:
@@ -213,7 +230,8 @@ def main():
             for n, df in (all_model_individuals).items():
                 df.to_excel(writer_, n)
 
-        writer.add_tag("completed inference")
+        if writer is not None:
+            writer.add_tag("completed inference")
 
 
 if __name__ == "__main__":

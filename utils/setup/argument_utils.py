@@ -26,11 +26,6 @@ def get_evaluation_mode(eval_mode):
     if eval_mode == 'use_input_size':
         use_full_res_coords =False
         resize_first = False
-    # # Force "use_input_size" settings if the input size and og image size are the same
-    # elif og_im_size == inp_size: 
-    #     print("your DATASET.ORIGINAL_IMAGE_SIZE == SAMPLER.INPUT_SIZE, therefore defaulting evaluation mode to \"use_input_size\"")
-    #     use_full_res_coords =False
-    #     resize_first = False
     # Scale model predicted sized heatmap up to full resolution and then obtain coordinates (recommended)
     elif eval_mode== 'scale_heatmap_first':
         use_full_res_coords =True
@@ -47,7 +42,7 @@ def infer_additional_arguments(yaml_args):
     yaml_args.INFERRED_ARGS = CN()
     yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = False
 
-    #due to multithreading issue, we must genreate heatmap labels in the main thread rather than
+    #due to multithreading issue, we must generate heatmap labels in the main thread rather than
     # multi-thread dataloaders. To fix this in future.
     if yaml_args.SAMPLER.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
         yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = True
@@ -99,53 +94,38 @@ def argument_checking(yaml_args):
 
     #Patch sampling cases to cover:
     # 1) General: 
-    #   a) can't use workers >0 if regressing sigma (can't gen heatmaps in main threads if patch-based)
-    #   b) SAMPLE_PATCH_SIZE == INPUT_SIZE. Even though dataloader will use SAMPLE_PATCH_SIZE instead of INPUT_SIZE, user needs to be aware.
-    #   c) ensure SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM <=  DATASET.ORIGINAL_IMAGE_SIZE
-    #   d) ensure patch size (SAMPLE_PATCH_SIZE) < SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
-    #   e) WARNING: SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM < DATASET.ORIGINAL_IMAGE_SIZE: WARN user they are resizing first.
+    #   a) ensure SAMPLER.PATCH.SAMPLE_PATCH_SIZE !=  DATASET.INPUT_SIZE if resizing images to input_size
+    #   b) ensure SAMPLER.PATCH.SAMPLE_PATCH_SIZE < DATASET.INPUT_SIZE if resizing images to input_size
+    #   c) If user is sampling from full resolution, provide a warning that the patch size should be smaller than the image size
 
     if yaml_args.SAMPLER.SAMPLE_MODE == "patch":
+      
+
         #1a
         try:
-            if yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD:
-                raise ValueError("When patch-based training, no support for regressing sigma with SAMPLER.NUM_WORKERS > 0. You chose %s workers, set it to 0. \
-                    Alternatively, you can regress sigma with full image training, or patch-based training with a fixed sigma using multiple workers. To be fixed." %  ( yaml_args.SAMPLER.NUM_WORKERS) )
+            if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "input_size" and yaml_args.SAMPLER.PATCH.SAMPLE_PATCH_SIZE == yaml_args.SAMPLER.INPUT_SIZE:
+                raise ValueError("""You want to train the model by sampling patches (SAMPLER.SAMPLE_MODE == "patch") from the image resized to input size defined by """
+                    """SAMPLER.INPUT_SIZE, indicated by SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "input_size"""
+                    """However, your SAMPLER.SAMPLE_PATCH_SIZE (%s) is the same as your input size SAMPLER.INPUT_SIZE (%s). You are doing "full" sampling, """
+                    """ unintentionally running the wrong scheme.""" %  ( yaml_args.SAMPLER.SAMPLE_PATCH, yaml_args.SAMPLER.INPUT_SIZE) )
         except ValueError as e:
             all_errors.append(e)
 
         #1b
         try:
-            if yaml_args.SAMPLER.PATCH.SAMPLE_PATCH_SIZE != yaml_args.SAMPLER.INPUT_SIZE:
-                raise ValueError("""You want to train the model by sampling patches (SAMPLER.SAMPLE_MODE == "patch") """
-                    """but your SAMPLER.SAMPLE_PATCH_SIZE (%s) does not match your network input size SAMPLER.INPUT_SIZE (%s). Either set """
-                    """these to the same if you want to use patch sampling training scheme or set SAMPLER.SAMPLE_PATCH =False and the full res image will be """
-                    """ resized to SAMPLER.INPUT_SIZE (%s) for full image sampling. I enforce using seperate parameters here to ensure you don't """
-                    """ unintentionally run the wrong scheme.""" %  ( yaml_args.SAMPLER.SAMPLE_PATCH, yaml_args.SAMPLER.INPUT_SIZE, yaml_args.SAMPLER.INPUT_SIZE) )
+            if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "input_size" and yaml_args.SAMPLER.PATCH.SAMPLE_PATCH_SIZE > yaml_args.SAMPLER.INPUT_SIZE:
+                raise ValueError(""" You are using SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "input_size"  and your SAMPLER.PATCH.SAMPLE_PATCH_SIZE is larger than the SAMPLER.INPUT_SIZE (%s vs %s)"""
+                    """It must be smaller.""" %  ( yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM, yaml_args.SAMPLER.INPUT_SIZE) )
         except ValueError as e:
             all_errors.append(e)
 
-        #1c
-        try:
-            if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM > yaml_args.DATASET.ORIGINAL_IMAGE_SIZE:
-                raise ValueError(""" Your SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM is larger than the DATASET.ORIGINAL_IMAGE_SIZE (%s vs %s)"""
-                    """It should either be the same, or smaller.""" %  ( yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM, yaml_args.DATASET.ORIGINAL_IMAGE_SIZE) )
-        except ValueError as e:
-            all_errors.append(e)
 
-        #1d
-        try:
-            if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM <= yaml_args.SAMPLER.PATCH.SAMPLE_PATCH_SIZE :
-                raise ValueError(""" You are trying to sample patches of size %s (SAMPLER.PATCH.SAMPLE_PATCH_SIZE) from an image of size """
-                """%s (SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM). The patch size should be smaller than the image it's sampling from.  """
-                %  (yaml_args.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM) )
-        except ValueError as e:
-            all_errors.append(e)
+     #1c
+        if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "full":
+            warnings.warn("You are doing patch-bases sampling, sampling from full resolution images (SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == \"full\")."
+            "Make sure the SAMPLER.PATCH.SAMPLE_PATCH_SIZE is smaller than ALL of your input images! Future: make a pre-processing check for this. ", stacklevel=2)
 
-        #1e
-        if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM < yaml_args.DATASET.ORIGINAL_IMAGE_SIZE:
-            warnings.warn(f'SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM is smaller than DATASET.ORIGINAL_IMAGE_SIZE. Your model is learning on resized input images from {yaml_args.DATASET.ORIGINAL_IMAGE_SIZE} to {yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM} \
-                and sampling {yaml_args.SAMPLER.PATCH.SAMPLE_PATCH_SIZE} patches from the {yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM} resolution image.', stacklevel=2)
+
 
 
     
@@ -166,18 +146,6 @@ def argument_checking(yaml_args):
 
 
 
-    try:
-        if yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[0] < yaml_args.SAMPLER.INPUT_SIZE[0] and yaml_args.DATASET.ORIGINAL_IMAGE_SIZE[1] < yaml_args.SAMPLER.INPUT_SIZE[1]:
-            raise (ValueError("DATASET.ORIGINAL_IMAGE_SIZE is smaller than  than the input size to the network (SAMPLER.INPUT_SIZE). Change input size to equal or smaller size of original image."))
-    except ValueError as e:
-        all_errors.append(e)
-
-    # try:
-    #     if yaml_args.DATASET.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
-    #         raise ValueError("Regressing sigmas (SOLVER.REGRESS_SIGMA=True) requires DATASET.NUM_WORKERS=0 due to multithreading issues with updating dataset object with new sigmas. You are attempting to use %s workers " % yaml_args.DATASET.NUM_WORKERS )
-    # except ValueError as e:
-    #     all_errors.append(e)
-    
 
     try:
         if yaml_args.SAMPLER.DATA_AUG != None and yaml_args.SAMPLER.DATA_AUG_PACKAGE != "imgaug":
