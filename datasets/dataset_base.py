@@ -83,6 +83,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
  
         super(DatasetBase, self).__init__()
 
+        #We are passing in the label generator here, this is unique to each model_trainer class.
         self.LabelGenerator = LabelGenerator
 
         self.data_augmentation_strategy = data_augmentation_strategy
@@ -216,9 +217,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 resized_factor, original_size, image, interested_landmarks = self.load_and_resize_image(data["image"], interested_landmarks)
                 self.images.append(image)
                 self.image_resizing_factors.append(resized_factor)
-                self.original_image_sizes.append(original_size)
-
-            
+                self.original_image_sizes.append(original_size)      
 
             else:
                 #Not caching, so add image path.
@@ -251,7 +250,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
     # @abstractmethod
     def add_additional_sample_attributes(self, data):
         '''
-        add more attributes to each sample here
+        Add more attributes to each sample.
 
         '''   
         for k_ in self.additional_sample_attribute_keys:
@@ -286,7 +285,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         return resized_factor, original_size, image, coords
 
     def __getitem__(self, index):
-        """ Implement method to get a data sample. Also give an option to debug here.
+        """ Main function of the dataloader. Gets a data sample. 
             
 
 
@@ -296,13 +295,20 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         Returns:
             It must return a dictionary with the keys: 
             sample = {
-            "image": torch.from_numpy(image) - torch tensor of the image 
-            "label": heatmaps,  - if self.generate_hms_here bool -> (torch tensor of heatmaps); else -> [] 
-            "target_coords": list of target coords of for landmarks, same scale as input to network , 
-            "full_res_coords": original list of coordinates, same scale as original image (may be same as target_coords)
-            "image_path": im_path: string to orignal image path 
-            "uid":this_uid : string of sample's unique id
+                "image" (torch.tensor, shape (1, H, W)): tensor of input image to network.
+                "label" (Dict of torch.tensors):  if self.generate_hms_here bool -> (Dictionary of labels e.g. tensor heatmaps, see LabelGenerator for details); else -> [].
+                "target_coords (np.array, shape (num_landmarks, 2))": list of target coords of for landmarks, same scale as input to model.
+                "landmarks_in_indicator" (list of 1s and/or 0s, shape (1, num_landmarks)): list of bools, whether the landmark is in the image or not.
+                "full_res_coords" (np.array, shape (num_landmarks, 2)): original list of coordinates of shape ,same scale as original image (so may be same as target_coords)
+                "image_path" (str): path to image, from the JSON file.
+                "uid" (str): sample's unique id, from the JSON file.
+                "annotation_available" (bool): Whether the JSON file provided annotations for this sample (necessary for training and validation).
+                "resizing_factor" (np.array, shape (1,2)): The x and y scale factors that the image was resized by to fit the network input size.
+                "original_image_size" (np.array, shape (2,1)): The resolution of the original image before it was resized.
+                ANY EXTRA ATTRIBUTES ADDED BY add_additional_sample_attributes()
              }
+
+
         """
         
         sorgin= time()
@@ -369,16 +375,16 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
         #     print("input coords: ", input_coords)
         #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
-            run_time_debug = True
+            # run_time_debug = True
         # else:
         #     print("ok")  
 
      
           
-        # print("sample: ", sample)
         sample = {"image":input_image , "label":label, "target_coords": input_coords, "landmarks_in_indicator": landmarks_in_indicator,
             "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid, "annotation_available": is_annotation_available,
             "resizing_factor": resized_factor, "original_image_size": original_size }
+
 
         #add additional sample attributes from child class.
         for key_ in list(self.additional_sample_attributes.keys()):
@@ -537,39 +543,3 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         return patch_start_idxs
 
 
-    # def patchify_image(self, image):
-    #     """Breaks up an input image into patches, where each patch overlaps with the next by 50% in x,y.
-
-    #     Args:
-    #         image (_type_): _description_
-    #     Returns
-
-    #     """
-    #     all_image_patches = []
-    #     patch_start_idxs = []
-
-       
-    #     break_x = break_y = False
-    #     for x in range(0, int(self.original_image_size[0]), int(self.sample_patch_size[0]/2)):
-    #         for y in range(0, int(self.original_image_size[1]), int(self.sample_patch_size[1]/2)):
-    #             break_y = False
-    #             # Ensure we do not go past the boundaries of the image
-    #             if x > self.original_image_size[0]-self.sample_patch_size[0]:
-    #                 x = self.original_image_size[0]-self.sample_patch_size[0]
-    #                 break_x = True
-    #             if y > self.original_image_size[1]-self.sample_patch_size[1]:
-    #                 y = self.original_image_size[1]-self.sample_patch_size[1]
-    #                 break_y = True
-    #             #torch loads images y-x so swap axis here
-    #             patch = image[:, y:y+self.sample_patch_size[1], x:x+self.sample_patch_size[0]  ]
-    #             all_image_patches.append(patch)
-    #             patch_start_idxs.append([x,y])
-
-
-    #             if break_y:
-    #                 break
-    #         if break_x:
-    #             break
-        
-    #     all_image_patches = torch.stack(all_image_patches)
-    #     return all_image_patches, patch_start_idxs
