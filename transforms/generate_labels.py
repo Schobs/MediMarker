@@ -7,7 +7,7 @@ from skimage.measure import block_reduce
 import math
 import matplotlib.pyplot as plt
 from utils.im_utils.heatmap_manipulation import get_coords
-from visualisation import visualize_image_trans_coords, visualize_imageNcoords_cropped_imgNnormcoords
+from utils.im_utils.visualisation import visualize_image_trans_coords, visualize_imageNcoords_cropped_imgNnormcoords
 import torch
 from abc import ABC, abstractmethod
 import matplotlib.pyplot as plt
