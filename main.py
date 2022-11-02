@@ -14,7 +14,6 @@ from config import get_cfg_defaults
 # from trainer.model_trainer_unet import UnetTrainer
 # from trainer.model_trainer_phdnet import PHDNetTrainer
 
-from visualisation import visualize_predicted_heatmaps
 from pandas import ExcelWriter
 from utils.setup.argument_utils import arg_parse
 import csv

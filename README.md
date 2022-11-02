@@ -83,7 +83,7 @@ conda activate my_env
 ```
 3) Install from the environments .yaml file
 ```
-conda env update --name my_env --file environment.yml
+conda env update --name my_env --file requirements/environment.yml
 ```
 
 That's it!
@@ -833,6 +833,7 @@ First, you must sign up to comet.ml. Then:
 1) Sign up to [comet.ml](https://www.comet.com/site/).
 2) Set OUTPUT.USE_COMETML_LOGGING = True
 3) Override the yaml file OUTPUT.COMET_API_KEY with the key tied to you comet.ml account.
+4) Done!
 
 *Optionally*:
    1) Customize OUTPUT.COMET_WORKSPACE to some string.

@@ -4,7 +4,7 @@ import os
 from utils.setup.initialization import InitWeights_KaimingUniform
 from losses.losses import HeatmapLoss, IntermediateOutputLoss, AdaptiveWingLoss, SigmaLoss
 from models.UNet_Classic import UNet
-from visualisation import visualize_heat_pred_coords
+from utils.im_utils.visualisation import visualize_heat_pred_coords
 import torch
 import numpy as np
 from time import time

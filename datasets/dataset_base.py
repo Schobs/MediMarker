@@ -18,10 +18,8 @@ from transforms.transformations import (HeatmapsToTensor, NormalizeZScore, ToTen
 from transforms.dataloader_transforms import get_aug_package_loader
 
 from transforms.generate_labels import LabelGenerator, generate_heatmaps
-from load_data import get_datatype_load, load_aspire_datalist
-from visualisation import (visualize_heat_pred_coords, visualize_image_target,
-                           visualize_image_trans_coords,
-                           visualize_image_trans_target, visualize_patch, visualize_image_all_coords)
+from utils.data.load_data import get_datatype_load, load_aspire_datalist
+from utils.im_utils.visualisation import visualize_patch
 from time import time
 
 import multiprocessing as mp
