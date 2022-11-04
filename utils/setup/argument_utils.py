@@ -52,6 +52,11 @@ def infer_additional_arguments(yaml_args):
     yaml_args.INFERRED_ARGS.USE_FULL_RES_COORDS = use_full_res_coords
     yaml_args.INFERRED_ARGS.RESIZE_FIRST = resize_first
 
+    if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "input_size":
+        yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = yaml_args.SAMPLER.INPUT_SIZE
+    else:
+        raise NotImplementedError("Only input_size is supported for now for SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM, not full")
+
     return yaml_args
 
 

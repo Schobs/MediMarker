@@ -4,9 +4,12 @@
 
 from trainer.model_trainer_unet import UnetTrainer
 from trainer.model_trainer_phdnet import PHDNetTrainer
+from trainer.model_trainer_GP import GPTrainer
 
 MODEL_TRAINER_INDEX = {
     'PHD-Net': PHDNetTrainer,
-    'U-Net': UnetTrainer
+    'U-Net': UnetTrainer,
+    'GP': GPTrainer
+
 
 }

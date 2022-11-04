@@ -94,6 +94,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.sample_patch_bias = sample_patch_bias
         self.sample_patch_from_resolution = sample_patch_from_resolution
 
+        # print("patch sampling stuff: ", self.sample_patch_size, self.sample_patch_bias, self.sample_patch_from_resolution)
         self.dataset_split_size = dataset_split_size
 
         #Additional sample attributes found in the json datalist to return with each sample
@@ -101,7 +102,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.additional_sample_attributes = {k: [] for k in self.additional_sample_attribute_keys}
 
         if self.sample_mode == "patch":
-            assert sample_patch_size == input_size
+            # assert sample_patch_size == input_size
 
             #Get the patches origin information. Use this for stitching together in valid/testing
             self.load_im_size = sample_patch_from_resolution

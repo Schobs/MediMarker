@@ -1,0 +1,281 @@
+import gpytorch
+
+from losses.losses import GPLoss
+from models.gp_model import ExactGPModel
+from utils.im_utils.visualisation import visualize_heat_pred_coords
+import torch
+import numpy as np
+from time import time
+# from dataset import ASPIRELandmarks
+# import multiprocessing as mp
+import ctypes
+import copy
+from torch.utils.data import DataLoader
+from utils.im_utils.heatmap_manipulation import get_coords, get_coords_fit_gauss
+from torch.cuda.amp import GradScaler, autocast
+import imgaug
+import torch.multiprocessing as mp
+from torch.multiprocessing import Pool, Process, set_start_method
+import matplotlib.pyplot as plt
+import math 
+import os 
+
+# torch.multiprocessing.set_start_method('spawn')# good solution !!!!
+from torchvision.transforms import Resize,InterpolationMode
+from trainer.model_trainer_base import NetworkTrainer
+
+from transforms.generate_labels import UNetLabelGenerator
+class GPTrainer(NetworkTrainer):
+    """ Class for the u-net trainer stuff.
+    """
+
+    def __init__(self, **kwargs):
+
+
+        super(GPTrainer, self).__init__(**kwargs)
+
+      
+        #global config variable
+        self.early_stop_patience = 250
+
+
+        #Label generator
+        self.train_label_generator = self.eval_label_generator = UNetLabelGenerator()
+   
+        #get model config parameters
+
+
+
+        #scheduler, initialiser and optimiser params
+        self.optimizer= torch.optim.Adam
+        self.optimizer_kwargs =  {"lr": self.initial_lr}
+
+        self.loss_func = gpytorch.mlls.ExactMarginalLogLikelihood
+
+        # "Loss" for GPs - the marginal log likelihood
+
+        ################# Settings for saving checkpoints ##################################
+        self.save_every = 25
+
+        #override dataloaderbatch size
+        # self.data_loader_batch_size = len()
+
+
+  #
+
+    def initialize_network(self):
+
+        #Need to instantiate and get all the training data and training labels
+        self.all_training_input = []
+        self.all_training_labels = []
+        self.all_testing_input = []
+        self.all_testing_labels = []
+
+        train_loader = iter(self.train_dataloader)
+        data_batch = next(train_loader)
+
+        count = 0
+        while data_batch is not None:
+         
+
+            image_flattened = torch.flatten(data_batch["image"], start_dim=1)
+            self.all_training_input.append(image_flattened)
+
+
+            targ_coord_reshaped = data_batch["target_coords"].reshape(-1, 2).type(torch.float32)
+            self.all_training_labels.append(targ_coord_reshaped)
+
+            count += 1
+            try:
+                data_batch = next(train_loader)
+            except StopIteration:
+                data_batch = None
+
+            # if count >2:
+            #     break
+            # break    
+
+ 
+ 
+        val_loader = iter(self.valid_dataloader)       
+        data_batch = next(val_loader)
+        count = 0
+
+        while data_batch is not None:
+            self.all_testing_input.append(torch.flatten(data_batch["image"], start_dim=1))
+            self.all_testing_labels.append((data_batch["target_coords"]))
+            try:
+                data_batch = next(val_loader)
+            except StopIteration:
+                data_batch = None   
+
+            # count += 1
+            # if count >2:
+            #     break         
+
+
+
+        self.all_training_input = torch.stack(self.all_training_input)
+        self.all_training_input = self.all_training_input.reshape(self.all_training_input.shape[0]*self.all_training_input.shape[1], -1).to(self.device)
+        self.all_training_labels = torch.stack(self.all_training_labels)
+        self.all_training_labels = self.all_training_labels.reshape(self.all_training_labels.shape[0]*self.all_training_labels.shape[1], -1).to(self.device)
+
+        self.all_testing_input = torch.stack(self.all_testing_input)
+        self.all_testing_input =  self.all_testing_input.reshape(self.all_testing_input.shape[0]*self.all_testing_input.shape[1], -1).to(self.device)
+        self.all_testing_labels = torch.stack(self.all_testing_labels)
+        self.all_testing_labels =  self.all_testing_labels.reshape(self.all_testing_labels.shape[0]*self.all_testing_labels.shape[1], -1).to(self.device)
+
+        print("all_training_input shape: ", self.all_training_input.shape)
+        print("all_training_labels shape: ", self.all_training_labels.shape)
+        print("all_testing_input shape: ", self.all_testing_input.shape)
+        print("all_testing_labels shape: ", self.all_testing_labels.shape)
+
+        # self.all_training_input = torch.linspace(0, 1, 100)
+
+        # self.all_training_labels = torch.stack([
+        #     torch.sin(self.all_training_input * (2 * math.pi)) + torch.randn(self.all_training_input.size()) * 0.2,
+        #     torch.cos(self.all_training_input * (2 * math.pi)) + torch.randn(self.all_training_input.size()) * 0.2,
+        # ], -1).to(self.device)
+
+        # self.all_training_input = self.all_training_input.to(self.device)
+        # Let's make the network
+        self.likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks=2, rank=2)
+
+        self.network = ExactGPModel(self.all_training_input, self.all_training_labels, self.likelihood)
+        self.network.to(self.device)
+     
+        #Log network and initial weights
+        if self.comet_logger:
+            self.comet_logger.set_model_graph(str(self.network))
+            print("Logged the model graph.")
+
+     
+        print("Initialized network architecture. #parameters: ", sum(p.numel() for p in self.network.parameters()))
+
+    def initialize_optimizer_and_scheduler(self):
+        assert self.network is not None, "self.initialize_network must be called first"
+
+      
+        self.learnable_params = list(self.network.parameters())
+        if self.regress_sigma:
+            for sig in self.sigmas:
+                self.learnable_params.append(sig)
+
+        self.optimizer = self.optimizer(self.learnable_params, **self.optimizer_kwargs)
+
+   
+        print("Initialised optimizer.")
+
+
+    def initialize_loss_function(self):
+        self.loss_func = self.loss_func(self.likelihood, self.network)
+        self.loss = GPLoss(self.loss_func)
+
+        print("initialized Loss function.")
+
+
+    #Override the train function
+    def train(self):
+        if not self.was_initialized:
+            self.initialize(True)
+
+        step = 0
+        while self.epoch < self.max_num_epochs:
+            # Zero gradients from previous iteration
+            self.optimizer.zero_grad()
+            # Output from model
+            output = self.network(self.all_training_input)
+            print(output)
+            # Calc loss and backprop gradients
+            loss, loss_dict = self.loss(output, self.all_training_labels)
+
+            loss.backward()
+            self.optimizer.step()
+            print('Iter %d/%d - Loss: %.3f  noise: %.3f' % (
+                self.epoch + 1, self.max_num_epochs, loss.item(),
+                # self.network.covar_module.base_kernel.lengthscale.item(),
+                self.network.likelihood.noise.item()
+            ))
+            self.epoch +=1
+
+            self.comet_logger.log_metric("training loss", loss.item(), self.epoch)
+            self.comet_logger.log_metric("noise", self.network.likelihood.noise.item(), self.epoch)
+            # self.comet_logger.log_metric("training loss", loss, self.epoch)
+
+        self.best_valid_loss_epoch = self.epoch
+
+      
+        self.best_valid_coords_epoch = self.epoch
+        self.save_checkpoint(os.path.join(self.output_folder, "GPmodel_fold" + str(self.fold) +".model"))
+
+        # Get into evaluation (predictive posterior) mode
+        self.network.eval()
+        self.likelihood.eval()
+
+        # # Test points are regularly spaced along [0,1]
+        # # Make predictions by feeding model through likelihood
+        # with torch.no_grad(), gpytorch.settings.fast_pred_var():
+        #     test_x = torch.linspace(0, 100, 100)
+        #     observed_pred = likelihood(model(test_x))
+
+
+            # self.optimizer.step()
+
+
+    def run_inference(self, split, debug=False):
+
+
+    def get_coords_from_heatmap(self, output, original_image_size):
+        """ Gets x,y coordinates from a model output. Here we use the final layer prediction of the U-Net,
+            maybe resize and get coords as the peak pixel. Also return value of peak pixel.
+
+        Args:
+            output: model output - a stack of heatmaps
+
+        Returns:
+            [int, int]: predicted coordinates
+        """
+
+  
+        return 
+
+
+    
+    
+    def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
+        '''
+        Use model outputs from a patchified image to stitch together a full resolution heatmap
+        
+        '''
+
+        raise NotImplementedError("need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo")
+
+        full_heatmap = np.zeros((self.orginal_im_size[1], self.orginal_im_size[0]))
+        patch_size_x = patch_predictions[0].shape[0]
+        patch_size_y = patch_predictions[0].shape[1]
+
+        for idx, patch in enumerate(patch_predictions):
+            full_heatmap[stitching_info[idx][1]:stitching_info[idx][1]+patch_size_y, stitching_info[idx][0]:stitching_info[idx][0]+patch_size_x] += patch.detach.cpu().numpy()
+
+        plt.imshow(full_heatmap)
+        plt.show()
+
+
+
+
+    
+
+
+    @staticmethod
+    def get_resolution_layers(input_size,  min_feature_res):
+        counter=1
+        while input_size[0] and input_size[1] >= min_feature_res*2:
+            counter+=1
+            input_size = [x/2 for x in input_size]
+        return counter
+
+
+
+
+
+

@@ -318,12 +318,27 @@ class MultiBranchPatchLoss(nn.Module):
 
         return total_loss, losses_seperated
 
-        # if self.branch_scheme == 'multi':
-        #     # print("reg loss and class loss", self.loss_regress.float(), self.loss_class)
-        #     return (self.loss_class + self.loss_disp)
-        # elif self.branch_scheme == 'displacement_only':
-        #     # print("reg loss ", self.loss_regress.float())
-        #     return (self.loss_disp)
-        # else:
-        #     # print("class loss ", self.loss_class)
-        #     return (self.loss_class)
+
+
+
+
+class GPLoss(nn.Module):
+    """
+    Gaussian Process loss
+
+    """
+
+    def __init__(self, loss_func):
+        super(GPLoss, self).__init__()
+        self.loss = loss_func
+        self.loss_seperated_keys = ["all_loss"]
+
+      
+
+    def forward(self, x, y):
+
+        l = -self.loss(x, y)
+
+        loss_seperated = {"all_loss": l}
+
+        return l, loss_seperated

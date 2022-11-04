@@ -93,7 +93,7 @@ class NetworkTrainer(ABC):
         self.train_label_generator = self.eval_label_generator = None
         self.optimizer= None
         self.loss = None
-        self.num_res_supervision = None
+        self.num_res_supervision = 1
 
         #Can be changed in extended class (child)
         self.early_stop_patience = 150
@@ -942,7 +942,7 @@ class NetworkTrainer(ABC):
         batch_hms = [torch.stack(x) for x in batch_hms]
 
         return batch_hms
-
+ 
     @staticmethod
     def worker_init_fn(worker_id):
         """Function to set the seed for each worker. This is used to ensure that each worker has a different seed, 
