@@ -3,9 +3,6 @@ import torch
 import numpy as np
 from albumentations.augmentations.transforms import ImageOnlyTransform
 from albumentations.core.transforms_interface import BasicTransform
-import matplotlib.pyplot as plt
-
-import warnings
 
 
 def normalize_cmr(image, to_tensor=False):

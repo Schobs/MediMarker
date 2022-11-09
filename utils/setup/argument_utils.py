@@ -1,5 +1,5 @@
 import argparse
-from config import get_cfg_defaults
+from config import get_cfg_defaults  # pylint: disable=import-error
 import warnings
 from yacs.config import CfgNode as CN
 

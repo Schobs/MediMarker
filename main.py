@@ -6,12 +6,17 @@ from datetime import datetime
 import torch
 from pandas import ExcelWriter
 from pytorch_lightning.utilities.seed import seed_everything
+
 # from torch.utils.tensorboard import SummaryWriter
 
-from datasets.dataset_index import DATASET_INDEX
-from trainer.model_trainer_index import MODEL_TRAINER_INDEX
-from utils.comet_logging.logging_utils import save_comet_html
-from utils.setup.argument_utils import arg_parse
+from datasets.dataset_index import DATASET_INDEX  # pylint: disable=import-error
+from trainer.model_trainer_index import (  # pylint: disable=import-error
+    MODEL_TRAINER_INDEX,
+)
+from utils.comet_logging.logging_utils import (  # pylint: disable=import-error
+    save_comet_html,
+)
+from utils.setup.argument_utils import arg_parse  # pylint: disable=import-error
 
 
 def main():
@@ -144,7 +149,7 @@ def main():
                 cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold" + fold + ".xlsx"
             ),
         )
-        with ExcelWriter(
+        with ExcelWriter(  # pylint: disable=abstract-class-instantiated
             os.path.join(
                 cfg.OUTPUT.OUTPUT_DIR,
                 "ensemble_summary_results_fold" + fold + output_append + ".xlsx",
@@ -160,7 +165,7 @@ def main():
                 "ensemble_individual_results_fold" + fold + ".xlsx",
             ),
         )
-        with ExcelWriter(
+        with ExcelWriter(  # pylint: disable=abstract-class-instantiated
             os.path.join(
                 cfg.OUTPUT.OUTPUT_DIR,
                 "ensemble_individual_results_fold" + fold + output_append + ".xlsx",
@@ -243,7 +248,7 @@ def main():
                 cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold" + fold + ".xlsx"
             ),
         )
-        with ExcelWriter(
+        with ExcelWriter(  # pylint: disable=abstract-class-instantiated
             os.path.join(
                 cfg.OUTPUT.OUTPUT_DIR,
                 "summary_results_fold" + fold + output_append + ".xlsx",
@@ -258,7 +263,7 @@ def main():
                 cfg.OUTPUT.OUTPUT_DIR, "individual_results_fold" + fold + ".xlsx"
             ),
         )
-        with ExcelWriter(
+        with ExcelWriter(  # pylint: disable=abstract-class-instantiated
             os.path.join(
                 cfg.OUTPUT.OUTPUT_DIR,
                 "individual_results_fold" + fold + output_append + ".xlsx",
