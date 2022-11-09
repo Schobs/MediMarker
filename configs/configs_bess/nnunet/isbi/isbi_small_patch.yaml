@@ -1,8 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp_test"
- 
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/small_patch/exp1"
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
   COMET_WORKSPACE: "schobs"
@@ -12,10 +11,9 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 1
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE: 12
-  MAX_EPOCHS: 15000 
+  MAX_EPOCHS: 258
   # REGRESS_SIGMA: True
 
-  AUTO_MIXED_PRECISION: False
 
 
 
@@ -32,9 +30,8 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: False
+  CACHE_DATA: True
   INFERENCE_ONLY: True
-  
 
 SAMPLER:
   DATA_AUG: None
@@ -44,10 +41,14 @@ SAMPLER:
   DEBUG: False
   PATCH:
     SAMPLER_BIAS: 1.0
-    RESOLUTION_TO_SAMPLE_FROM:  "input_size"
-    SAMPLE_PATCH_SIZE: [64,64]
+    RESOLUTION_TO_SAMPLE_FROM:  "input_size" # ['input_size', 'full']  
+    SAMPLE_PATCH_SIZE: [28,28]
+
+
+INFERENCE:
+  EVALUATION_MODE: "use_input_size" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: True
 
 MODEL:
   GAUSS_SIGMA: 2
-  ARCHITECTURE: "GP"  # ["U-Net" , "PHD-Net"]
-  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gp_test1/GPmodel_fold0.model"
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing/model_best_valid_coord_error_fold0.model"

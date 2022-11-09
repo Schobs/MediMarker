@@ -1,8 +1,8 @@
-
-
 from datasets.dataset_base import DatasetBase
+
 # class DatasetMeta(data.Dataset):
 #    pass
+
 
 class DatasetGeneric(DatasetBase):
     """
@@ -20,18 +20,15 @@ class DatasetGeneric(DatasetBase):
     References:
         #TO DO
     """
+
     additional_sample_attribute_keys = []
 
-    def __init__(
-        self, **kwargs
-        ):
-        
- 
+    def __init__(self, **kwargs):
+
         # super(DatasetBase, self).__init__()
         super(DatasetGeneric, self).__init__(**kwargs)
-     
 
-    # def add_additional_sample_attributes(self, data):   
+    # def add_additional_sample_attributes(self, data):
     #     return
-        #Extended dataset class can add more attributes to each sample here
-        # return data
+    # Extended dataset class can add more attributes to each sample here
+    # return data

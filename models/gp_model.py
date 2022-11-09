@@ -1,5 +1,5 @@
 import gpytorch
-
+import torch
 
 # We will use the simplest form of GP model, exact inference
 # class ExactGPModel(gpytorch.models.ExactGP):
@@ -21,8 +21,12 @@ class ExactGPModel(gpytorch.models.ExactGP):
             gpytorch.means.ConstantMean(), num_tasks=2
         )
         self.covar_module = gpytorch.kernels.MultitaskKernel(
-            gpytorch.kernels.RBFKernel(), num_tasks=2, rank=1
+            gpytorch.kernels.RBFKernel(), num_tasks=2, rank=2
         )
+        print("attr:", dir(self.covar_module.data_covar_module))
+        self.covar_module.data_covar_module.lengthscale = torch.tensor(128)
+        # mylengthscale = float(config.scale) * np.sqrt(Dim) * np.random.rand(d1,d2)
+        # model.covar_module.data_covar_module.kernels[2*i+1].lengthscale = torch.tensor(mylengthscale
 
     def forward(self, x):
         mean_x = self.mean_module(x)

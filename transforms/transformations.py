@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 
 import warnings
 
-def normalize_cmr(image,to_tensor=False):
+
+def normalize_cmr(image, to_tensor=False):
     """Adds small epsilon to std to avoid divide by zero
 
     Args:
@@ -20,13 +21,13 @@ def normalize_cmr(image,to_tensor=False):
     # warnings.filterwarnings("error")
     # image = sample["image"]
     if torch.is_tensor(image):
-        
-        norm_image = ((image-torch.mean(image))/(torch.std(image)+1e-100)).float()
-       
+
+        norm_image = ((image - torch.mean(image)) / (torch.std(image) + 1e-100)).float()
+
     else:
 
-        norm_image = ((image-np.mean(image))/(np.std(image)+1e-100))
-    
+        norm_image = (image - np.mean(image)) / (np.std(image) + 1e-100)
+
         if to_tensor:
             norm_image = torch.from_numpy(np.expand_dims(norm_image, axis=0)).float()
 
@@ -34,16 +35,12 @@ def normalize_cmr(image,to_tensor=False):
 
 
 class NormalizeZScore(ImageOnlyTransform):
-    def __init__(
-        self,
-        always_apply=True,
-        p=1.0
-    ):
+    def __init__(self, always_apply=True, p=1.0):
         super(NormalizeZScore, self).__init__()
 
     def apply(self, image, **params):
         print("applying normalization")
-        return (zscore(image, axis=None))
+        return zscore(image, axis=None)
         # norm_image = (image-np.mean(image))/np.std(image)
         # return norm_image
 
@@ -52,13 +49,12 @@ class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, sample):
-        image = sample['image']
-        label = sample['label']
+        image = sample["image"]
+        label = sample["label"]
 
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C x H x W
-        
 
         # print("before image shape: ", image.shape)
         # image = image.transpose((2, 0, 1))
@@ -94,10 +90,10 @@ class ToTensor(object):
 #             image_aug[32:-32, 32:-32, :] = image_small
 #             result.append(image_aug)
 #         return result
-        
+
 #     def func_heatmaps(heatmaps, random_state, parents, hooks):
 #         return heatmaps
-        
+
 #     def func_keypoints(keypoints_on_images, random_state, parents, hooks):
 #         return keypoints_on_images
 
@@ -107,16 +103,15 @@ class ToTensor(object):
 #     func_keypoints=func_keypoints
 # )
 
+
 class HeatmapsToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
     def __call__(self, heatmaps):
 
-
         # swap color axis because
         # numpy image: H x W x C
         # torch image: C x H x W
-        
 
         # print("before image shape: ", image.shape)
         # image = image.transpose((2, 0, 1))
@@ -124,7 +119,6 @@ class HeatmapsToTensor(object):
         all_seg_labels = []
         for maps in heatmaps:
             all_seg_labels.append(torch.from_numpy(maps).float())
-
 
         return all_seg_labels
 

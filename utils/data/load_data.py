@@ -25,6 +25,7 @@ def get_datatype_load(im_path):
     else:
         return lambda pth: Image.open(pth)
 
+
 def _compute_path(base_dir, element):
 
     if isinstance(element, str):
@@ -51,11 +52,11 @@ def _append_paths(base_dir, items):
                 item[k] = v
     return items
 
-    
+
 def load_aspire_datalist(
     data_list_file_path: str,
     data_list_key: str = "training",
-    base_dir: Optional[str] = None, 
+    base_dir: Optional[str] = None,
 ):
     """Load image/label paths of decathalon challenge from JSON file
 
@@ -84,10 +85,12 @@ def load_aspire_datalist(
     with open(data_list_file_path) as json_file:
         json_data = json.load(json_file)
     if data_list_key not in json_data:
-        raise ValueError(f"data list {data_list_key} not specified in '{data_list_file_path}'.")
+        raise ValueError(
+            f"data list {data_list_key} not specified in '{data_list_file_path}'."
+        )
     expected_data = json_data[data_list_key]
- 
+
     if base_dir is None:
         base_dir = os.path.dirname(data_list_file_path)
-    
+
     return _append_paths(base_dir, expected_data)
