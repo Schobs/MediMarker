@@ -35,9 +35,9 @@ class NormalizeZScore(ImageOnlyTransform):
     def __init__(self, always_apply=True, p=1.0):
         super(NormalizeZScore, self).__init__()
 
-    def apply(self, image, **params):
+    def apply(self, img, **params):
         print("applying normalization")
-        return zscore(image, axis=None)
+        return zscore(img, axis=None)
         # norm_image = (image-np.mean(image))/np.std(image)
         # return norm_image
 

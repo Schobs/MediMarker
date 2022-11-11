@@ -224,6 +224,10 @@ class NetworkTrainer(ABC):
         """
 
     def train(self):
+        """
+        The main training loop. For every epoch we train and validate. Each training epoch covers a number of minibatches of a certain batch size,
+        defined in the config file.
+        """
         if not self.was_initialized:
             self.initialize(True)
 
@@ -241,7 +245,7 @@ class NetworkTrainer(ABC):
 
             print("training")
             # Train for X number of batches per epoch e.g. 250
-            for iter_b in range(self.num_batches_per_epoch):
+            for _ in range(self.num_batches_per_epoch):
                 l, generator = self.run_iteration(
                     generator,
                     self.train_dataloader,

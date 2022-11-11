@@ -1,11 +1,12 @@
+import warnings
+
 import argparse
 from config import get_cfg_defaults  # pylint: disable=import-error
-import warnings
 from yacs.config import CfgNode as CN
 
 
 def get_evaluation_mode(eval_mode):
-    """_summary_
+    """Gets evaluation mode from the config file. This is used to determine whether to use how to process the model output to get the final coords.
 
     Args:
         eval_mode (str): string for evaulation mode

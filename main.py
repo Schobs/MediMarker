@@ -1,27 +1,32 @@
 # from __future__ import print_function, absolute_import
-from comet_ml import Experiment
 import os
 from datetime import datetime
-
+from comet_ml import Experiment
 import torch
 from pandas import ExcelWriter
 from pytorch_lightning.utilities.seed import seed_everything
+import logging
 
 # from torch.utils.tensorboard import SummaryWriter
 
-from datasets.dataset_index import DATASET_INDEX  # pylint: disable=import-error
-from trainer.model_trainer_index import (  # pylint: disable=import-error
+from datasets.dataset_index import DATASET_INDEX
+
+
+from trainer.model_trainer_index import (
     MODEL_TRAINER_INDEX,
 )
-from utils.comet_logging.logging_utils import (  # pylint: disable=import-error
+from utils.comet_logging.logging_utils import (
     save_comet_html,
 )
-from utils.setup.argument_utils import arg_parse  # pylint: disable=import-error
+from utils.setup.argument_utils import arg_parse
 
 
 def main():
 
-    """The main for this domain adaptation example, showing the workflow"""
+    """The main file for training and testing the model. Everything is called from here."""
+
+    # set up a glova
+    # Read and infer arguments from yaml file
     cfg = arg_parse()
 
     # ---- setup device ----
@@ -52,7 +57,9 @@ def main():
             writer.add_tag(str(tag_))
 
         with open(
-            os.path.join(cfg.OUTPUT.OUTPUT_DIR, "comet_" + exp_name + ".txt"), "w"
+            os.path.join(cfg.OUTPUT.OUTPUT_DIR, "comet_" + exp_name + ".txt"),
+            "w",
+            encoding="utf-8",
         ) as f:
             f.write("link to exp: " + writer.url)
     else:
@@ -71,15 +78,11 @@ def main():
     #     record_shapes=True,
     #     with_stack=True)
 
-    # get dataset class based on dataset, it defaults to datasets.dataset_generic
-
+    # get dataset class based on dataset, it defaults to datasets.dataset_generic. Also get trainer
     dataset_class = DATASET_INDEX[cfg.DATASET.DATASET_CLASS]
-
     trainer = MODEL_TRAINER_INDEX[cfg.MODEL.ARCHITECTURE]
 
-    # Trainer
-
-    ############ Training ############
+    ############ Set up model trainer, indicating if we are training or testing ############
     if not cfg.TRAINER.INFERENCE_ONLY:
         if writer is not None:
             writer.add_tag("training")
@@ -96,7 +99,6 @@ def main():
 
         if writer is not None:
             writer.add_tag("completed training")
-
     else:
         if writer is not None:
             writer.add_tag("inference only")
@@ -110,73 +112,37 @@ def main():
         )
         trainer.initialize(training_bool=False)
 
-    ########### Testing ##############
+    ########### TESTING ##############
     print("\n Testing")
 
     all_model_summaries = {}
     all_model_individuals = {}
 
-    # if ensemble inference, need to pass a list of checkpoint_paths to the model_trainer.
-    # In the trainer, for each minibatch, I need to perform inference for each model and saving the model outputs in a list.
-    # After the minibatch, I need to get S-MHA and a model prediction, E-MHA, E-CPV and the model predictions too.
-    # Then I need to update a csv file per minibatch, NOT save to a list and write at the end.
-    # Use the first model in the list as S-MHA.
+    # Ensemble inference
     if cfg.INFERENCE.ENSEMBLE_INFERENCE:
 
         if writer is not None:
             writer.add_tag("ensemble_inference")
 
         # run_inference_ensemble_models(self, split, checkpoint_list, debug=False)
-        all_summary_results, ind_results = trainer.run_inference_ensemble_models(
+        (
+            all_model_summaries,
+            all_model_individuals,
+        ) = trainer.run_inference_ensemble_models(
             split="testing",
             checkpoint_list=cfg.INFERENCE.ENSEMBLE_CHECKPOINTS,
             debug=cfg.INFERENCE.DEBUG,
         )
 
-        # ind_results = {"ensemble_results": ind_results}
-        # Now Save all model results to a spreadsheet
-        html_to_log = save_comet_html(all_summary_results, ind_results)
-        writer.log_html(html_to_log)
-        # print("Logged all results to CometML.")
+        # Add ensemble marker to the output file
         if cfg.OUTPUT.RESULTS_CSV_APPEND is not None:
-            output_append = "_" + str(cfg.OUTPUT.RESULTS_CSV_APPEND)
+            output_append = "_ensemble_" + str(cfg.OUTPUT.RESULTS_CSV_APPEND)
         else:
-            output_append = ""
-
-        print(
-            "saving summary of results locally to: ",
-            os.path.join(
-                cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold" + fold + ".xlsx"
-            ),
-        )
-        with ExcelWriter(  # pylint: disable=abstract-class-instantiated
-            os.path.join(
-                cfg.OUTPUT.OUTPUT_DIR,
-                "ensemble_summary_results_fold" + fold + output_append + ".xlsx",
-            )
-        ) as writer_:
-            for n, df in (all_summary_results).items():
-                df.to_excel(writer_, n)
-
-        print(
-            "saving individual sample results locally to: ",
-            os.path.join(
-                cfg.OUTPUT.OUTPUT_DIR,
-                "ensemble_individual_results_fold" + fold + ".xlsx",
-            ),
-        )
-        with ExcelWriter(  # pylint: disable=abstract-class-instantiated
-            os.path.join(
-                cfg.OUTPUT.OUTPUT_DIR,
-                "ensemble_individual_results_fold" + fold + output_append + ".xlsx",
-            )
-        ) as writer_:
-            for n, df in (ind_results).items():
-                df.to_excel(writer_, n)
-        writer.add_tag("completed ensemble_inference")
-        writer.add_tag("completed inference")
+            output_append = "_ensemble"
 
     else:
+        writer.add_tag("single_inference")
+
         if cfg.MODEL.CHECKPOINT:
             print("loading provided checkpoint", cfg.MODEL.CHECKPOINT)
 
@@ -231,49 +197,49 @@ def main():
                 all_model_summaries[model_names[i]] = summary_results
                 all_model_individuals[model_names[i]] = ind_results
 
-        # Now Save all model results to a spreadsheet
-        if writer is not None:
-            html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
-            writer.log_html(html_to_log)
-            print("Logged all results to CometML.")
-
+        # Add append to output file string
         if cfg.OUTPUT.RESULTS_CSV_APPEND is not None:
             output_append = "_" + str(cfg.OUTPUT.RESULTS_CSV_APPEND)
         else:
             output_append = ""
 
-        print(
-            "saving summary of results locally to: ",
-            os.path.join(
-                cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold" + fold + ".xlsx"
-            ),
-        )
-        with ExcelWriter(  # pylint: disable=abstract-class-instantiated
-            os.path.join(
-                cfg.OUTPUT.OUTPUT_DIR,
-                "summary_results_fold" + fold + output_append + ".xlsx",
-            )
-        ) as writer_:
-            for n, df in (all_model_summaries).items():
-                df.to_excel(writer_, n)
+    # Now Save all model results to a spreadsheet
+    if writer is not None:
+        html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
+        writer.log_html(html_to_log)
+        print("Logged all results to CometML.")
 
-        print(
-            "saving individual sample results locally to: ",
-            os.path.join(
-                cfg.OUTPUT.OUTPUT_DIR, "individual_results_fold" + fold + ".xlsx"
-            ),
+    print(
+        "saving summary of results locally to: ",
+        os.path.join(cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold" + fold + ".xlsx"),
+    )
+    with ExcelWriter(  # pylint: disable=abstract-class-instantiated
+        os.path.join(
+            cfg.OUTPUT.OUTPUT_DIR,
+            "summary_results_fold" + fold + output_append + ".xlsx",
         )
-        with ExcelWriter(  # pylint: disable=abstract-class-instantiated
-            os.path.join(
-                cfg.OUTPUT.OUTPUT_DIR,
-                "individual_results_fold" + fold + output_append + ".xlsx",
-            )
-        ) as writer_:
-            for n, df in (all_model_individuals).items():
-                df.to_excel(writer_, n)
+    ) as writer_:
+        for n, df in (all_model_summaries).items():
+            df.to_excel(writer_, n)
 
-        if writer is not None:
-            writer.add_tag("completed inference")
+    print(
+        "saving individual sample results locally to: ",
+        os.path.join(
+            cfg.OUTPUT.OUTPUT_DIR,
+            "individual_results_fold" + fold + output_append + ".xlsx",
+        ),
+    )
+    with ExcelWriter(  # pylint: disable=abstract-class-instantiated
+        os.path.join(
+            cfg.OUTPUT.OUTPUT_DIR,
+            "individual_results_fold" + fold + output_append + ".xlsx",
+        )
+    ) as writer_:
+        for n, df in (all_model_individuals).items():
+            df.to_excel(writer_, n)
+
+    if writer is not None:
+        writer.add_tag("completed inference")
 
 
 if __name__ == "__main__":
