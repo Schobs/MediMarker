@@ -13,25 +13,30 @@ from imgaug.augmentables import Keypoint, KeypointsOnImage
 from PIL import Image
 from torch.utils import data
 from torchvision import transforms
-from transforms.transformations import (HeatmapsToTensor, NormalizeZScore, ToTensor,
-                             normalize_cmr)
+from transforms.transformations import (
+    HeatmapsToTensor,
+    normalize_cmr,
+)
 from transforms.dataloader_transforms import get_aug_package_loader
 
-from transforms.generate_labels import LabelGenerator, generate_heatmaps
+from transforms.generate_labels import LabelGenerator
 from utils.data.load_data import get_datatype_load, load_aspire_datalist
 from utils.im_utils.visualisation import visualize_patch
 from time import time
 
 import multiprocessing as mp
 import ctypes
+
 # import albumentations as A
 # import albumentations.augmentations.functional as F
 # from albumentations.pytorch import ToTensorV2
 
 from abc import ABC, abstractmethod, ABCMeta
 
+
 class DatasetMeta(ABCMeta, type(data.Dataset)):
-   pass
+    pass
+
 
 class DatasetBase(ABC, metaclass=DatasetMeta):
     """
@@ -59,29 +64,26 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         annotation_path: str,
         generate_hms_here: bool,
         sample_mode: str,
-        image_modality: str= "CMRI",
-        split: str ="training",
+        image_modality: str = "CMRI",
+        split: str = "training",
         root_path: str = "./data",
         cv: int = -1,
         cache_data: bool = False,
         debug: bool = False,
-        input_size=  [512,512],
-        sample_patch_size = [512, 512],
-        sample_patch_bias = 0.66,
-        sample_patch_from_resolution = [512,512],
+        input_size=[512, 512],
+        sample_patch_size=[512, 512],
+        sample_patch_bias=0.66,
+        sample_patch_from_resolution=[512, 512],
         num_res_supervisions: int = 5,
         data_augmentation_strategy: str = None,
         data_augmentation_package: str = None,
         dataset_split_size: int = -1,
-        additional_sample_attribute_keys = []
-        
+        additional_sample_attribute_keys=[],
+    ):
 
-        ):
-        
- 
         super(DatasetBase, self).__init__()
 
-        #We are passing in the label generator here, this is unique to each model_trainer class.
+        # We are passing in the label generator here, this is unique to each model_trainer class.
         self.LabelGenerator = LabelGenerator
 
         self.data_augmentation_strategy = data_augmentation_strategy
@@ -94,149 +96,186 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.sample_patch_bias = sample_patch_bias
         self.sample_patch_from_resolution = sample_patch_from_resolution
 
+        # print("patch sampling stuff: ", self.sample_patch_size, self.sample_patch_bias, self.sample_patch_from_resolution)
         self.dataset_split_size = dataset_split_size
 
-        #Additional sample attributes found in the json datalist to return with each sample
+        # Additional sample attributes found in the json datalist to return with each sample
         self.additional_sample_attribute_keys = additional_sample_attribute_keys
-        self.additional_sample_attributes = {k: [] for k in self.additional_sample_attribute_keys}
+        self.additional_sample_attributes = {
+            k: [] for k in self.additional_sample_attribute_keys
+        }
 
         if self.sample_mode == "patch":
-            assert sample_patch_size == input_size
+            # assert sample_patch_size == input_size
 
-            #Get the patches origin information. Use this for stitching together in valid/testing
+            # Get the patches origin information. Use this for stitching together in valid/testing
             self.load_im_size = sample_patch_from_resolution
             self.input_size = sample_patch_size
 
             # Coordinates of each patch origin in the image
-            self.patchified_idxs = self.get_patch_stitching_info(self.load_im_size, self.sample_patch_size )
+            self.patchified_idxs = self.get_patch_stitching_info(
+                self.load_im_size, self.sample_patch_size
+            )
 
-            #if we're sampling patches w/o aug we still need to center crop so change the aug strategy
+            # if we're sampling patches w/o aug we still need to center crop so change the aug strategy
             if self.data_augmentation_strategy == None:
                 self.data_augmentation_package = "imgaug"
                 self.data_augmentation_strategy = "CenterCropOnly"
 
         elif self.sample_mode == "full":
             #  If not sample_patches then just 1 big patch!
-            self.patchified_idxs = [[0,0]]
+            self.patchified_idxs = [[0, 0]]
             self.load_im_size = input_size
             self.input_size = input_size
         else:
             raise ValueError("sample mode %s not recognized." % self.sample_mode)
 
         self.heatmap_label_size = self.input_size
-        #ratio between original image and load_image size, to resize landmarks.
-
-     
-
+        # ratio between original image and load_image size, to resize landmarks.
 
         if self.data_augmentation_strategy == None:
             print("No data Augmentation for %s split." % split)
         else:
-            #Get data augmentor for the correct package
-            self.aug_package_loader = get_aug_package_loader(self.data_augmentation_package)
-            #Get specific data augmentation strategy
-            self.transform = self.aug_package_loader(self.data_augmentation_strategy, self.input_size )
-            print("Using data augmentation package %s and strategy %s for %s split." % (data_augmentation_package, self.data_augmentation_strategy, split) )
+            # Get data augmentor for the correct package
+            self.aug_package_loader = get_aug_package_loader(
+                self.data_augmentation_package
+            )
+            # Get specific data augmentation strategy
+            self.transform = self.aug_package_loader(
+                self.data_augmentation_strategy, self.input_size
+            )
+            print(
+                "Using data augmentation package %s and strategy %s for %s split."
+                % (data_augmentation_package, self.data_augmentation_strategy, split)
+            )
 
-
-        self.heatmaps_to_tensor = transforms.Compose([
-                HeatmapsToTensor()
-            ])
-        
+        self.heatmaps_to_tensor = transforms.Compose([HeatmapsToTensor()])
 
         self.root_path = Path(root_path)
         self.annotation_path = Path(annotation_path)
         self.image_modality = image_modality
         self.landmarks = landmarks
         self.split = split
-        self.sigmas= sigmas
+        self.sigmas = sigmas
 
-        self.cv=cv
+        self.cv = cv
         self.cache_data = cache_data
         self.debug = debug
 
         self.num_res_supervisions = num_res_supervisions
 
-
-        #Lists to save the image paths (or images if caching), target coordinates (scaled to input size), and full resolution coords.
+        # Lists to save the image paths (or images if caching), target coordinates (scaled to input size), and full resolution coords.
         self.images = []
         self.target_coordinates = []
-        self.full_res_coordinates = [] #full_res will be same as target if input and original image same size
+        self.full_res_coordinates = (
+            []
+        )  # full_res will be same as target if input and original image same size
         self.image_paths = []
         self.uids = []
         self.annotation_available = []
         self.original_image_sizes = []
         self.image_resizing_factors = []
 
-
-
-        #We are using cross-validation, following our convention of naming each json train with the append "foldX" where (X= self.cv)
+        # We are using cross-validation, following our convention of naming each json train with the append "foldX" where (X= self.cv)
         if cv >= 0:
-            label_std = os.path.join('fold' + str(self.cv) +'.json' )
-            print("Loading %s data for CV %s " % (self.split, os.path.join(self.annotation_path, label_std)))
-            datalist = load_aspire_datalist(os.path.join(self.annotation_path, label_std), data_list_key=self.split, base_dir=self.root_path)
+            label_std = os.path.join("fold" + str(self.cv) + ".json")
+            print(
+                "Loading %s data for CV %s "
+                % (self.split, os.path.join(self.annotation_path, label_std))
+            )
+            datalist = load_aspire_datalist(
+                os.path.join(self.annotation_path, label_std),
+                data_list_key=self.split,
+                base_dir=self.root_path,
+            )
 
             if self.dataset_split_size != -1:
-                datalist = datalist [:self.dataset_split_size]
+                datalist = datalist[: self.dataset_split_size]
                 print("datalist: ", datalist)
-        #Not using CV, load the specified json file
+        # Not using CV, load the specified json file
         else:
-            print("Loading %s data (no CV) for %s " % (self.split, self.annotation_path))
-            datalist = load_aspire_datalist(self.annotation_path, data_list_key=self.split, base_dir=self.root_path)
+            print(
+                "Loading %s data (no CV) for %s " % (self.split, self.annotation_path)
+            )
+            datalist = load_aspire_datalist(
+                self.annotation_path, data_list_key=self.split, base_dir=self.root_path
+            )
 
-
-        # datalist = datalist[:24]
+        datalist = datalist[:20]
 
         # based on first image extenstion, get the load function.
         self.datatype_load = get_datatype_load(datalist[0]["image"])
 
-        self.load_function = lambda img: img 
+        self.load_function = lambda img: img
 
         for idx, data in enumerate(datalist):
-             ### Add coordinate labels as sample attribute, if annotations available
-            #case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
-            if type(data["coordinates"]) != list or ("has_annotation" in data.keys() and data["has_annotation"] == False):
-                interested_landmarks = np.array([[0,0]]*len(self.landmarks))
+            ### Add coordinate labels as sample attribute, if annotations available
+            # case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
+            if type(data["coordinates"]) != list or (
+                "has_annotation" in data.keys() and data["has_annotation"] == False
+            ):
+                interested_landmarks = np.array([[0, 0]] * len(self.landmarks))
                 self.annotation_available.append(False)
                 self.full_res_coordinates.append(interested_landmarks)
 
                 if self.split == "training" or self.split == "validation":
-                    raise ValueError("Training/Validation data must have annotations. Check your data. Sample that failed: ", data)
+                    raise ValueError(
+                        "Training/Validation data must have annotations. Check your data. Sample that failed: ",
+                        data,
+                    )
             else:
-                interested_landmarks = np.array(data["coordinates"])[self.landmarks,:2]
-                self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks,:2] )
+                interested_landmarks = np.array(data["coordinates"])[self.landmarks, :2]
+                self.full_res_coordinates.append(
+                    np.array(data["coordinates"])[self.landmarks, :2]
+                )
                 self.annotation_available.append(True)
 
-
-
             if self.cache_data:
-              
-                #Determine original size and log whether we needed to resize it
-                resized_factor, original_size, image, interested_landmarks = self.load_and_resize_image(data["image"], interested_landmarks)
+
+                # Determine original size and log whether we needed to resize it
+                (
+                    resized_factor,
+                    original_size,
+                    image,
+                    interested_landmarks,
+                ) = self.load_and_resize_image(data["image"], interested_landmarks)
                 self.images.append(image)
                 self.image_resizing_factors.append(resized_factor)
-                self.original_image_sizes.append(original_size)      
+                self.original_image_sizes.append(original_size)
 
             else:
-                #Not caching, so add image path.
-                self.images.append(data["image"]) #just appends the path, the load_function will load it later.
-
+                # Not caching, so add image path.
+                self.images.append(
+                    data["image"]
+                )  # just appends the path, the load_function will load it later.
 
             self.target_coordinates.append(interested_landmarks)
             self.image_paths.append(data["image"])
             self.uids.append(data["id"])
 
-            #Extended dataset class can add more attributes to each sample here
+            # Extended dataset class can add more attributes to each sample here
             self.add_additional_sample_attributes(data)
 
         if self.cache_data:
-            print("Cached all %s data in memory. Length of %s " % (self.split, len(self.images)))
+            print(
+                "Cached all %s data in memory. Length of %s "
+                % (self.split, len(self.images))
+            )
         else:
-            print("Not caching %s image data in memory, will load on the fly. Length of %s " % (self.split, len(self.images)))
+            print(
+                "Not caching %s image data in memory, will load on the fly. Length of %s "
+                % (self.split, len(self.images))
+            )
 
-
-        non_unique = ([[x,self.image_paths[x_idx]] for x_idx, x in enumerate(self.uids) if self.uids.count(x) > 1])
-        assert len(non_unique) == 0,  "Not all uids are unique! Check your data. %s non-unqiue uids from %s samples , they are: %s \n " % (len(non_unique), len(self.uids), non_unique) 
+        non_unique = [
+            [x, self.image_paths[x_idx]]
+            for x_idx, x in enumerate(self.uids)
+            if self.uids.count(x) > 1
+        ]
+        assert len(non_unique) == 0, (
+            "Not all uids are unique! Check your data. %s non-unqiue uids from %s samples , they are: %s \n "
+            % (len(non_unique), len(self.uids), non_unique)
+        )
 
     def __len__(self):
         return len(self.images)
@@ -244,17 +283,15 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
     def set_use_cache(self, use_cache):
         self.use_cache = use_cache
 
-
     # @abstractmethod
     def add_additional_sample_attributes(self, data):
-        '''
+        """
         Add more attributes to each sample.
 
-        '''   
+        """
         for k_ in self.additional_sample_attribute_keys:
             keyed_data = data[k_]
             self.additional_sample_attributes[k_].append(keyed_data)
-        
 
     def load_and_resize_image(self, image_path, coords):
         """Load image and resize it to the specified size. Also resize the coordinates to match the new image size.
@@ -267,31 +304,36 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             _type_: _description_
         """
 
-        original_image  = self.datatype_load(image_path)
-        original_size = np.expand_dims(np.array(list(original_image.size)),1)
+        original_image = self.datatype_load(image_path)
+        original_size = np.expand_dims(np.array(list(original_image.size)), 1)
         if list(original_image.size) != self.load_im_size:
-            resizing_factor = [list(original_image.size)[0]/self.load_im_size[0], list(original_image.size)[1]/self.load_im_size[1]]
+            resizing_factor = [
+                list(original_image.size)[0] / self.load_im_size[0],
+                list(original_image.size)[1] / self.load_im_size[1],
+            ]
             resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
         else:
-            resizing_factor = [1,1]
-            resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)                
+            resizing_factor = [1, 1]
+            resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
 
-        #potentially resize the coords
-        coords =  np.round(coords * [1/resizing_factor[0], 1/resizing_factor[1]])
-        image = np.expand_dims(normalize_cmr(original_image.resize(self.load_im_size)), axis=0)
+        # potentially resize the coords
+        coords = np.round(coords * [1 / resizing_factor[0], 1 / resizing_factor[1]])
+        image = np.expand_dims(
+            normalize_cmr(original_image.resize(self.load_im_size)), axis=0
+        )
 
         return resized_factor, original_size, image, coords
 
     def __getitem__(self, index):
-        """ Main function of the dataloader. Gets a data sample. 
-            
+        """Main function of the dataloader. Gets a data sample.
+
 
 
         Args:
             index (_type_): _description_
 
         Returns:
-            It must return a dictionary with the keys: 
+            It must return a dictionary with the keys:
             sample = {
                 "image" (torch.tensor, shape (1, H, W)): tensor of input image to network.
                 "label" (Dict of torch.tensors):  if self.generate_hms_here bool -> (Dictionary of labels e.g. tensor heatmaps, see LabelGenerator for details); else -> [].
@@ -308,52 +350,69 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
 
         """
-        
-        sorgin= time()
+
+        sorgin = time()
 
         hm_sigmas = self.sigmas
         # print("load time: " , (time()-sorgin))
         coords = self.target_coordinates[index]
         full_res_coods = self.full_res_coordinates[index]
         im_path = self.image_paths[index]
-        run_time_debug= False
+        run_time_debug = False
         this_uid = self.uids[index]
         is_annotation_available = self.annotation_available[index]
-        x_y_corner = [0,0]
+        x_y_corner = [0, 0]
         image = self.load_function(self.images[index])
 
-
-        #If we cached the data, we don't need to get original image size. If not, we need to load it here.
+        # If we cached the data, we don't need to get original image size. If not, we need to load it here.
         if self.cache_data:
             resized_factor = self.image_resizing_factors[index]
             original_size = self.original_image_sizes[index]
 
         else:
-            resized_factor, original_size, image, coords = self.load_and_resize_image(image, coords) 
-           
-        untransformed_coords = coords
+            resized_factor, original_size, image, coords = self.load_and_resize_image(
+                image, coords
+            )
 
+        untransformed_coords = coords
 
         untransformed_im = image
 
-
-        #Do data augmentation
+        # Do data augmentation
         if self.data_augmentation_strategy != None:
-            
-            #By default, the origin is 0,0 unless we sample from the middle of the image somewhere.
-            #If sampling patches we first sample the patch with a little wiggle room, & normalize the lms. The transform center-crops it back.
+
+            # By default, the origin is 0,0 unless we sample from the middle of the image somewhere.
+            # If sampling patches we first sample the patch with a little wiggle room, & normalize the lms. The transform center-crops it back.
             if self.sample_mode == "patch":
-                untransformed_im, untransformed_coords, landmarks_in_indicator, x_y_corner = self.sample_patch(untransformed_im, untransformed_coords)
+                (
+                    untransformed_im,
+                    untransformed_coords,
+                    landmarks_in_indicator,
+                    x_y_corner,
+                ) = self.sample_patch(untransformed_im, untransformed_coords)
 
-            kps = KeypointsOnImage([Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords], shape=untransformed_im[0].shape )
+            kps = KeypointsOnImage(
+                [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
+                shape=untransformed_im[0].shape,
+            )
 
-            s= time()
-            transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps) #list where [0] is image and [1] are coords.
+            s = time()
+            transformed_sample = self.transform(
+                image=untransformed_im[0], keypoints=kps
+            )  # list where [0] is image and [1] are coords.
             input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
             input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
-            
-            #Recalculate indicators incase transform pushed out/in coords.
-            landmarks_in_indicator = [1 if ((0 <= xy[0] <= self.input_size[0] ) and (0 <= xy[1] <= self.input_size[1] )) else 0 for xy in input_coords  ]
+
+            # Recalculate indicators incase transform pushed out/in coords.
+            landmarks_in_indicator = [
+                1
+                if (
+                    (0 <= xy[0] <= self.input_size[0])
+                    and (0 <= xy[1] <= self.input_size[1])
+                )
+                else 0
+                for xy in input_coords
+            ]
 
         else:
 
@@ -361,41 +420,55 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
 
-        s= time()
+        s = time()
         if self.generate_hms_here:
 
-            label = self.LabelGenerator.generate_labels(input_coords, x_y_corner, landmarks_in_indicator,  self.heatmap_label_size, hm_sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
+            label = self.LabelGenerator.generate_labels(
+                input_coords,
+                x_y_corner,
+                landmarks_in_indicator,
+                self.heatmap_label_size,
+                hm_sigmas,
+                self.num_res_supervisions,
+                self.hm_lambda_scale,
+            )
         else:
             label = []
 
-
-        #If coordinates are cutoff by augmentation throw a run time error. 
-        # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
-        #     print("input coords: ", input_coords)
-        #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
+            # If coordinates are cutoff by augmentation throw a run time error.
+            # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
+            #     print("input coords: ", input_coords)
+            #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
             run_time_debug = True
         # else:
-        #     print("ok")  
+        #     print("ok")
 
-     
-          
-        sample = {"image":input_image , "label":label, "target_coords": input_coords, "landmarks_in_indicator": landmarks_in_indicator,
-            "full_res_coords": full_res_coods, "image_path": im_path, "uid":this_uid, "annotation_available": is_annotation_available,
-            "resizing_factor": resized_factor, "original_image_size": original_size }
+        sample = {
+            "image": input_image,
+            "label": label,
+            "target_coords": input_coords,
+            "landmarks_in_indicator": landmarks_in_indicator,
+            "full_res_coords": full_res_coods,
+            "image_path": im_path,
+            "uid": this_uid,
+            "annotation_available": is_annotation_available,
+            "resizing_factor": resized_factor,
+            "original_image_size": original_size,
+        }
 
-
-        #add additional sample attributes from child class.
+        # add additional sample attributes from child class.
         for key_ in list(self.additional_sample_attributes.keys()):
             sample[key_] = self.additional_sample_attributes[key_][index]
 
-
-        if (self.debug or run_time_debug):
+        if self.debug or run_time_debug:
             print("sample: ", sample)
-            self.LabelGenerator.debug_sample(sample,untransformed_im, untransformed_coords)
+            self.LabelGenerator.debug_sample(
+                sample, untransformed_im, untransformed_coords
+            )
         return sample
 
     def generate_labels(self, landmarks, sigmas):
-        """ Generate heatmap labels using same method as in _get_item__ 
+        """Generate heatmap labels using same method as in _get_item__
 
         Args:
             landmarks (_type_): _description_
@@ -406,17 +479,31 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         """
 
         # landmarks_in_indicator = [1 for xy in landmarks  ]
-        landmarks_in_indicator = [1 if ((0 <= xy[0] <= self.input_size[0] ) and (0 <= xy[1] <= self.input_size[1] )) else 0 for xy in landmarks  ]
+        landmarks_in_indicator = [
+            1
+            if (
+                (0 <= xy[0] <= self.input_size[0])
+                and (0 <= xy[1] <= self.input_size[1])
+            )
+            else 0
+            for xy in landmarks
+        ]
 
-        x_y_corner = [0,0]
+        x_y_corner = [0, 0]
 
-        return self.LabelGenerator.generate_labels(landmarks, x_y_corner, landmarks_in_indicator, self.input_size, sigmas,  self.num_res_supervisions, self.hm_lambda_scale)
-    
-
+        return self.LabelGenerator.generate_labels(
+            landmarks,
+            x_y_corner,
+            landmarks_in_indicator,
+            self.input_size,
+            sigmas,
+            self.num_res_supervisions,
+            self.hm_lambda_scale,
+        )
 
     def sample_patch(self, image, landmarks, lm_safe_region=0, safe_padding=128):
-        """ Samples a patch from the image. It ensures a landmark is in a patch with a self.sample_patch_bias% chance.
-            The patch image is larger than the patch-size by safe_padding on every side for safer data augmentation. 
+        """Samples a patch from the image. It ensures a landmark is in a patch with a self.sample_patch_bias% chance.
+            The patch image is larger than the patch-size by safe_padding on every side for safer data augmentation.
             Therefore, the image is first padded with zeros on each side to stop out of bounds when sampling from the edges.
 
         Args:
@@ -429,33 +516,44 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             _type_: cropped padded sample
             landmarks normalised to within the patch
             binary indicator of which landmarks are in the patch.
-            
+
         """
-        
+
         z_rand = np.random.uniform(0, 1)
         landmarks_in_indicator = []
-        if z_rand >= (1-self.sample_patch_bias):
+        if z_rand >= (1 - self.sample_patch_bias):
 
-            #Keep sampling until landmark is in patch         
+            # Keep sampling until landmark is in patch
             while 1 not in landmarks_in_indicator:
                 landmarks_in_indicator = []
 
                 #
-                y_rand = np.random.randint(0, self.load_im_size[1]-self.sample_patch_size[1])
-                x_rand = np.random.randint(0, self.load_im_size[0] -self.sample_patch_size[0])
+                y_rand = np.random.randint(
+                    0, self.load_im_size[1] - self.sample_patch_size[1]
+                )
+                x_rand = np.random.randint(
+                    0, self.load_im_size[0] - self.sample_patch_size[0]
+                )
 
                 for lm in landmarks:
                     landmark_in = 0
-                  
 
-                    #Safe region means landmark is not right on the edge
-                    if y_rand+lm_safe_region  <= lm[1]<= (y_rand+self.sample_patch_size[1])-lm_safe_region:
-                        if x_rand+lm_safe_region <= lm[0] <= (x_rand +self.sample_patch_size[0])-lm_safe_region:
+                    # Safe region means landmark is not right on the edge
+                    if (
+                        y_rand + lm_safe_region
+                        <= lm[1]
+                        <= (y_rand + self.sample_patch_size[1]) - lm_safe_region
+                    ):
+                        if (
+                            x_rand + lm_safe_region
+                            <= lm[0]
+                            <= (x_rand + self.sample_patch_size[0]) - lm_safe_region
+                        ):
                             landmark_in = 1
-                    
+
                     landmarks_in_indicator.append(landmark_in)
 
-                #Tested with the extremes, its all ok.
+                # Tested with the extremes, its all ok.
                 # y_rand = self.load_im_size[1]-self.sample_patch_size[1]
                 # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
                 # y_rand = 0
@@ -464,48 +562,94 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
 
         else:
-            y_rand = np.random.randint(0, self.load_im_size[1]-self.sample_patch_size[1])
-            x_rand = np.random.randint(0, self.load_im_size[0] -self.sample_patch_size[0])
+            y_rand = np.random.randint(
+                0, self.load_im_size[1] - self.sample_patch_size[1]
+            )
+            x_rand = np.random.randint(
+                0, self.load_im_size[0] - self.sample_patch_size[0]
+            )
 
             for lm in landmarks:
                 landmark_in = 0
-                if y_rand+lm_safe_region <= lm[1]<= y_rand+self.sample_patch_size[1]-lm_safe_region:
-                    if x_rand+lm_safe_region <= lm[0] <= (x_rand +self.sample_patch_size[0])-lm_safe_region:
+                if (
+                    y_rand + lm_safe_region
+                    <= lm[1]
+                    <= y_rand + self.sample_patch_size[1] - lm_safe_region
+                ):
+                    if (
+                        x_rand + lm_safe_region
+                        <= lm[0]
+                        <= (x_rand + self.sample_patch_size[0]) - lm_safe_region
+                    ):
                         landmark_in = 1
                 landmarks_in_indicator.append(landmark_in)
-
 
         # Add the safe padding size
         y_rand_safe = y_rand + safe_padding
         x_rand_safe = x_rand + safe_padding
 
-        #First pad image
-        padded_image =   np.expand_dims(np.pad(image[0], (safe_padding,safe_padding)), axis=0)
-        padded_patch_size = [x+ (2*safe_padding) for x in self.sample_patch_size]
+        # First pad image
+        padded_image = np.expand_dims(
+            np.pad(image[0], (safe_padding, safe_padding)), axis=0
+        )
+        padded_patch_size = [x + (2 * safe_padding) for x in self.sample_patch_size]
 
         # We pad before and after the slice.
-        y_rand_pad = y_rand_safe -safe_padding
-        x_rand_pad = x_rand_safe -safe_padding
-        cropped_padded_sample = padded_image[:, y_rand_pad:y_rand_pad+padded_patch_size[1], x_rand_pad:x_rand_pad+padded_patch_size[0]]
-     
-        #Calculate the new origin: 2*safe_padding bc we padded image & then added pad to the patch.
-        normalized_landmarks = [[(lm[0]+2*safe_padding)-(x_rand_safe), (lm[1]+2*safe_padding)-(y_rand_safe)] for lm in landmarks]
+        y_rand_pad = y_rand_safe - safe_padding
+        x_rand_pad = x_rand_safe - safe_padding
+        cropped_padded_sample = padded_image[
+            :,
+            y_rand_pad : y_rand_pad + padded_patch_size[1],
+            x_rand_pad : x_rand_pad + padded_patch_size[0],
+        ]
+
+        # Calculate the new origin: 2*safe_padding bc we padded image & then added pad to the patch.
+        normalized_landmarks = [
+            [
+                (lm[0] + 2 * safe_padding) - (x_rand_safe),
+                (lm[1] + 2 * safe_padding) - (y_rand_safe),
+            ]
+            for lm in landmarks
+        ]
 
         if self.debug:
-            padded_lm = [[lm[0]+safe_padding, lm[1]+safe_padding] for lm in landmarks]
+            padded_lm = [
+                [lm[0] + safe_padding, lm[1] + safe_padding] for lm in landmarks
+            ]
 
-            print("\n \n \n the min xy is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
-             and the normalized landmark is %s : " % 
-                (y_rand_safe, x_rand_safe, x_rand_pad, y_rand_pad, landmarks, padded_lm, normalized_landmarks ))
+            print(
+                "\n \n \n the min xy is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
+             and the normalized landmark is %s : "
+                % (
+                    y_rand_safe,
+                    x_rand_safe,
+                    x_rand_pad,
+                    y_rand_pad,
+                    landmarks,
+                    padded_lm,
+                    normalized_landmarks,
+                )
+            )
 
-
-            visualize_patch(image[0], landmarks[0], padded_image[0], padded_lm[0], cropped_padded_sample[0], normalized_landmarks[0], [x_rand_pad, y_rand_pad])
-        return cropped_padded_sample, normalized_landmarks, landmarks_in_indicator, [x_rand, y_rand]
-
+            visualize_patch(
+                image[0],
+                landmarks[0],
+                padded_image[0],
+                padded_lm[0],
+                cropped_padded_sample[0],
+                normalized_landmarks[0],
+                [x_rand_pad, y_rand_pad],
+            )
+        return (
+            cropped_padded_sample,
+            normalized_landmarks,
+            landmarks_in_indicator,
+            [x_rand, y_rand],
+        )
 
     def get_patch_stitching_info(self, image_size, patch_size):
         """
-        Get stitching info for breaking up an input image into patches, 
+        Get stitching info for breaking up an input image into patches,
         where each patch overlaps with the next by 50% in x,y. The x,y, indicies are returned for each
         patch so we know how to slice the full resolution image.
 
@@ -517,27 +661,23 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         """
         patch_start_idxs = []
 
-     
         break_x = break_y = False
-        for x in range(0, int(image_size[0]), int(patch_size[0]/2)):
-            for y in range(0, int(image_size[1]), int(patch_size[1]/2)):
+        for x in range(0, int(image_size[0]), int(patch_size[0] / 2)):
+            for y in range(0, int(image_size[1]), int(patch_size[1] / 2)):
                 break_y = False
                 # Ensure we do not go past the boundaries of the image
-                if x > image_size[0]-patch_size[0]:
-                    x = image_size[0]-patch_size[0]
+                if x > image_size[0] - patch_size[0]:
+                    x = image_size[0] - patch_size[0]
                     break_x = True
-                if y > image_size[1]-patch_size[1]:
-                    y = image_size[1]-patch_size[1]
+                if y > image_size[1] - patch_size[1]:
+                    y = image_size[1] - patch_size[1]
                     break_y = True
-                #torch loads images y-x so swap axis here
-                patch_start_idxs.append([x,y])
-
+                # torch loads images y-x so swap axis here
+                patch_start_idxs.append([x, y])
 
                 if break_y:
                     break
             if break_x:
                 break
-        
+
         return patch_start_idxs
-
-

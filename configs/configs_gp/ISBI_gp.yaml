@@ -1,0 +1,53 @@
+
+ 
+OUTPUT: 
+  OUTPUT_DIR: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp_test"
+ 
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
+  COMET_WORKSPACE: "schobs"
+
+SOLVER:
+  DEEP_SUPERVISION: False
+  NUM_RES_SUPERVISIONS: 1
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 12
+  MAX_EPOCHS: 15000 
+  # REGRESS_SIGMA: True
+
+  AUTO_MIXED_PRECISION: False
+
+
+
+
+DATASET:
+  # DEBUG: True
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  NAME:  "ISBI 2015 Junior"
+  IMAGE_MODALITY: 'Cephalometric'
+  LANDMARKS : [0]
+    
+ 
+TRAINER:
+  PERFORM_VALIDATION: True
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: False
+  INFERENCE_ONLY: True
+  
+
+SAMPLER:
+  DATA_AUG: None
+  INPUT_SIZE : [512,512]
+  SAMPLE_MODE: 'patch' # ['patch', 'full']
+  NUM_WORKERS: 8
+  DEBUG: False
+  PATCH:
+    SAMPLER_BIAS: 1.0
+    RESOLUTION_TO_SAMPLE_FROM:  "input_size"
+    SAMPLE_PATCH_SIZE: [64,64]
+
+MODEL:
+  GAUSS_SIGMA: 2
+  ARCHITECTURE: "GP"  # ["U-Net" , "PHD-Net"]
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gp_test1/GPmodel_fold0.model"

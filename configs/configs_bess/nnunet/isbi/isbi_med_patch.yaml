@@ -1,0 +1,54 @@
+
+ 
+OUTPUT: 
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/small_patch/isbi_small_med_patch"
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
+  COMET_WORKSPACE: "schobs"
+
+SOLVER:
+  DEEP_SUPERVISION: False
+  NUM_RES_SUPERVISIONS: 1
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 12
+  MAX_EPOCHS: 258
+  # REGRESS_SIGMA: True
+
+
+
+
+
+DATASET:
+  # DEBUG: True
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  NAME:  "ISBI 2015 Junior"
+  IMAGE_MODALITY: 'Cephalometric'
+  LANDMARKS : [0]
+    
+ 
+TRAINER:
+  PERFORM_VALIDATION: True
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: True
+  INFERENCE_ONLY: False
+
+SAMPLER:
+  DATA_AUG: None
+  INPUT_SIZE : [512,512]
+  SAMPLE_MODE: 'patch' # ['patch', 'full']
+  NUM_WORKERS: 8
+  DEBUG: False
+  PATCH:
+    SAMPLER_BIAS: 1.0
+    RESOLUTION_TO_SAMPLE_FROM:  "input_size" # ['input_size', 'full']  
+    SAMPLE_PATCH_SIZE: [64,64]
+
+
+INFERENCE:
+  EVALUATION_MODE: "use_input_size" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: False
+
+MODEL:
+  GAUSS_SIGMA: 2
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing/model_best_valid_coord_error_fold0.model"
