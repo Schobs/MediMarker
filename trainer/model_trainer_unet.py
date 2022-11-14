@@ -90,7 +90,7 @@ class UnetTrainer(NetworkTrainer):
             self.individual_hm_loss = HeatmapLoss()
         elif loss_str == "awl":
             self.individual_hm_loss = AdaptiveWingLoss(
-                hm_lambda_scale=self.model_config.MODEL.HM_LAMBDA_SCALE
+                hm_lambda_scale=self.trainer_config.MODEL.HM_LAMBDA_SCALE
             )
         else:
             raise ValueError(
