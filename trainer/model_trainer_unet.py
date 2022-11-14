@@ -1,5 +1,4 @@
 from torch import nn
-import os
 from utils.setup.initialization import InitWeights_KaimingUniform
 from losses.losses import (
     HeatmapLoss,
@@ -8,21 +7,10 @@ from losses.losses import (
     SigmaLoss,
 )
 from models.UNet_Classic import UNet
-from utils.im_utils.visualisation import visualize_heat_pred_coords
 import torch
 import numpy as np
-from time import time
 
-# from dataset import ASPIRELandmarks
-# import multiprocessing as mp
-import ctypes
-import copy
-from torch.utils.data import DataLoader
 from utils.im_utils.heatmap_manipulation import get_coords, get_coords_fit_gauss
-from torch.cuda.amp import GradScaler, autocast
-import imgaug
-import torch.multiprocessing as mp
-from torch.multiprocessing import Pool, Process, set_start_method
 import matplotlib.pyplot as plt
 
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
@@ -113,6 +101,7 @@ class UnetTrainer(NetworkTrainer):
         self.save_every = 25
 
     def initialize_network(self):
+        """Initialise the network."""
 
         # Let's make the network
         self.network = UNet(
@@ -146,6 +135,7 @@ class UnetTrainer(NetworkTrainer):
         )
 
     def initialize_optimizer_and_scheduler(self):
+        """Initialise the optimiser and scheduler."""
         assert self.network is not None, "self.initialize_network must be called first"
 
         self.learnable_params = list(self.network.parameters())
@@ -158,6 +148,7 @@ class UnetTrainer(NetworkTrainer):
         print("Initialised optimizer.")
 
     def initialize_loss_function(self):
+        """Initialise the loss function. Also initialise the deep supervision weights and loss. Potetntially initialise the sigma loss."""
 
         if self.deep_supervision:
             # first get weights for the layers. We don't care about the first two decoding levels
@@ -259,12 +250,8 @@ class UnetTrainer(NetworkTrainer):
         Use model outputs from a patchified image to stitch together a full resolution heatmap
 
         """
-
-        raise NotImplementedError(
-            "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
-        )
-
-        full_heatmap = np.zeros((self.orginal_im_size[1], self.orginal_im_size[0]))
+        orginal_im_size = [512, 512]
+        full_heatmap = np.zeros((orginal_im_size[1], orginal_im_size[0]))
         patch_size_x = patch_predictions[0].shape[0]
         patch_size_y = patch_predictions[0].shape[1]
 
@@ -276,6 +263,10 @@ class UnetTrainer(NetworkTrainer):
 
         plt.imshow(full_heatmap)
         plt.show()
+
+        raise NotImplementedError(
+            "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
+        )
 
     @staticmethod
     def get_resolution_layers(input_size, min_feature_res):

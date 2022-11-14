@@ -12,16 +12,11 @@ from evaluation.localization_evaluation import (
     success_detection_rate,
     generate_summary_df,
 )
-from utils.im_utils.heatmap_manipulation import get_coords
-from torchvision.transforms import Resize, InterpolationMode
 from torch.utils.data import DataLoader
 
 from abc import ABC, abstractmethod
 import imgaug
-import copy
 import pandas as pd
-
-import matplotlib.pyplot as plt
 
 
 class NetworkTrainer(ABC):
@@ -538,11 +533,7 @@ class NetworkTrainer(ABC):
                 self.save_checkpoint(
                     os.path.join(
                         self.output_folder,
-                        "model_ep_"
-                        + str(self.epoch)
-                        + "_fold"
-                        + fold_str
-                        + ".model" % (),
+                        "model_ep_" + str(self.epoch) + "_fold" + fold_str + ".model",
                     )
                 )
 

@@ -2,23 +2,14 @@ import gpytorch
 
 from losses.losses import GPLoss
 from models.gp_model import ExactGPModel
-from utils.im_utils.visualisation import visualize_heat_pred_coords
 import torch
 import numpy as np
-from time import time
 
 # from dataset import ASPIRELandmarks
 # import multiprocessing as mp
-import ctypes
-import copy
-from torch.utils.data import DataLoader
-from utils.im_utils.heatmap_manipulation import get_coords, get_coords_fit_gauss
-from torch.cuda.amp import GradScaler, autocast
-import imgaug
 import torch.multiprocessing as mp
 from torch.multiprocessing import Pool, Process, set_start_method
 import matplotlib.pyplot as plt
-import math
 import os
 from scipy.stats import multivariate_normal
 import matplotlib.patches as patches
@@ -411,12 +402,8 @@ class GPTrainer(NetworkTrainer):
         Use model outputs from a patchified image to stitch together a full resolution heatmap
 
         """
-
-        raise NotImplementedError(
-            "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
-        )
-
-        full_heatmap = np.zeros((self.orginal_im_size[1], self.orginal_im_size[0]))
+        orginal_im_size = [512, 512]
+        full_heatmap = np.zeros((orginal_im_size[1], orginal_im_size[0]))
         patch_size_x = patch_predictions[0].shape[0]
         patch_size_y = patch_predictions[0].shape[1]
 
@@ -428,6 +415,10 @@ class GPTrainer(NetworkTrainer):
 
         plt.imshow(full_heatmap)
         plt.show()
+
+        raise NotImplementedError(
+            "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
+        )
 
     @staticmethod
     def get_resolution_layers(input_size, min_feature_res):

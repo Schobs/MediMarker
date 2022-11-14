@@ -5,7 +5,6 @@ from comet_ml import Experiment
 import torch
 from pandas import ExcelWriter
 from pytorch_lightning.utilities.seed import seed_everything
-import logging
 
 # from torch.utils.tensorboard import SummaryWriter
 

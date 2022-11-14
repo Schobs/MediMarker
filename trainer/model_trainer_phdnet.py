@@ -204,11 +204,8 @@ class PHDNetTrainer(NetworkTrainer):
         Use model outputs from a patchified image to stitch together a full resolution heatmap
 
         """
-        raise NotImplementedError(
-            "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
-        )
-
-        full_heatmap = np.zeros((self.orginal_im_size[1], self.orginal_im_size[0]))
+        orginal_im_size = [512, 512]
+        full_heatmap = np.zeros((orginal_im_size[1], orginal_im_size[0]))
         patch_size_x = patch_predictions[0].shape[0]
         patch_size_y = patch_predictions[0].shape[1]
 
@@ -220,6 +217,10 @@ class PHDNetTrainer(NetworkTrainer):
 
         plt.imshow(full_heatmap)
         plt.show()
+
+        raise NotImplementedError(
+            "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
+        )
 
     # def predict_heatmaps_and_coordinates(self, data_dict,  return_all_layers = False, resize_to_og=False,):
     #     data =(data_dict['image']).to( self.device )
