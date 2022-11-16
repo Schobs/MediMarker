@@ -127,7 +127,7 @@ def argument_checking(yaml_args):
 
     if yaml_args.MODEL.ARCHITECTURE == "PHD-Net":
         try:
-            if yaml_args.EVALUATION_SAMPLE_MODE != "full":
+            if yaml_args.SAMPLER.EVALUATION_SAMPLE_MODE != "full":
                 raise ValueError(
                     f'PHD-Net only supports "full" image evaluation. Please set SAMPLER.PATCH.EVALUATION_SAMPLE_MODE to full. '
                     f"Currently set to {yaml_args.SAMPLER.EVALUATION_SAMPLE_MODE}"

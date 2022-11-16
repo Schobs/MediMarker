@@ -329,10 +329,15 @@ class MultiBranchPatchLoss(nn.Module):
         else:
             self.class_criterion = nn.MSELoss(reduction="mean")
 
-    def weighted_mse_loss(self, input_, target, weights):
-        """MSE loss with weights."""
+    def weighted_absolute_loss(self, input_, target, weights):
+        """Mean absolute error loss with weights."""
 
         return torch.mean(weights * torch.abs(input_ - target))
+
+    def weighted_mse_loss(self, input_, target, weights):
+        """Mean squared error loss with weights."""
+
+        return torch.mean(weights * (input_ - target) ** 2)
 
     def forward(self, predictions, labels, sigmas):
         """The forward pass of the loss function.
