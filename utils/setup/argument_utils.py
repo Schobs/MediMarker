@@ -66,14 +66,6 @@ def infer_additional_arguments(yaml_args):
     yaml_args.INFERRED_ARGS.USE_FULL_RES_COORDS = use_full_res_coords
     yaml_args.INFERRED_ARGS.RESIZE_FIRST = resize_first
 
-    # # If we are doing patch sampling and specify evaluation is on input_size, sample validation in patches. Otherwise, sample full image.
-    # if (yaml_args.SAMPLER.SAMPLE_MODE == "patch" and yaml_args.INFERENCE.EVALUATION_MODE == "use_input_size"):
-    #     yaml_args.INFERRED_ARGS.EVALUATION_SAMPLE_MODE = "patch"
-    # else:
-    #     yaml_args.INFERRED_ARGS.EVALUATION_SAMPLE_MODE = "full"
-
-    # PATCH.EVALUATION_SAMPLING
-
     if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "input_size":
         yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = yaml_args.SAMPLER.INPUT_SIZE
     else:
@@ -135,10 +127,10 @@ def argument_checking(yaml_args):
 
     if yaml_args.MODEL.ARCHITECTURE == "PHD-Net":
         try:
-            if yaml_args.SAMPLER.PATCH.EVALUATION_SAMPLE_MODE != "full":
+            if yaml_args.EVALUATION_SAMPLE_MODE != "full":
                 raise ValueError(
                     f'PHD-Net only supports "full" image evaluation. Please set SAMPLER.PATCH.EVALUATION_SAMPLE_MODE to full. '
-                    f"Currently set to {yaml_args.SAMPLER.PATCH.EVALUATION_SAMPLE_MODE}"
+                    f"Currently set to {yaml_args.SAMPLER.EVALUATION_SAMPLE_MODE}"
                 )
         except ValueError as er_msg:
             all_errors.append(er_msg)

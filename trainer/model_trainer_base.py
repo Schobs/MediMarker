@@ -1075,7 +1075,7 @@ class NetworkTrainer(ABC):
             landmarks=self.landmarks,
             LabelGenerator=self.eval_label_generator,
             split=split,
-            sample_mode=self.trainer_config.SAMPLER.PATCH.EVALUATION_SAMPLE_MODE,
+            sample_mode=self.trainer_config.SAMPLER.EVALUATION_SAMPLE_MODE,
             sample_patch_size=self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
             sample_patch_bias=self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS,
             sample_patch_from_resolution=self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,

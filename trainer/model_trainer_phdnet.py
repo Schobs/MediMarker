@@ -51,7 +51,7 @@ class PHDNetTrainer(NetworkTrainer):
             clamp_dist=self.trainer_config.MODEL.PHDNET.CLAMP_DIST,
         )
 
-        if self.trainer_config.SAMPLER.PATCH.EVALUATION_SAMPLE_MODE == "full":
+        if self.trainer_config.SAMPLER.EVALUATION_SAMPLE_MODE == "full":
             eval_patch_size = self.training_resolution
         else:
             eval_patch_size = self.sample_patch_size

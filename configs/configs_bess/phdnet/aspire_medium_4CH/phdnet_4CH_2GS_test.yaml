@@ -1,11 +1,15 @@
 
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/M4CH/testing/phdnet/M4CH_phdnet_8GS_AugAC_L0_test"
- 
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/M4CH/testing/phdnet/M4CH_phdnet_2GS_AugAC_L0_test"
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
+  COMET_WORKSPACE: "schobs"
+  COMET_TAGS: ["phdnet", "test"]
+  
 
 SOLVER:
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE: 32
+  DATA_LOADER_BATCH_SIZE: 12
   MAX_EPOCHS: 500
   REGRESS_SIGMA: False
   REGRESS_SIGMA_LOSS_WEIGHT: 0.005
@@ -49,6 +53,7 @@ SAMPLER:
     SAMPLER_BIAS: 0.0
     RESOLUTION_TO_SAMPLE_FROM:  "input_size" # ['full', 'input_size']
     SAMPLE_PATCH_SIZE: [128,128]
+    EVALUATION_SAMPLE_MODE: "full"  # ['patch', "full"] Whether to sample patches or the full image during evaluation
 
 
 # _C.SAMPLER.PATCH = CN() 
