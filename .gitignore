@@ -6,3 +6,9 @@ scripts_bess/
 scripts/
 configs/configs_legacy/
 configs/configs_local/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+

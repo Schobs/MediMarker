@@ -7,15 +7,13 @@ import numpy as np
 
 # from dataset import ASPIRELandmarks
 # import multiprocessing as mp
-import torch.multiprocessing as mp
-from torch.multiprocessing import Pool, Process, set_start_method
 import matplotlib.pyplot as plt
-import os
-from scipy.stats import multivariate_normal
 import matplotlib.patches as patches
 
+import os
+from scipy.stats import multivariate_normal
+
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
-from torchvision.transforms import Resize, InterpolationMode
 from trainer.model_trainer_base import NetworkTrainer
 
 from transforms.generate_labels import UNetLabelGenerator
@@ -50,11 +48,7 @@ class GPTrainer(NetworkTrainer):
         # override dataloaderbatch size
         # self.data_loader_batch_size = len()
 
-    #
-
-    def initialize_network(self):
-
-        # Need to instantiate and get all the training data and training labels
+        # Need to instantiate and get all the training data and training labels (called when initialize_network() is called in super.)
         self.all_training_input = []
         self.all_training_labels = []
         self.all_testing_input = []
@@ -62,6 +56,14 @@ class GPTrainer(NetworkTrainer):
 
         self.all_training_input_ims = []
         self.all_testing_input_ims = []
+
+        self.likelihood = None
+        # self.network = None
+
+    #
+
+    def initialize_network(self):
+
         if self.trainer_config.TRAINER.INFERENCE_ONLY:
             self.set_training_dataloaders()
 

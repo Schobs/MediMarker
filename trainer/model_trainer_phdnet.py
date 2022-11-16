@@ -15,10 +15,6 @@ from trainer.model_trainer_base import NetworkTrainer
 from transforms.generate_labels import PHDNetLabelGenerator
 
 
-# TODO: 1) write the label generator for PHDNetLabelGenerator
-# 2) write the loss function for phdnet
-# 3) write get_coords_from_heatmap (may be the same as unet, in which case put in base)
-# 4 ) write predict_heatmaps_and_coordinates from datadict directly
 class PHDNetTrainer(NetworkTrainer):
     """Class for the phdnet trainer stuff."""
 
@@ -54,11 +50,17 @@ class PHDNetTrainer(NetworkTrainer):
             self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS,
             clamp_dist=self.trainer_config.MODEL.PHDNET.CLAMP_DIST,
         )
+
+        if self.trainer_config.SAMPLER.PATCH.EVALUATION_SAMPLE_MODE == "full":
+            eval_patch_size = self.training_resolution
+        else:
+            eval_patch_size = self.sample_patch_size
+
         self.eval_label_generator = PHDNetLabelGenerator(
             self.maxpool_factor,
             self.training_resolution,
             self.class_label_scheme,
-            self.training_resolution,
+            eval_patch_size,
             self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS,
             clamp_dist=self.trainer_config.MODEL.PHDNET.CLAMP_DIST,
         )
@@ -122,7 +124,7 @@ class PHDNetTrainer(NetworkTrainer):
 
         print("initialized Loss function.")
 
-    def get_coords_from_heatmap(self, output, original_image_size):
+    def get_coords_from_heatmap(self, model_output, original_image_size):
         """Gets x,y coordinates from a model output.
             maybe resize and get coords as the peak pixel. Also return value of peak pixel.
 
@@ -133,56 +135,39 @@ class PHDNetTrainer(NetworkTrainer):
             [int, int]: predicted coordinates
         """
 
-        # all_ims_same_size = np.all(original_image_size[0] == original_image_size)
-
-        #         hms_list = []
-        #         if all_ims_same_size:
-        #             final_heatmap = Resize([original_image_size[0][0][0], original_image_size[0][1][0]], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
-        #         else:
-        #             for im_idx, im_size in enumerate(original_image_size):
-        #                 # print("this needs to be tested: model_trainer_unet.py  get_coords_from_heatmap when images are different sizes!")
-        #                 # print("im idx, im_size, final_heatmap shape ", im_idx, im_size, final_heatmap[im_idx].shape)
-        #                 hms_list.append(Resize([im_size[0][0], im_size[1][0]], interpolation=  InterpolationMode.BICUBIC)(final_heatmap[im_idx]))
-        #                 # print("shape : ", hms_list[-1].shape)
-        #             final_heatmap = torch.stack(hms_list)
-
-        raise NotImplementedError(
-            "not implemented the original_image_size properly. see aboe and the model_trainer_unet.py version of this function"
-        )
-
         extra_info = {"hm_max": None}
+        original_image_size = original_image_size.cpu().detach().numpy()[:, ::-1, :]
 
-        output = [x.detach().cpu().numpy() for x in output]
-
-        # full_image_res = [output[0][0][0].shape[0]*(2**self.maxpool_factor),output[0][0][0].shape[1]*(2**self.maxpool_factor) ]
-        full_image_res = [
-            output[0][0][0].shape[1] * (2**self.maxpool_factor),
-            output[0][0][0].shape[0] * (2**self.maxpool_factor),
-        ]
+        model_output = [x.detach().cpu().numpy() for x in model_output]
 
         smoothed_candidate_maps = []
 
-        for sample_idx in range(len(output[0])):
+        for sample_idx in range(len(model_output[0])):
+
+            sample_og_size = [
+                original_image_size[sample_idx][0][0],
+                original_image_size[sample_idx][1][0],
+            ]
             # self.trainer_config.INFERENCE.DEBUG
             csm = candidate_smoothing(
-                [output[0][sample_idx], output[1][sample_idx]],
-                full_image_res,
+                [model_output[0][sample_idx], model_output[1][sample_idx]],
+                sample_og_size,
                 self.maxpool_factor,
                 log_displacement_bool=self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS,
                 debug=self.trainer_config.INFERENCE.DEBUG,
             )
             if self.resize_first:
-                csm = Resize(
-                    original_image_size[::-1], interpolation=InterpolationMode.BICUBIC
-                )(csm)
+                csm = Resize(sample_og_size, interpolation=InterpolationMode.BICUBIC)(
+                    csm
+                )
 
             smoothed_candidate_maps.append(csm)
 
         smoothed_candidate_maps = torch.stack(smoothed_candidate_maps).to(self.device)
         # Get only the full resolution heatmap
-        # output = output[-1]
+        # model_output = model_output[-1]
 
-        # final_heatmap = output
+        # final_heatmap = model_output
         # if self.resize_first:
         #     #torch resize does HxW so need to flip the diemsions
         #     final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
@@ -194,8 +179,6 @@ class PHDNetTrainer(NetworkTrainer):
         extra_info["final_heatmaps"] = smoothed_candidate_maps
 
         extra_info["debug_candidate_smoothed_maps"] = smoothed_candidate_maps
-
-        # del final_heatmap
 
         return pred_coords, extra_info
 
@@ -222,30 +205,5 @@ class PHDNetTrainer(NetworkTrainer):
             "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
         )
 
-    # def predict_heatmaps_and_coordinates(self, data_dict,  return_all_layers = False, resize_to_og=False,):
-    #     data =(data_dict['image']).to( self.device )
-    #     target = [x.to(self.device) for x in data_dict['label']]
-    #     from_which_level_supervision = self.num_res_supervision
-
-    #     if self.deep_supervision:
-    #         output = self.network(data)[-from_which_level_supervision:]
-    #     else:
-    #         output = self.network(data)
-
-    #     l, loss_dict = self.loss(output, target, self.sigmas)
-
-    #     final_heatmap = output[-1]
-    #     if resize_to_og:
-    #         #torch resize does HxW so need to flip the dimesions for resize
-    #         final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
-
-    #     predicted_coords, max_values = get_coords(final_heatmap)
-
-    #     heatmaps_return = output
-    #     if not return_all_layers:
-    #         heatmaps_return = output[-1] #only want final layer
-
-    #     return heatmaps_return, final_heatmap, predicted_coords, l.detach().cpu().numpy()
-
-    def set_training_dataloaders(self):
-        super(PHDNetTrainer, self).set_training_dataloaders()
+    # def set_training_dataloaders(self):
+    #     super(PHDNetTrainer, self).set_training_dataloaders()

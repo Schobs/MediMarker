@@ -51,7 +51,7 @@ class AdaptiveWingLoss(nn.Module):
 
 class MyWingLoss(nn.Module):
     def __init__(self, omega=30, theta=0.5, epsilon=1, alpha=2.1):
-        super(AdaptiveWingLoss, self).__init__()
+        super(MyWingLoss, self).__init__()
         self.omega = omega
         self.theta = theta
         self.epsilon = epsilon
@@ -125,6 +125,8 @@ class SoftMaxLoss(nn.Module):
 
 # torch.nn.MSELoss(reduction='mean')
 class HeatmapLoss(nn.Module):
+    """Heatmap Loss wrapper, defaulting to MSE"""
+
     def __init__(self, loss_func=nn.MSELoss()):
         super(HeatmapLoss, self).__init__()
 
@@ -273,38 +275,76 @@ class IntermediateOutputLossAndSigma(nn.Module):
 
 
 class MultiBranchPatchLoss(nn.Module):
-    def __init__(self, branch_scheme, class_loss_scheme, distance_weighted_bool):
+    """Loss for PHD-Net. It is a combination of the loss for the heatmap and the loss for the patch.
+    W
+
+    Args:
+        nn (pytorch module): super class wrapper for the loss function
+    """
+
+    def __init__(
+        self,
+        branch_scheme,
+        class_loss_scheme,
+        distance_weighted_bool,
+        binary_weighted_weights=4096,
+    ):
+        """Initialize the loss function class.
+
+        Args:
+            branch_scheme (str): "multi": both branches; "heatmap": heatmap branch only;  "displacement": displacement branch only
+            class_loss_scheme (str): "gaussian" or "binary" or "binary_weighted": "gaussian" creates gaussian heatmap centered on landmark,
+                                    "binary" creates binary map where the patch with landmark is 1, with all other patches 0,
+                                    "binary_weighted": same as binary, except the positive class is overweighted to balance the class imbalance using binary_weighted_weights
+            distance_weighted_bool (bool): Whether to weight the displacemnt loss using distance from the landmark. The displacement_weights are passed in.
+            binary_weighted_weights (int): the weight to apply to the positive class. Default is 4096
+
+        Raises:
+            NotImplementedError: Only "gaussian"  and "binary" class loss scheme is implemented
+        """
         super(MultiBranchPatchLoss, self).__init__()
         self.branch_scheme = branch_scheme
         self.criterion_reg = nn.MSELoss(reduction="mean")
         self.distance_weighted_bool = distance_weighted_bool
         self.loss_seperated_keys = ["all_loss_all", "displacement_loss", "heatmap_loss"]
+        self.binary_weighted_weights = binary_weighted_weights
+
+        assert class_loss_scheme in ["gaussian", "binary"]
 
         if class_loss_scheme == "binary":
             self.class_criterion = nn.BCELoss(reduction="mean")
         elif class_loss_scheme == "binary_weighted":
             self.class_criterion = nn.BCEWithLogitsLoss(
                 reduction="mean",
-                pos_weight=torch.tensor(4096).to(
+                pos_weight=torch.tensor(self.binary_weighted_weights).to(
                     device=torch.device(
                         "cuda:0" if torch.cuda.is_available() else "cpu"
                     )
                 ),
             )
             raise NotImplementedError(
-                "this needs testing in new package. the hardcoded pos_weight doesn't seem right. I imagine it needs to be equal to # negative patches."
+                "this needs testing in new package. Instead of relying on 4096, it needs to be equal to # negative patches in the average image."
             )
-        elif class_loss_scheme == "gaussian":
-            self.class_criterion = nn.MSELoss(reduction="mean")
-        #  self.class_criterion = nn.BCEWithLogitsLoss(reduction='mean', pos_weight=  torch.tensor(4096).to(device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')))
+        # else class loss scheme is gaussian
         else:
-            print("no recognised class loss scheme: ", class_loss_scheme)
+            self.class_criterion = nn.MSELoss(reduction="mean")
 
-    def weighted_mse_loss(self, input, target, weights):
+    def weighted_mse_loss(self, input_, target, weights):
+        """MSE loss with weights."""
 
-        return torch.mean(weights * torch.abs(input - target))
+        return torch.mean(weights * torch.abs(input_ - target))
 
     def forward(self, predictions, labels, sigmas):
+        """The forward pass of the loss function.
+
+        Args:
+            predictions (tensor): model predictions
+            labels (tensor): target labels
+            sigmas (tensor): sigmas values. Later, can use this to optimize sigma.
+
+        Returns:
+            _type_: _description_
+        """
 
         losses_seperated = {}
         total_loss = 0
@@ -312,9 +352,22 @@ class MultiBranchPatchLoss(nn.Module):
         pred_displacements = predictions[1]
         pred_class = predictions[0]
 
-        # print("pred_class shape: ", pred_class.shape, "pred_displacements shape: ", pred_displacements.shape)
-        # print("labels shape class ",  len(labels['patch_heatmap']), labels['patch_heatmap'].shape)
-        # print("labels shape disp ",   len(labels['patch_displacements']), labels['patch_displacements'].shape)
+        # print(
+        #     "pred_class shape: ",
+        #     pred_class.shape,
+        #     "pred_displacements shape: ",
+        #     pred_displacements.shape,
+        # )
+        # print(
+        #     "labels shape class ",
+        #     len(labels["patch_heatmap"]),
+        #     labels["patch_heatmap"].shape,
+        # )
+        # print(
+        #     "labels shape disp ",
+        #     len(labels["patch_displacements"]),
+        #     labels["patch_displacements"].shape,
+        # )
 
         # print()
         if self.branch_scheme == "displacement" or self.branch_scheme == "multi":

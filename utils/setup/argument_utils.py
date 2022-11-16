@@ -40,6 +40,17 @@ def get_evaluation_mode(eval_mode):
 
 
 def infer_additional_arguments(yaml_args):
+    """Uses the config file to infer additional arguments that are not explicitly defined in the config file.
+
+    Args:
+        yaml_args (.yaml): _description_
+
+    Raises:
+        NotImplementedError: _description_
+
+    Returns:
+        _type_: _description_
+    """
     yaml_args.INFERRED_ARGS = CN()
     yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = False
 
@@ -55,14 +66,14 @@ def infer_additional_arguments(yaml_args):
     yaml_args.INFERRED_ARGS.USE_FULL_RES_COORDS = use_full_res_coords
     yaml_args.INFERRED_ARGS.RESIZE_FIRST = resize_first
 
-    # If we are doing patch sampling and specify evaluation is on input_size, sample validation in patches. Otherwise, sample full image.
-    if (
-        yaml_args.SAMPLER.SAMPLE_MODE == "patch"
-        and yaml_args.INFERENCE.EVALUATION_MODE == "use_input_size"
-    ):
-        yaml_args.INFERRED_ARGS.EVALUATION_SAMPLE_MODE = "patch"
-    else:
-        yaml_args.INFERRED_ARGS.EVALUATION_SAMPLE_MODE = "full"
+    # # If we are doing patch sampling and specify evaluation is on input_size, sample validation in patches. Otherwise, sample full image.
+    # if (yaml_args.SAMPLER.SAMPLE_MODE == "patch" and yaml_args.INFERENCE.EVALUATION_MODE == "use_input_size"):
+    #     yaml_args.INFERRED_ARGS.EVALUATION_SAMPLE_MODE = "patch"
+    # else:
+    #     yaml_args.INFERRED_ARGS.EVALUATION_SAMPLE_MODE = "full"
+
+    # PATCH.EVALUATION_SAMPLING
+
     if yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "input_size":
         yaml_args.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = yaml_args.SAMPLER.INPUT_SIZE
     else:
@@ -121,6 +132,16 @@ def argument_checking(yaml_args):
     #   a) ensure SAMPLER.PATCH.SAMPLE_PATCH_SIZE !=  DATASET.INPUT_SIZE if resizing images to input_size
     #   b) ensure SAMPLER.PATCH.SAMPLE_PATCH_SIZE < DATASET.INPUT_SIZE if resizing images to input_size
     #   c) If user is sampling from full resolution, provide a warning that the patch size should be smaller than the image size
+
+    if yaml_args.MODEL.ARCHITECTURE == "PHD-Net":
+        try:
+            if yaml_args.SAMPLER.PATCH.EVALUATION_SAMPLE_MODE != "full":
+                raise ValueError(
+                    f'PHD-Net only supports "full" image evaluation. Please set SAMPLER.PATCH.EVALUATION_SAMPLE_MODE to full. '
+                    f"Currently set to {yaml_args.SAMPLER.PATCH.EVALUATION_SAMPLE_MODE}"
+                )
+        except ValueError as er_msg:
+            all_errors.append(er_msg)
 
     if yaml_args.SAMPLER.SAMPLE_MODE == "patch":
 

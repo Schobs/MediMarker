@@ -1,5 +1,5 @@
-import enum
 import os
+import types
 from inference.ensemble_inference_helper import EnsembleUncertainties
 import torch
 import numpy as np
@@ -101,12 +101,13 @@ class NetworkTrainer(ABC):
         self.amp_grad_scaler = None
         self.train_dataloader = self.valid_dataloader = None
         self.dict_logger = None
+        self.learnable_params = None
 
         # Set up in init of extended class (child)
-        self.network = None
+        self.network = types.SimpleNamespace()  # empty object
         self.train_label_generator = self.eval_label_generator = None
         self.optimizer = None
-        self.loss = None
+        self.loss = types.SimpleNamespace()  # empty object
         self.num_res_supervision = 1
 
         # Can be changed in extended class (child)
@@ -123,6 +124,8 @@ class NetworkTrainer(ABC):
         self.best_valid_loss_epoch = 0
         self.epochs_wo_val_improv = 0
         self.print_initiaization_info = True
+        self.epoch_start_time = time()
+        self.epoch_end_time = time()
 
     def initialize(self, training_bool=True):
         """
@@ -321,7 +324,7 @@ class NetworkTrainer(ABC):
         so = time()
 
         # We can either give the generator to be iterated or a data_dict directly
-        if direct_data_dict == None:
+        if direct_data_dict is None:
             try:
                 data_dict = next(generator)
 
@@ -1072,7 +1075,7 @@ class NetworkTrainer(ABC):
             landmarks=self.landmarks,
             LabelGenerator=self.eval_label_generator,
             split=split,
-            sample_mode=self.trainer_config.INFERRED_ARGS.EVALUATION_SAMPLE_MODE,
+            sample_mode=self.trainer_config.SAMPLER.PATCH.EVALUATION_SAMPLE_MODE,
             sample_patch_size=self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
             sample_patch_bias=self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS,
             sample_patch_from_resolution=self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
