@@ -174,12 +174,12 @@ class UnetTrainer(NetworkTrainer):
 
         print("initialized Loss function.")
 
-    def get_coords_from_heatmap(self, output, original_image_size):
+    def get_coords_from_heatmap(self, model_output, original_image_size):
         """Gets x,y coordinates from a model output. Here we use the final layer prediction of the U-Net,
             maybe resize and get coords as the peak pixel. Also return value of peak pixel.
 
         Args:
-            output: model output - a stack of heatmaps
+            model_output: model output - a stack of heatmaps
 
         Returns:
             [int, int]: predicted coordinates
@@ -188,14 +188,14 @@ class UnetTrainer(NetworkTrainer):
         extra_info = {"hm_max": []}
 
         # Get only the full resolution heatmap
-        output = output[-1]
+        model_output = model_output[-1]
 
-        final_heatmap = output
+        final_heatmap = model_output
         original_image_size = original_image_size.cpu().detach().numpy()[:, ::-1, :]
         all_ims_same_size = np.all(original_image_size[0] == original_image_size)
 
         # Perform inference on each image
-        input_size_coords, input_max_values = get_coords(output)
+        input_size_coords, input_max_values = get_coords(model_output)
 
         # Save the predicted coordinates on the model-input size image
         extra_info["coords_og_size"] = input_size_coords

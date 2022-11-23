@@ -80,6 +80,36 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         dataset_split_size: int = -1,
         additional_sample_attribute_keys=[],
     ):
+        """Initialize the dataset. This is the base class for all datasets.
+
+        Args:
+            landmarks (_type_): _description_
+            sigmas (_type_): _description_
+            LabelGenerator (_type_): _description_
+            hm_lambda_scale (float): _description_
+            annotation_path (str): _description_
+            generate_hms_here (bool): _description_
+            sample_mode (str): _description_
+            image_modality (str, optional): _description_. Defaults to "CMRI".
+            split (str, optional): _description_. Defaults to "training".
+            root_path (str, optional): _description_. Defaults to "./data".
+            cv (int, optional): _description_. Defaults to -1.
+            cache_data (bool, optional): _description_. Defaults to False.
+            debug (bool, optional): _description_. Defaults to False.
+            input_size (list, optional): _description_. Defaults to [512, 512].
+            sample_patch_size (list, optional): _description_. Defaults to [512, 512].
+            sample_patch_bias (float, optional): _description_. Defaults to 0.66.
+            sample_patch_from_resolution (list, optional): _description_. Defaults to [512, 512].
+            num_res_supervisions (int, optional): _description_. Defaults to 5.
+            data_augmentation_strategy (str, optional): _description_. Defaults to None.
+            data_augmentation_package (str, optional): _description_. Defaults to None.
+            dataset_split_size (int, optional): _description_. Defaults to -1.
+            additional_sample_attribute_keys (list, optional): _description_. Defaults to [].
+
+        Raises:
+            ValueError: _description_
+            ValueError: _description_
+        """
 
         super(DatasetBase, self).__init__()
 
@@ -201,7 +231,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 self.annotation_path, data_list_key=self.split, base_dir=self.root_path
             )
 
-        datalist = datalist[:20]
+        # datalist = datalist[:20]
 
         # based on first image extenstion, get the load function.
         self.datatype_load = get_datatype_load(datalist[0]["image"])
@@ -211,7 +241,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         for idx, data in enumerate(datalist):
             ### Add coordinate labels as sample attribute, if annotations available
             # case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
-            if type(data["coordinates"]) != list or (
+            if (not isinstance(data["coordinates"], list)) or (
                 "has_annotation" in data.keys() and data["has_annotation"] == False
             ):
                 interested_landmarks = np.array([[0, 0]] * len(self.landmarks))
@@ -239,6 +269,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     image,
                     interested_landmarks,
                 ) = self.load_and_resize_image(data["image"], interested_landmarks)
+
                 self.images.append(image)
                 self.image_resizing_factors.append(resized_factor)
                 self.original_image_sizes.append(original_size)
@@ -439,7 +470,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
             #     print("input coords: ", input_coords)
             #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
-            run_time_debug = True
+            # run_time_debug = True
         # else:
         #     print("ok")
 

@@ -38,6 +38,7 @@ _C.SAMPLER.SAMPLE_MODE = "full"  # ['patch', 'full']
 
 _C.SAMPLER.DEBUG = False
 _C.SAMPLER.INPUT_SIZE = [512, 512]
+_C.SAMPLER.EVALUATION_SAMPLE_MODE = "full"  # ['patch', "full"] Whether to sample patches or the full image during evaluation
 
 _C.SAMPLER.DATA_AUG = "AffineComplex"  # None
 _C.SAMPLER.DATA_AUG_PACKAGE = "imgaug"  # ['imgaug', 'albumentations']
@@ -45,7 +46,7 @@ _C.SAMPLER.NUM_WORKERS = 0
 
 
 _C.SAMPLER.PATCH = CN()
-_C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = "input_size"  # ['full', 'input_size'] TODO
+_C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = "input_size"  # ['full', 'input_size']
 
 _C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [512, 512]
 
@@ -109,15 +110,11 @@ _C.MODEL.PHDNET.MAXPOOL_FACTOR = 3  # ['multi', 'heatmap', 'displacement']
 _C.MODEL.PHDNET.CLASS_LABEL_SCHEME = (
     "gaussian"  # ['binary', 'binary_weighted', 'gaussian']
 )
-_C.MODEL.PHDNET.WEIGHT_DISP_LOSS_BY_HEATMAP = (
-    True  # ['binary', 'binary_weighted', 'gaussian']
-)
-_C.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS = (
-    True  # ['binary', 'binary_weighted', 'gaussian']
-)
-_C.MODEL.PHDNET.CLAMP_DIST = (
-    None  # [None, 48, 10] (none or any int. TODO: WRITE TEST FOR THIS)
-)
+_C.MODEL.PHDNET.WEIGHT_DISP_LOSS_BY_HEATMAP = True
+_C.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS = True
+
+# [None, 48, 10] (none or any int. TODO: WRITE TEST FOR THIS)
+_C.MODEL.PHDNET.CLAMP_DIST = None
 
 
 _C.INFERENCE = CN()
