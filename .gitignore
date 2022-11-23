@@ -2,13 +2,13 @@ outputs/
 outputs2/
 outputsISBI/
 profiler/
-scripts_bess/
-scripts/
+scripts/scripts_sharc/
 configs/configs_legacy/
 configs/configs_local/
-
+utils/setup/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-
+*.pyc
+*.out

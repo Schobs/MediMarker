@@ -15,3 +15,6 @@ class InitWeights_KaimingUniform(object):
             module.weight = nn.init.kaiming_uniform_(module.weight, a=self.neg_slope)
             if module.bias is not None:
                 module.bias = nn.init.constant_(module.bias, 0)
+
+
+
