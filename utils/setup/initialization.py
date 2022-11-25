@@ -2,6 +2,7 @@ from torch import nn
 
 
 class InitWeights_KaimingUniform(object):
+    
     def __init__(self, neg_slope=1e-2):
         self.neg_slope = neg_slope
 

@@ -216,6 +216,21 @@ def candidate_smoothing(
     debug=False,
     save_fig=False,
 ):
+    """Implements candidate smoothing from [paper ref]. Combines the heatmap branch and displacement branch from PHD-Net
+
+    Args:
+        output (_type_): _description_
+        full_resolution (_type_): _description_
+        maxpool_factor (_type_): _description_
+        log_displacement_bool (bool, optional): _description_. Defaults to True.
+        smooth_factor (int, optional): _description_. Defaults to 4.
+        return_cropped_im (bool, optional): _description_. Defaults to False.
+        debug (bool, optional): _description_. Defaults to False.
+        save_fig (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
     import transforms.generate_labels as gl
 
     # print("output and input andshape, ", output[0].shape, output[1].shape, input.shape)
@@ -251,7 +266,7 @@ def candidate_smoothing(
                 # y_disp = np.sign(predicted_disps[lm,1, x_idx,y_idx]) * (2**(abs(predicted_disps[lm,1,x_idx,y_idx]))-1)
                 # loc = [center_xy[0]+x_disp, center_xy[1]+y_disp]
 
-                center_xy = [x + (step_size // 2), y + (step_size // 2)]
+                center_xy = [y + (step_size // 2), x + (step_size // 2)]
                 # REMEMBER TO MINUS 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
                 if log_displacement_bool:
                     x_disp = np.sign(predicted_disps[lm, 0, x_idx, y_idx]) * (
@@ -323,7 +338,7 @@ def candidate_smoothing(
             for x_idx, x in enumerate(range(0, full_resolution[0], step_size)):
                 for y_idx, y in enumerate(range(0, full_resolution[1], step_size)):
 
-                    center_xy = [x + (step_size // 2), y + (step_size // 2)]
+                    center_xy = [y + (step_size // 2), x + (step_size // 2)]
                     # REMEMBER TO ADD 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
                     if log_displacement_bool:
                         x_disp = np.sign(predicted_disps[lm, 0, x_idx, y_idx]) * (

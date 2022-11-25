@@ -532,7 +532,7 @@ class PHDNetLabelGenerator(LabelGenerator):
         )
         ax[0, 2].add_patch(rect3)
 
-        # 5)
+        # 5) 
         # tensor_weights = torch.tensor(np.expand_dims(np.expand_dims(patch_heatmap_label, axis=0), axis=0))
         # need to flip axis here because torch does y-x not x-y
         # upscaled_hm =  (F.interpolate(tensor_weights, [1,self.sample_grid_size[0], self.sample_grid_size[1]], mode="nearest-exact")).cpu().detach().numpy()[0,0]
@@ -590,8 +590,8 @@ class PHDNetLabelGenerator(LabelGenerator):
             ):
 
                 center_xy = [
-                    x + ((2**self.maxpool_factor) // 2),
                     y + ((2**self.maxpool_factor) // 2),
+                    x + ((2**self.maxpool_factor) // 2),
                 ]
                 # REMEMBER TO ADD 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
 
@@ -802,8 +802,8 @@ class PHDNetLabelGenerator(LabelGenerator):
                     ):
 
                         center_xy = [
-                            x + ((2**self.maxpool_factor) // 2),
                             y + ((2**self.maxpool_factor) // 2),
+                            x + ((2**self.maxpool_factor) // 2),
                         ]
                         # REMEMBER TO ADD 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
 
