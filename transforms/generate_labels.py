@@ -143,22 +143,10 @@ class UNetLabelGenerator(LabelGenerator):
 
         """
 
-    def debug_sample(self, sample_dict, untrans_image, untrans_coords):
+    def debug_sample(self, sample_dict, image, coordinates):
         """Visually debug a sample. Provide logging and visualisation of the sample."""
 
-        # print("before coords: ", landmarks)
-        # print("og image sahpe: ", image.shape, "trans image shape", sample_dict["image"].shape, "trans targ coords: ", sample_dict["target_coords"])
-        # print("len of hetamps ", len(sample_dict["label"]), " and shape: ", sample_dict["label"][-1].shape, " and hm exp shape ", np.expand_dims(sample_dict["label"][-1], axis=0).shape)
-        # landmarks_from_label = get_coords(torch.from_numpy(np.expand_dims(sample_dict["label"][-1], axis=0)))
-        # print("landmarks reverse engineered from heatmap label: ", landmarks_from_label)
-
-        # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
-        visualize_image_trans_coords(
-            untrans_image[0],
-            untrans_coords,
-            sample_dict["image"][0],
-            sample_dict["target_coords"],
-        )
+        visualize_image_trans_coords(image[0], coordinates, sample_dict)
 
     def debug_crop(
         self, original_im, cropped_im, original_lms, normalized_lms, lms_indicators

@@ -206,16 +206,22 @@ def visualize_image_all_coords(image, coords):
     plt.close()
 
 
-def visualize_image_trans_coords(
-    untrans_image, untrans_coords, trans_image, trans_coords
-):
+def visualize_image_trans_coords(untrans_image, untrans_coords, sample_dict):
     """
     visualize an image and the same image after it has been transformed. also shows the coordinates on the trans image and untrans image
 
     """
-    fig, ax = plt.subplots(nrows=1, ncols=2, squeeze=False)
 
-    print("og im shape@ ", untrans_image.shape)
+    trans_image = sample_dict["image"][0]
+    trans_coords = sample_dict["target_coords"]
+    target_heatmaps = sample_dict["label"]["heatmaps"][-1]
+    indicator_landmarks = sample_dict["landmarks_in_indicator"]
+
+    fig, ax = plt.subplots(nrows=2, ncols=3, squeeze=False)
+
+    print("og im shape: ", untrans_image.shape)
+    print("target heatmap shape", (target_heatmaps).shape)
+    print("indicator_landmarks", (indicator_landmarks))
 
     print(
         "mean and std of OG image:",
@@ -235,6 +241,12 @@ def visualize_image_trans_coords(
 
     ax[0, 0].imshow(untrans_image, cmap="gray")
     ax[0, 1].imshow(trans_image, cmap="gray")
+    ax[0, 2].imshow(trans_image, cmap="gray")
+    heatmap_display_count = 0
+
+    # ax[1, 0].imshow(target_heatmaps[0,0], cmap="gray")
+    # ax[1, 0].imshow(target_heatmaps[0,, cmap="gray")
+
     # ax[0,2].imshow(trans_image, cmap='gray')
     for coord_idx, co in enumerate(untrans_coords):
         # rect1 = patches.Rectangle((int(co[0]), int(co[1])),9,9,linewidth=2,edgecolor='r',facecolor='none')
@@ -268,6 +280,41 @@ def visualize_image_trans_coords(
             fontsize=15,  # Font size
             color="white",  # Color
         )
+
+        if indicator_landmarks[coord_idx] == 1:
+            ax[0, 2].plot(
+                int(trans_coords[coord_idx][0]),
+                int(trans_coords[coord_idx][1]),
+                marker="+",
+                markersize=20,
+                linewidth=8,
+                color="red",
+            )
+            text3 = ax[0, 2].text(
+                int(trans_coords[coord_idx][0]) - 30,
+                int(trans_coords[coord_idx][1]) - 10,  # Position
+                r"$L_{{{}}}$".format(str(coord_idx + 1)),  # Text
+                verticalalignment="bottom",  # Centered bottom with line
+                horizontalalignment="center",  # Centered with horizontal line
+                fontsize=15,  # Font size
+                color="white",  # Color
+            )
+
+            if heatmap_display_count < 3:
+                ax[1, heatmap_display_count].imshow(
+                    target_heatmaps[coord_idx], cmap="gray"
+                )
+                text4 = ax[1, heatmap_display_count].text(
+                    int(trans_coords[coord_idx][0]) - 30,
+                    int(trans_coords[coord_idx][1]) - 10,  # Position
+                    r"$L_{{{}}}$".format(str(coord_idx + 1)),  # Text
+                    verticalalignment="bottom",  # Centered bottom with line
+                    horizontalalignment="center",  # Centered with horizontal line
+                    fontsize=15,  # Font size
+                    color="white",  # Color
+                )
+                heatmap_display_count += 1
+
         # plt.axis('off')
         # text.set_path_effects([path_effects.Stroke(linewidth=3, foreground='black'),
         #                path_effects.Normal()])

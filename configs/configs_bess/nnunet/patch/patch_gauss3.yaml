@@ -1,0 +1,46 @@
+
+ 
+OUTPUT: 
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/patch_training/patch_gauss3/"
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
+  COMET_WORKSPACE: "schobs"
+
+SOLVER:
+  DEEP_SUPERVISION: True
+  NUM_RES_SUPERVISIONS: 5
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 24
+  MAX_EPOCHS: 1000
+  # REGRESS_SIGMA: True
+
+
+
+
+
+DATASET:
+  # DEBUG: True
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  NAME:  "ISBI 2015 Junior"
+  IMAGE_MODALITY: 'Cephalometric'
+  LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+    
+ 
+TRAINER:
+  PERFORM_VALIDATION: True
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: True
+  INFERENCE_ONLY: False
+
+SAMPLER:
+  DATA_AUG: 'AffineComplex'
+  INPUT_SIZE : [1935,2400]
+  NUM_WORKERS: 8 
+  SAMPLE_MODE: "patch"
+  EVALUATION_SAMPLE_MODE: "patch"
+  DEBUG: False
+
+MODEL:
+  GAUSS_SIGMA: 3
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing/model_best_valid_coord_error_fold0.model"
