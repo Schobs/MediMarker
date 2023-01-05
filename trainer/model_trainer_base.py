@@ -1,108 +1,74 @@
-
+"""
+Module housing the model trainer superclass extended for all supported models within the LaNNU-Net framework.
+"""
+import copy
 import enum
 import os
-from inference.ensemble_inference_helper import EnsembleUncertainties
+from time import time
+from abc import ABC, abstractmethod
+
 import torch
 import numpy as np
-from time import time
-# import multiprocessing as mp
-from utils.local_logging.dict_logger import DictLogger
 from torch.cuda.amp import GradScaler, autocast
-from evaluation.localization_evaluation import success_detection_rate, generate_summary_df
-from utils.im_utils.heatmap_manipulation import get_coords
 from torchvision.transforms import Resize,InterpolationMode
 from torch.utils.data import DataLoader
-
-from abc import ABC, abstractmethod
 import imgaug
-import copy
+from imgaug import augmenters as iaa
 import pandas as pd
-
 import matplotlib.pyplot as plt
 
+from inference.ensemble_inference_helper import EnsembleUncertainties
+from evaluation.localization_evaluation import success_detection_rate, generate_summary_df
+from utils.im_utils.heatmap_manipulation import get_coords
+from utils.local_logging.dict_logger import DictLogger
+
 class NetworkTrainer(ABC):
-    """ Super class for trainers. I extend this for trainers for U-Net and PHD-Net. They share some functions.y
+    """
+    Centralised super class for all model trainers within the LaNNU-Net framework.
     """
     @abstractmethod
     def __init__(self, trainer_config,  is_train= True, dataset_class=None, output_folder=None, comet_logger=None, profiler=None):
         #Device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        #This is the trainer config dict
         self.trainer_config = trainer_config
         self.is_train = is_train
-
-
-        #Dataset class to use
         self.dataset_class = dataset_class
-        #Dataloader info
         self.data_loader_batch_size = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE
         self.num_batches_per_epoch = self.trainer_config.SOLVER.MINI_BATCH_SIZE
         self.gen_hms_in_mainthread = self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
         self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
         self.landmarks = self.trainer_config.DATASET.LANDMARKS
         self.training_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM if self.sampler_mode == "patch" else self.trainer_config.SAMPLER.INPUT_SIZE
-
-       
-
-        #Set up logger & profiler
         self.profiler = profiler
         self.comet_logger = comet_logger
         self.verbose_logging = self.trainer_config.OUTPUT.VERBOSE
-
-
-        #Set up directories
         self.output_folder = output_folder
-
-        #Trainer variables
         self.perform_validation = self.trainer_config.TRAINER.PERFORM_VALIDATION
         self.fold= self.trainer_config.TRAINER.FOLD
         self.continue_checkpoint = self.trainer_config.MODEL.CHECKPOINT
-        
         self.auto_mixed_precision = self.trainer_config.SOLVER.AUTO_MIXED_PRECISION
-
-        #Training params
-        self.max_num_epochs =   self.trainer_config.SOLVER.MAX_EPOCHS
-        #Regressing sigma parameters for heatmaps
+        self.max_num_epochs = self.trainer_config.SOLVER.MAX_EPOCHS
         self.regress_sigma = self.trainer_config.SOLVER.REGRESS_SIGMA
         self.sigmas = [torch.tensor(x, dtype=float, device=self.device, requires_grad=True) for x in np.repeat(self.trainer_config.MODEL.GAUSS_SIGMA, len(self.landmarks))]
-
-        #Validation parameters
         self.use_full_res_coords = self.trainer_config.INFERRED_ARGS.USE_FULL_RES_COORDS
         self.resize_first = self.trainer_config.INFERRED_ARGS.RESIZE_FIRST 
-        
-
-        #Checkpointing params
         self.save_every = 25
         self.save_latest_only = self.trainer_config.TRAINER.SAVE_LATEST_ONLY # if false it will not store/overwrite _latest but separate files each
         self.save_intermediate_checkpoints = True  # whether or not to save checkpoint_latest
-
-        #Loss function
-
-      
-       
-        #To be initialised in the super class (here)
         self.was_initialized = False
         self.amp_grad_scaler = None 
         self.train_dataloader = self.valid_dataloader = None
         self.dict_logger = None
-
-
-        #Set up in init of extended class (child)
         self.network = None
         self.train_label_generator = self.eval_label_generator = None
         self.optimizer= None
         self.loss = None
         self.num_res_supervision = None
-
-        #Can be changed in extended class (child)
         self.early_stop_patience = 150
         self.initial_lr = self.trainer_config.SOLVER.BASE_LR
-
-        #Inference params
         self.fit_gauss_inference = self.trainer_config.INFERENCE.FIT_GAUSS
-
-        #Initialize
+        self.apply_tta = self.trainer.config.INFERENCE.APPLY_TTA
+        self.tta_samples = self.trainer.config.NUM_TTA_SAMPLES
         self.epoch = 0
         self.best_valid_loss = 999999999999999999999999999
         self.best_valid_coord_error = 999999999999999999999999999
@@ -111,74 +77,50 @@ class NetworkTrainer(ABC):
         self.print_initiaization_info = True
 
     def initialize(self, training_bool=True):
-        '''
+        """
         Initialize profiler, comet logger, training/val dataloaders, network, optimizer, loss, automixed precision
         and maybe load a checkpoint. 
-        
-        '''
-        # torch.backends.cudnn.benchmark = True
-
+        """
         if self.profiler:
             print("Initialized profiler")
             self.profiler.start()
-        
-        
         self.initialize_dataloader_settings()
         if training_bool:
             self.set_training_dataloaders()
-
         self.initialize_network()
         self.initialize_optimizer_and_scheduler()
         self.initialize_loss_function()
         self._maybe_init_amp()
-
         if self.comet_logger:
             self.comet_logger.log_parameters(self.trainer_config)
-        
-        #This is the logger that will save epoch results to log & log variables at inference, extend this for any extra stuff you want to log/save at evaluation!
         self.dict_logger = DictLogger(len(self.landmarks), self.regress_sigma, self.loss.loss_seperated_keys, self.dataset_class.additional_sample_attribute_keys)
-
         self.was_initialized = True
-
         self.maybe_load_checkpoint()
-
-
-
         self.print_initiaization_info = False
-
 
     @abstractmethod
     def initialize_network(self):
-        '''
+        """
         Initialize the network here!
-        
-        '''
-    
-
+        """
 
     @abstractmethod
     def initialize_optimizer_and_scheduler(self):
-
-        '''
+        """
         Initialize the optimizer and LR scheduler here!
-        
-        '''
+        """
 
     @abstractmethod
     def initialize_loss_function(self):
-        '''
+        """
         Initialize the loss function here!
-        
-        '''
-
+        """
 
     def maybe_update_lr(self, epoch=None, exponent=0.9):
         """
         if epoch is not None we overwrite epoch. Else we use epoch = self.epoch + 1
-
         (maybe_update_lr is called in on_epoch_end which is called before epoch is incremented.
         Therefore we need to do +1 here)
-
         """
         if epoch is None:
             ep = self.epoch + 1
@@ -203,28 +145,20 @@ class NetworkTrainer(ABC):
 
     @abstractmethod
     def get_coords_from_heatmap(self, model_output, original_image_size):
-
         """
         Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
-       """
+        """
 
     def train(self):
         if not self.was_initialized:
             self.initialize(True)
-
         step = 0
         while self.epoch < self.max_num_epochs:
-            
-
             self.epoch_start_time = time()
-
             self.network.train()
-
             generator = iter(self.train_dataloader)
-
             #We will log the training and validation info here. The keys we set describe all the info we are logging.
             per_epoch_logs =  self.dict_logger.get_epoch_logger()
-
             print("training")
             # Train for X number of batches per epoch e.g. 250
             for iter_b in range(self.num_batches_per_epoch):
@@ -234,25 +168,18 @@ class NetworkTrainer(ABC):
                 step += 1
             # del generator
             print("validation")
-
             with torch.no_grad():
                 self.network.eval()
                 generator = iter(self.valid_dataloader)
                 while generator != None:
                     l, generator = self.run_iteration(generator, self.valid_dataloader, backprop=False, split="validation", log_coords=True,  logged_vars=per_epoch_logs)
-                 
             self.epoch_end_time = time()
-           
             continue_training = self.on_epoch_end(per_epoch_logs)
-
             if not continue_training:
                 if self.profiler:
                     self.profiler.stop()
                 break
-     
             self.epoch +=1
-
-        #Save the final weights
         if self.comet_logger:
             print("Logging weights as histogram...")
             weights = []
@@ -261,14 +188,11 @@ class NetworkTrainer(ABC):
                     weights.extend(name[1].detach().cpu().numpy().tolist())
             self.comet_logger.log_histogram_3d(weights, step=self.epoch)
 
-
-
-
-
     def run_iteration(self, generator, dataloader, backprop, split, log_coords, logged_vars=None, debug=False, direct_data_dict=None):
-        """ Runs a single iteration of a forward pass. It can perform back-propagation (training) or not (validation, testing), indicated w/ bool backprop.
-            It can also retrieve coordindates from predicted heatmap and log variables using DictLogger, dictated by the keys in the logged_vars dict.
-            It will generate a batch of samples from the generator, unless a direct_data_dict is provided, in which case it will use that instead.   
+        """ 
+        Runs a single iteration of a forward pass. It can perform back-propagation (training) or not (validation, testing), indicated w/ bool backprop.
+        It can also retrieve coordindates from predicted heatmap and log variables using DictLogger, dictated by the keys in the logged_vars dict.
+        It will generate a batch of samples from the generator, unless a direct_data_dict is provided, in which case it will use that instead.   
 
         Args:
             generator (Iterable): An iterable that generates a batch of samples (use a Pytorch DataLoader as the iterable type)
@@ -300,22 +224,15 @@ class NetworkTrainer(ABC):
                     data_dict = next(generator)
         else:
             data_dict = direct_data_dict
-
-
-        data =(data_dict['image']).to( self.device )
-
+        data = (data_dict['image']).to( self.device )
+        import pdb; pdb.set_trace()
         # This happens when we regress sigma with >0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
         if self.gen_hms_in_mainthread:
             data_dict['label'] = self.generate_heatmaps_batch(data_dict, dataloader)          
-
         #Put targets to device
         target = {key: ([x.to(self.device) for x in val ] if isinstance(val, list) else val.to(self.device) ) for key, val in data_dict['label'].items() }
-
-        
         self.optimizer.zero_grad()
-        
-
         #Run the forward pass, using auto mixed precision if enabled
         so = time()
         if self.auto_mixed_precision:
@@ -333,19 +250,15 @@ class NetworkTrainer(ABC):
                         self.amp_grad_scaler.update()
                         if self.regress_sigma:
                             self.update_dataloader_sigmas(self.sigmas)
-
                 else:
                     l = torch.tensor(0).to(self.device)
                     loss_dict = {}
-         
         else:
             output = self.network(data)
             del data
-
             #Only attempts loss if annotations avaliable for entire batch
             if all(data_dict["annotation_available"]):
                 l, loss_dict = self.loss(output, target, self.sigmas)
-            
                 if backprop:
                     l.backward()
                     torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
@@ -355,28 +268,21 @@ class NetworkTrainer(ABC):
             else:
                 l = torch.tensor(0).to(self.device)
                 loss_dict = {}
-
         #Log info from this iteration.
         s= time()
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
-
                 pred_coords, pred_coords_input_size, extra_info, target_coords = self.maybe_get_coords(output, log_coords, data_dict)
-                
                 logged_vars = self.dict_logger.log_key_variables(logged_vars, pred_coords, extra_info, target_coords, loss_dict, data_dict, log_coords, split)
                 if debug:
                     debug_vars = [x for x in logged_vars["individual_results"]  if x["uid"] in data_dict['uid']]
-                    self.eval_label_generator.debug_prediction(data_dict, output, pred_coords,pred_coords_input_size, debug_vars, extra_info)
-                           
+                    self.eval_label_generator.debug_prediction(data_dict, output, pred_coords,pred_coords_input_size, debug_vars, extra_info)         
         e = time()
         if self.profiler:
             self.profiler.step()
-
         del output
         del target
         return l.detach().cpu().numpy(), generator
-
-    
 
     def maybe_get_coords(self, output, log_coords, data_dict):
         """From output gets coordinates and extra info for logging. If log_coords is false, returns None for all.
@@ -892,8 +798,6 @@ class NetworkTrainer(ABC):
         Returns:
             dataset: Dataset object
         """
-
-        # assert split in ["validation", "testing"]
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
         dataset = self.dataset_class(
                 annotation_path =self.trainer_config.DATASET.SRC_TARGETS,
@@ -942,6 +846,27 @@ class NetworkTrainer(ABC):
         batch_hms = [torch.stack(x) for x in batch_hms]
 
         return batch_hms
+
+    def apply_image_transformation(img):
+        """
+        Applies and returns a selection of augmented versions of the inputted image.
+        """
+        transformed_imgs = []
+        for transformation in define_transformations().values():
+            transformed_imgs.append(transformation.augment_image(img))
+        return transformed_imgs
+
+    def define_transformations():
+        """
+        Dictionary of imgaug transformations to be applied to images as part of the TTA.
+        """
+        return {
+            "median_blur" : iaa.AverageBlur(k=(2, 11)),
+            "motion_blur" : iaa.MotionBlur(k=8),
+            "blend_alpha" : iaa.BlendAlpha([0.25, 0.75], iaa.MedianBlur(13)),
+            "sharpen" : iaa.Sharpen(alpha=(0.0, 1.0), lightness=(0.75, 2.0)),
+            "average_pool" : iaa.AveragePooling(2)
+        }
 
     @staticmethod
     def worker_init_fn(worker_id):

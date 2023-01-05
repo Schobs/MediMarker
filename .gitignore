@@ -6,3 +6,4 @@ scripts_bess/
 scripts/
 configs/configs_legacy/
 configs/configs_local/
+*.pyc
