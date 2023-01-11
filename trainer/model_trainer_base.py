@@ -6,7 +6,7 @@ import numpy as np
 from time import time
 
 # import multiprocessing as mp
-from utils.local_logging.dict_logger import DictLogger
+from utils.logging.dict_logger import DictLogger
 from torch.cuda.amp import GradScaler, autocast
 from evaluation.localization_evaluation import (
     success_detection_rate,
@@ -174,7 +174,6 @@ class NetworkTrainer(ABC):
 
     @abstractmethod
     def initialize_optimizer_and_scheduler(self):
-
         """
         Initialize the optimizer and LR scheduler here!
 
@@ -216,7 +215,6 @@ class NetworkTrainer(ABC):
 
     @abstractmethod
     def get_coords_from_heatmap(self, model_output, original_image_size):
-
         """
         Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
         """

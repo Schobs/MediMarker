@@ -38,9 +38,9 @@ class GPTrainer(NetworkTrainer):
         self.optimizer = torch.optim.Adam
         self.optimizer_kwargs = {"lr": self.initial_lr}
 
+        # "Loss" for GPs - the marginal log likelihood
         self.loss_func = gpytorch.mlls.ExactMarginalLogLikelihood
 
-        # "Loss" for GPs - the marginal log likelihood
 
         ################# Settings for saving checkpoints ##################################
         self.save_every = 25
@@ -58,9 +58,7 @@ class GPTrainer(NetworkTrainer):
         self.all_testing_input_ims = []
 
         self.likelihood = None
-        # self.network = None
 
-    #
 
     def initialize_network(self):
 
@@ -71,6 +69,7 @@ class GPTrainer(NetworkTrainer):
         data_batch = next(train_loader)
 
         count = 0
+        #Since 
         while data_batch is not None:
 
             for s_im in data_batch["image"]:
@@ -78,9 +77,7 @@ class GPTrainer(NetworkTrainer):
             image_flattened = torch.flatten(data_batch["image"], start_dim=1)
             self.all_training_input.append(image_flattened)
 
-            targ_coord_reshaped = (
-                data_batch["target_coords"].reshape(-1, 2).type(torch.float32)
-            )
+            targ_coord_reshaped = (data_batch["target_coords"].reshape(-1, 2).type(torch.float32))
             self.all_training_labels.append(targ_coord_reshaped)
 
             count += 1
@@ -411,8 +408,8 @@ class GPTrainer(NetworkTrainer):
 
         for idx, patch in enumerate(patch_predictions):
             full_heatmap[
-                stitching_info[idx][1] : stitching_info[idx][1] + patch_size_y,
-                stitching_info[idx][0] : stitching_info[idx][0] + patch_size_x,
+                stitching_info[idx][1]: stitching_info[idx][1] + patch_size_y,
+                stitching_info[idx][0]: stitching_info[idx][0] + patch_size_x,
             ] += patch.detach.cpu().numpy()
 
         plt.imshow(full_heatmap)

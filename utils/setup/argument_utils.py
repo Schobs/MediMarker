@@ -1,5 +1,8 @@
 import warnings
-
+import logging
+import os
+from pathlib import Path
+from datetime import datetime
 import argparse
 from config import get_cfg_defaults  # pylint: disable=import-error
 from yacs.config import CfgNode as CN
@@ -46,16 +49,18 @@ def infer_additional_arguments(yaml_args):
         yaml_args (.yaml): _description_
 
     Raises:
+
         NotImplementedError: _description_
 
     Returns:
         _type_: _description_
     """
+
     yaml_args.INFERRED_ARGS = CN()
     yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = False
 
     # due to multithreading issue, we must generate heatmap labels in the main thread rather than
-    # multi-thread dataloaders. To fix this in future.
+    # multi-thread dataloaders. To fix this in future.ssh tes
     if yaml_args.SAMPLER.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
         yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = True
 
@@ -72,6 +77,24 @@ def infer_additional_arguments(yaml_args):
         raise NotImplementedError(
             "Only input_size is supported for now for SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM, not full"
         )
+
+    # If set in config, autodetect if NOT running on SSH and running locally,
+    # we amend paths to where the SSH is mounted locally
+    if yaml_args.SSH.AUTO_AMEND_PATHS:
+
+        if "SSH_CONNECTION" not in os.environ:
+            yaml_args.DATASET.ROOT = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                         Path(yaml_args.DATASET.ROOT).relative_to(Path(yaml_args.DATASET.ROOT).anchor))
+
+            # yaml_args.DATASET.ROOT = os.path.join(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT, yaml_args.DATASET.ROOT)
+            yaml_args.DATASET.SRC_TARGETS = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                Path(yaml_args.DATASET.SRC_TARGETS).relative_to(Path(yaml_args.DATASET.SRC_TARGETS).anchor))
+
+            yaml_args.OUTPUT.OUTPUT_DIR = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                              Path(yaml_args.OUTPUT.OUTPUT_DIR).relative_to(Path(yaml_args.OUTPUT.OUTPUT_DIR).anchor))
+    #Set logger path
+
+    yaml_args.OUTPUT.LOGGER_OUTPUT = os.path.join(yaml_args.OUTPUT.OUTPUT_DIR,  "_Fold" + str(yaml_args.TRAINER.FOLD) + "_" + str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S")) + "_log.txt")
 
     return yaml_args
 
@@ -266,7 +289,6 @@ def arg_parse():
     # cfg.freeze()
     cfg = infer_additional_arguments(cfg)
 
-    print("Config: \n ", cfg)
 
     argument_checking(cfg)
     return cfg

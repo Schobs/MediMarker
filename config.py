@@ -38,7 +38,8 @@ _C.SAMPLER.SAMPLE_MODE = "full"  # ['patch', 'full']
 
 _C.SAMPLER.DEBUG = False
 _C.SAMPLER.INPUT_SIZE = [512, 512]
-_C.SAMPLER.EVALUATION_SAMPLE_MODE = "full"  # ['patch', "full"] Whether to sample patches or the full image during evaluation
+# ['patch', "full"] Whether to sample patches or the full image during evaluation
+_C.SAMPLER.EVALUATION_SAMPLE_MODE = "full"
 
 _C.SAMPLER.DATA_AUG = "AffineComplex"  # None
 _C.SAMPLER.DATA_AUG_PACKAGE = "imgaug"  # ['imgaug', 'albumentations']
@@ -51,7 +52,8 @@ _C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = "input_size"  # ['full', 'input_siz
 _C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [512, 512]
 
 _C.SAMPLER.PATCH.SAMPLER_BIAS = 0.66
-_C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional"  # ["patchify_and_stitch", "fully_convolutional"] # patchify_and_stitch if you wish to patchify and stitch the RESOLUTION_TO_SAMPLE_FROM sized image, fully_convolutional to use input size directly RESOLUTION_TO_SAMPLE_FROM
+# ["patchify_and_stitch", "fully_convolutional"] # patchify_and_stitch if you wish to patchify and stitch the RESOLUTION_TO_SAMPLE_FROM sized image, fully_convolutional to use input size directly RESOLUTION_TO_SAMPLE_FROM
+_C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional"
 # _C.SAMPLER.SAMPLE_PATCH = False
 # _C.SAMPLER.SAMPLE_PATCH_SIZE = [512,512]
 # _C.SAMPLER.SAMPLE_FROM_FULLRES =  True
@@ -79,7 +81,7 @@ _C.SOLVER.REGRESS_SIGMA = False
 _C.SOLVER.REGRESS_SIGMA_LOSS_WEIGHT = 0.005
 
 
-## model trainer
+# model trainer
 _C.TRAINER = CN()
 _C.TRAINER.PERFORM_VALIDATION = True
 _C.TRAINER.SAVE_LATEST_ONLY = True
@@ -141,6 +143,7 @@ _C.OUTPUT = CN()
 _C.OUTPUT.VERBOSE = True
 # _C.OUTPUT.FAST_DEV_RUN = False  # True for debug
 _C.OUTPUT.OUTPUT_DIR = "/output/"
+
 # _C.OUTPUT.TB_DIR = "./lightning_logs"
 
 _C.OUTPUT.USE_COMETML_LOGGING = False
@@ -151,6 +154,27 @@ _C.OUTPUT.COMET_PROJECT_NAME = "landnnunet"
 
 _C.OUTPUT.COMET_TAGS = ["default"]
 _C.OUTPUT.RESULTS_CSV_APPEND = None
+
+# ---------------------------------------------------------------------------- #
+# SSH options
+# -----------
+# Use if your data is on an SSH mount and you want to load data & save results to
+# this mount (common if you are using HPC). Only use this if you understand it.
+# If set to True, set your SRC_TARGETS, OUTPUT_DIR AND ROOT to the path you use
+# when you are running the programme inside your SSH mount.
+# Then set your LOCAL_PATH_TO_SSH_MOUNT to the path from your local machine to
+# the SSH mount. The code will automatically detect if you are running locally
+# and alter your paths to the SSH mount accordingly.
+# Example:
+# DATASET.ROOT: "/shared/tale2/Shared/schobs/data/ISBI2015_landmarks"
+# SSH.LOCAL_PATH_TO_SSH_MOUNT = "/mnt/tale_shared/"
+# and the code will detect if you are running locally instead of via SSH and change:
+# DATASET.ROOT = "/mnt/tale_shared/shared/tale2/Shared/schobs/data/ISBI2015_landmarks"
+# ---------------------------------------------------------------------------- #
+
+_C.SSH = CN()
+_C.SSH.AUTO_AMEND_PATHS = False
+_C.SSH.LOCAL_PATH_TO_SSH_MOUNT = "/mnt/bess"
 
 
 def get_cfg_defaults():

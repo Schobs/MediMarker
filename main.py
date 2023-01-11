@@ -3,28 +3,23 @@ import os
 from datetime import datetime
 from comet_ml import Experiment
 import torch
+import logging
 from pandas import ExcelWriter
 from pytorch_lightning.utilities.seed import seed_everything
-
-# from torch.utils.tensorboard import SummaryWriter
 
 from datasets.dataset_index import DATASET_INDEX
 
 
-from trainer.model_trainer_index import (
-    MODEL_TRAINER_INDEX,
-)
-from utils.comet_logging.logging_utils import (
-    save_comet_html,
-)
+from trainer.model_trainer_index import MODEL_TRAINER_INDEX
+from utils.logging.comet_logging import save_comet_html
 from utils.setup.argument_utils import arg_parse
+
+from utils.logging.python_logger import get_logger, initialize_logging
 
 
 def main():
-
     """The main file for training and testing the model. Everything is called from here."""
 
-    # set up a glova
     # Read and infer arguments from yaml file
     cfg = arg_parse()
 
@@ -39,6 +34,13 @@ def main():
     time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     fold = str(cfg.TRAINER.FOLD)
 
+    # ---- setup logger ----
+    # initialize_logging()
+    logger = get_logger(cfg.OUTPUT.LOGGER_OUTPUT, __name__)
+
+    logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
+    logger.info("Config \n %s ", cfg)
+    
     exp_name = cfg.OUTPUT.OUTPUT_DIR.split("/")[-1] + "_Fold" + fold + "_" + str(time)
 
     # Set up Comet logging
@@ -66,16 +68,6 @@ def main():
 
     # clear cuda cache
     torch.cuda.empty_cache()
-
-    # exit()
-    # This is Tensorboard stuff. Useful for profiler to optimize.
-    # t_writer = SummaryWriter("/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/profiler/")
-    # cfg.DATASET.DEBUG = True
-    # prof = torch.profiler.profile(
-    #     schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=2),
-    #     on_trace_ready=torch.profiler.tensorboard_trace_handler("/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/profiler/"),
-    #     record_shapes=True,
-    #     with_stack=True)
 
     # get dataset class based on dataset, it defaults to datasets.dataset_generic. Also get trainer
     dataset_class = DATASET_INDEX[cfg.DATASET.DATASET_CLASS]

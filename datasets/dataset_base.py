@@ -27,9 +27,6 @@ from time import time
 import multiprocessing as mp
 import ctypes
 
-# import albumentations as A
-# import albumentations.augmentations.functional as F
-# from albumentations.pytorch import ToTensorV2
 
 from abc import ABC, abstractmethod, ABCMeta
 
@@ -136,8 +133,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         }
 
         if self.sample_mode == "patch":
-            # assert sample_patch_size == input_size
-
             # Get the patches origin information. Use this for stitching together in valid/testing
             self.load_im_size = sample_patch_from_resolution
             self.input_size = sample_patch_size
@@ -239,7 +234,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.load_function = lambda img: img
 
         for idx, data in enumerate(datalist):
-            ### Add coordinate labels as sample attribute, if annotations available
+            # Add coordinate labels as sample attribute, if annotations available
             # case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
             if (not isinstance(data["coordinates"], list)) or (
                 "has_annotation" in data.keys() and data["has_annotation"] == False
@@ -630,8 +625,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         x_rand_pad = x_rand_safe - safe_padding
         cropped_padded_sample = padded_image[
             :,
-            y_rand_pad : y_rand_pad + padded_patch_size[1],
-            x_rand_pad : x_rand_pad + padded_patch_size[0],
+            y_rand_pad: y_rand_pad + padded_patch_size[1],
+            x_rand_pad: x_rand_pad + padded_patch_size[0],
         ]
 
         # Calculate the new origin: 2*safe_padding bc we padded image & then added pad to the patch.
