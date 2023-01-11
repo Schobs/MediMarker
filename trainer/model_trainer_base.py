@@ -20,7 +20,7 @@ import pandas as pd
 
 
 class NetworkTrainer(ABC):
-    """Super class for trainers. I extend this for trainers for U-Net and PHD-Net. They share some functions.y"""
+    """Super class for trainers. Extend this for trainers for U-Net, PHD-Net or any other model. They will share some functions."""
 
     @abstractmethod
     def __init__(
@@ -93,8 +93,6 @@ class NetworkTrainer(ABC):
         self.save_intermediate_checkpoints = (
             True  # whether or not to save checkpoint_latest
         )
-
-        # Loss function
 
         # To be initialised in the super class (here)
         self.was_initialized = False
@@ -174,7 +172,6 @@ class NetworkTrainer(ABC):
 
     @abstractmethod
     def initialize_optimizer_and_scheduler(self):
-
         """
         Initialize the optimizer and LR scheduler here!
 
@@ -216,7 +213,6 @@ class NetworkTrainer(ABC):
 
     @abstractmethod
     def get_coords_from_heatmap(self, model_output, original_image_size):
-
         """
         Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
         """
@@ -255,9 +251,11 @@ class NetworkTrainer(ABC):
                 if self.comet_logger:
                     self.comet_logger.log_metric("training loss iteration", l, step)
                 step += 1
-            # del generator
             print("validation")
 
+            # TODO: For patchify and stitch, I need to split the image into patches, run the network on each patch, and then stitch the patches back together.
+            # I could: A) create a maybe_patchify() function to wrap around iter(), save results in the dict_logger & stitch after
+            # B) change the dataloader to return patches instead of full images, attach attributes() and then stitch after
             with torch.no_grad():
                 self.network.eval()
                 generator = iter(self.valid_dataloader)
@@ -321,8 +319,6 @@ class NetworkTrainer(ABC):
             generator: The generator, which is now one iteration ahead from the input generator, or may have been reinitialized if it ran out of samples (if training).
         """
 
-        so = time()
-
         # We can either give the generator to be iterated or a data_dict directly
         if direct_data_dict is None:
             try:
@@ -357,7 +353,6 @@ class NetworkTrainer(ABC):
         self.optimizer.zero_grad()
 
         # Run the forward pass, using auto mixed precision if enabled
-        so = time()
         if self.auto_mixed_precision:
             with autocast():
                 output = self.network(data)

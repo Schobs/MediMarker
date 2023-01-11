@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing4/"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/cepha29/full_sizeFULLTRAIN"
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
   COMET_WORKSPACE: "schobs"
@@ -10,8 +10,8 @@ SOLVER:
   DEEP_SUPERVISION: True
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE: 12
-  MAX_EPOCHS: 258
+  DATA_LOADER_BATCH_SIZE: 2
+  MAX_EPOCHS: 1000
   # REGRESS_SIGMA: True
 
 
@@ -30,13 +30,14 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: True
+  CACHE_DATA: False
   INFERENCE_ONLY: False
 
 SAMPLER:
   DATA_AUG: 'AffineComplex'
-  INPUT_SIZE : [512,512]
+  INPUT_SIZE : [2048,2048]
   NUM_WORKERS: 8 
+  DEBUG: False
 
 MODEL:
   GAUSS_SIGMA: 3

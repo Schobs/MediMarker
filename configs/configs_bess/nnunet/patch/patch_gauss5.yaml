@@ -10,7 +10,7 @@ SOLVER:
   DEEP_SUPERVISION: True
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE: 24
+  DATA_LOADER_BATCH_SIZE: 128
   MAX_EPOCHS: 1000
   # REGRESS_SIGMA: True
 
@@ -40,7 +40,9 @@ SAMPLER:
   SAMPLE_MODE: "patch"
   EVALUATION_SAMPLE_MODE: "patch"
   DEBUG: False
-
+  PATCH:
+    SAMPLE_PATCH_SIZE: [256, 256]
+    SAMPLER_BIAS: 1.0
 MODEL:
   GAUSS_SIGMA: 5
   # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing/model_best_valid_coord_error_fold0.model"
