@@ -1,16 +1,9 @@
-from abc import abstractclassmethod
 import os
 from pathlib import Path
-from typing import List
-import warnings
 
-import imgaug as ia
-import imgaug.augmenters as iaa
-import nibabel as nib
 import numpy as np
 import torch
 from imgaug.augmentables import Keypoint, KeypointsOnImage
-from PIL import Image
 from torch.utils import data
 from torchvision import transforms
 from transforms.transformations import (
@@ -19,16 +12,13 @@ from transforms.transformations import (
 )
 from transforms.dataloader_transforms import get_aug_package_loader
 
-from transforms.generate_labels import LabelGenerator
-from utils.data.load_data import get_datatype_load, load_aspire_datalist
+from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image
 from utils.im_utils.visualisation import visualize_patch
-from time import time
-
-import multiprocessing as mp
-import ctypes
 
 
-from abc import ABC, abstractmethod, ABCMeta
+from utils.logging.python_logger import get_logger
+
+from abc import ABC, ABCMeta
 
 
 class DatasetMeta(ABCMeta, type(data.Dataset)):
@@ -110,6 +100,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         super(DatasetBase, self).__init__()
 
+        # Logger
+        self.logger = get_logger("root")
+
         # We are passing in the label generator here, this is unique to each model_trainer class.
         self.LabelGenerator = LabelGenerator
 
@@ -123,7 +116,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.sample_patch_bias = sample_patch_bias
         self.sample_patch_from_resolution = sample_patch_from_resolution
 
-        # print("patch sampling stuff: ", self.sample_patch_size, self.sample_patch_bias, self.sample_patch_from_resolution)
         self.dataset_split_size = dataset_split_size
 
         # Additional sample attributes found in the json datalist to return with each sample
@@ -159,7 +151,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # ratio between original image and load_image size, to resize landmarks.
 
         if self.data_augmentation_strategy == None:
-            print("No data Augmentation for %s split." % split)
+            self.logger.info("No data Augmentation for %s split.", split)
         else:
             # Get data augmentor for the correct package
             self.aug_package_loader = get_aug_package_loader(
@@ -169,9 +161,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             self.transform = self.aug_package_loader(
                 self.data_augmentation_strategy, self.input_size
             )
-            print(
-                "Using data augmentation package %s and strategy %s for %s split."
-                % (data_augmentation_package, self.data_augmentation_strategy, split)
+            self.logger.info(
+                "Using data augmentation package %s and strategy %s for %s split.",
+                data_augmentation_package, self.data_augmentation_strategy, split
             )
 
         self.heatmaps_to_tensor = transforms.Compose([HeatmapsToTensor()])
@@ -192,9 +184,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # Lists to save the image paths (or images if caching), target coordinates (scaled to input size), and full resolution coords.
         self.images = []
         self.target_coordinates = []
-        self.full_res_coordinates = (
-            []
-        )  # full_res will be same as target if input and original image same size
+        self.full_res_coordinates = [] # full_res will be same as target if input and original image same size
         self.image_paths = []
         self.uids = []
         self.annotation_available = []
@@ -204,9 +194,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # We are using cross-validation, following our convention of naming each json train with the append "foldX" where (X= self.cv)
         if cv >= 0:
             label_std = os.path.join("fold" + str(self.cv) + ".json")
-            print(
-                "Loading %s data for CV %s "
-                % (self.split, os.path.join(self.annotation_path, label_std))
+            self.logger.info(
+                "Loading %s data for CV %s ", self.split, os.path.join(self.annotation_path, label_std)
             )
             datalist = load_aspire_datalist(
                 os.path.join(self.annotation_path, label_std),
@@ -216,11 +205,11 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
             if self.dataset_split_size != -1:
                 datalist = datalist[: self.dataset_split_size]
-                print("datalist: ", datalist)
+                self.logger.info("datalist: %s", datalist)
         # Not using CV, load the specified json file
         else:
-            print(
-                "Loading %s data (no CV) for %s " % (self.split, self.annotation_path)
+            self.logger.info(
+                "Loading %s data (no CV) for %s ", self.split, self.annotation_path
             )
             datalist = load_aspire_datalist(
                 self.annotation_path, data_list_key=self.split, base_dir=self.root_path
@@ -235,10 +224,10 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         for idx, data in enumerate(datalist):
             # Add coordinate labels as sample attribute, if annotations available
-            # case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
             if (not isinstance(data["coordinates"], list)) or (
                 "has_annotation" in data.keys() and data["has_annotation"] == False
             ):
+                # Case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
                 interested_landmarks = np.array([[0, 0]] * len(self.landmarks))
                 self.annotation_available.append(False)
                 self.full_res_coordinates.append(interested_landmarks)
@@ -249,31 +238,26 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                         data,
                     )
             else:
+                # Case when we have annotations.
                 interested_landmarks = np.array(data["coordinates"])[self.landmarks, :2]
-                self.full_res_coordinates.append(
-                    np.array(data["coordinates"])[self.landmarks, :2]
-                )
+                self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks, :2])
                 self.annotation_available.append(True)
 
             if self.cache_data:
-
                 # Determine original size and log whether we needed to resize it
                 (
                     resized_factor,
                     original_size,
                     image,
                     interested_landmarks,
-                ) = self.load_and_resize_image(data["image"], interested_landmarks)
-
+                ) = load_and_resize_image(data["image"], interested_landmarks, self.load_im_size, self.datatype_load)
                 self.images.append(image)
                 self.image_resizing_factors.append(resized_factor)
                 self.original_image_sizes.append(original_size)
 
             else:
-                # Not caching, so add image path.
-                self.images.append(
-                    data["image"]
-                )  # just appends the path, the load_function will load it later.
+                # Not caching, so just append image path.
+                self.images.append(data["image"])
 
             self.target_coordinates.append(interested_landmarks)
             self.image_paths.append(data["image"])
@@ -283,25 +267,15 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             self.add_additional_sample_attributes(data)
 
         if self.cache_data:
-            print(
-                "Cached all %s data in memory. Length of %s "
-                % (self.split, len(self.images))
+            self.logger.info(
+                "Cached all %s data in memory. Length of %s", self.split,  len(self.images)
             )
         else:
-            print(
-                "Not caching %s image data in memory, will load on the fly. Length of %s "
-                % (self.split, len(self.images))
+            self.logger.info(
+                "Not caching %s image data in memory, will load on the fly. Length of %s", self.split, len(self.images)
             )
 
-        non_unique = [
-            [x, self.image_paths[x_idx]]
-            for x_idx, x in enumerate(self.uids)
-            if self.uids.count(x) > 1
-        ]
-        assert len(non_unique) == 0, (
-            "Not all uids are unique! Check your data. %s non-unqiue uids from %s samples , they are: %s \n "
-            % (len(non_unique), len(self.uids), non_unique)
-        )
+        self.check_uids_unique()
 
     def __len__(self):
         return len(self.images)
@@ -309,46 +283,26 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
     def set_use_cache(self, use_cache):
         self.use_cache = use_cache
 
-    # @abstractmethod
-    def add_additional_sample_attributes(self, data):
+    def check_uids_unique(self):
+        """Make sure all uids are unique
+        """
+        non_unique = [
+            [x, self.image_paths[x_idx]]
+            for x_idx, x in enumerate(self.uids)
+            if self.uids.count(x) > 1
+        ]
+        assert len(non_unique) == 0, (
+            f"Not all uids are unique! Check your data. {len(non_unique)} non-unqiue uids from {len(self.uids)} samples , they are: {non_unique}"
+        )
+
+    def add_additional_sample_attributes(self, extra_data):
         """
         Add more attributes to each sample.
 
         """
         for k_ in self.additional_sample_attribute_keys:
-            keyed_data = data[k_]
+            keyed_data = extra_data[k_]
             self.additional_sample_attributes[k_].append(keyed_data)
-
-    def load_and_resize_image(self, image_path, coords):
-        """Load image and resize it to the specified size. Also resize the coordinates to match the new image size.
-
-        Args:
-            image_path (str): _description_
-            coords ([ints]): _description_
-
-        Returns:
-            _type_: _description_
-        """
-
-        original_image = self.datatype_load(image_path)
-        original_size = np.expand_dims(np.array(list(original_image.size)), 1)
-        if list(original_image.size) != self.load_im_size:
-            resizing_factor = [
-                list(original_image.size)[0] / self.load_im_size[0],
-                list(original_image.size)[1] / self.load_im_size[1],
-            ]
-            resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
-        else:
-            resizing_factor = [1, 1]
-            resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
-
-        # potentially resize the coords
-        coords = np.round(coords * [1 / resizing_factor[0], 1 / resizing_factor[1]])
-        image = np.expand_dims(
-            normalize_cmr(original_image.resize(self.load_im_size)), axis=0
-        )
-
-        return resized_factor, original_size, image, coords
 
     def __getitem__(self, index):
         """Main function of the dataloader. Gets a data sample.
@@ -377,10 +331,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         """
 
-        sorgin = time()
-
         hm_sigmas = self.sigmas
-        # print("load time: " , (time()-sorgin))
         coords = self.target_coordinates[index]
         full_res_coods = self.full_res_coordinates[index]
         im_path = self.image_paths[index]
@@ -396,12 +347,11 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             original_size = self.original_image_sizes[index]
 
         else:
-            resized_factor, original_size, image, coords = self.load_and_resize_image(
-                image, coords
+            resized_factor, original_size, image, coords = load_and_resize_image(
+                image, coords, self.load_im_size, self.datatype_load
             )
 
         untransformed_coords = coords
-
         untransformed_im = image
 
         # Do data augmentation
@@ -422,7 +372,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 shape=untransformed_im[0].shape,
             )
 
-            s = time()
             transformed_sample = self.transform(
                 image=untransformed_im[0], keypoints=kps
             )  # list where [0] is image and [1] are coords.
@@ -446,7 +395,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
 
-        s = time()
         if self.generate_hms_here:
 
             label = self.LabelGenerator.generate_labels(
@@ -487,14 +435,15 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             sample[key_] = self.additional_sample_attributes[key_][index]
 
         if self.debug or run_time_debug:
-            print("sample: ", sample)
+            self.logger.info("sample: %s", sample)
             self.LabelGenerator.debug_sample(
                 sample, untransformed_im, untransformed_coords
             )
         return sample
 
     def generate_labels(self, landmarks, sigmas):
-        """Generate heatmap labels using same method as in _get_item__
+        """Generate heatmap labels using same method as in _get_item__.
+        Note, this does not work with patch-based yet (note the x_y_corner is hard coded as [0,0]. This is raised in argument checkers.)
 
         Args:
             landmarks (_type_): _description_
@@ -643,10 +592,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 [lm[0] + safe_padding, lm[1] + safe_padding] for lm in landmarks
             ]
 
-            print(
+            self.logger.info(
                 "\n \n \n the min xy is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
-             and the normalized landmark is %s : "
-                % (
+                and the normalized landmark is %s : ",
                     y_rand_safe,
                     x_rand_safe,
                     x_rand_pad,
@@ -654,7 +602,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     landmarks,
                     padded_lm,
                     normalized_landmarks,
-                )
             )
 
             visualize_patch(

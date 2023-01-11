@@ -1,5 +1,5 @@
 import imgaug.augmenters as iaa
-
+import imgaug
 import albumentations as A
 import albumentations.augmentations.functional as F
 from albumentations.pytorch import ToTensorV2
@@ -41,6 +41,14 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
     Returns:
         transform: sequence of transforms
     """
+
+    # if data_augmentation == "flatten":
+
+    #     transform = iaa.Sequential(
+    #         [
+    #             imgaug.imgaug.flatten()
+    #         ]
+    #     )
     if data_augmentation == "AffineSimple":
 
         transform = iaa.Sequential(

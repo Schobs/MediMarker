@@ -656,9 +656,10 @@ class NetworkTrainer(ABC):
         inference_resolution = self.training_resolution
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
+        test_batch_size = self.maybe_alter_batch_size(test_dataset)
         self.test_dataloader = DataLoader(
             test_dataset,
-            batch_size=self.data_loader_batch_size,
+            batch_size=test_batch_size,
             shuffle=False,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
@@ -1035,9 +1036,13 @@ class NetworkTrainer(ABC):
             "Using %s Dataloader workers and persist workers bool : %s "
             % (self.num_workers_cfg, self.persist_workers)
         )
+
+        train_batch_size = self.maybe_alter_batch_size(train_dataset)
+        valid_batch_size = self.maybe_alter_batch_size(valid_dataset)
+
         self.train_dataloader = DataLoader(
             train_dataset,
-            batch_size=self.data_loader_batch_size,
+            batch_size=train_batch_size,
             shuffle=True,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
@@ -1046,7 +1051,7 @@ class NetworkTrainer(ABC):
         )
         self.valid_dataloader = DataLoader(
             valid_dataset,
-            batch_size=self.data_loader_batch_size,
+            batch_size=valid_batch_size,
             shuffle=False,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
@@ -1127,3 +1132,13 @@ class NetworkTrainer(ABC):
             worker_id (int): dataloader worker id
         """
         imgaug.seed(np.random.get_state()[1][0] + worker_id)
+
+    def maybe_alter_batch_size(self, dataset):
+        """If the batch size is set to -1, then we use the entire dataset as the batch size.
+            This is used when using GPs since we cannot mini-batch the GP training.
+        """
+
+        if self.data_loader_batch_size == -1:
+            return dataset.__len__()
+        else:
+            return self.data_loader_batch_size

@@ -16,7 +16,7 @@ from scipy.stats import multivariate_normal
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
 from trainer.model_trainer_base import NetworkTrainer
 
-from transforms.generate_labels import UNetLabelGenerator
+from transforms.generate_labels import GPLabelGenerator
 
 
 class GPTrainer(NetworkTrainer):
@@ -30,7 +30,7 @@ class GPTrainer(NetworkTrainer):
         self.early_stop_patience = 250
 
         # Label generator
-        self.train_label_generator = self.eval_label_generator = UNetLabelGenerator()
+        self.train_label_generator = self.eval_label_generator = GPLabelGenerator()
 
         # get model config parameters
 
@@ -41,12 +41,10 @@ class GPTrainer(NetworkTrainer):
         # "Loss" for GPs - the marginal log likelihood
         self.loss_func = gpytorch.mlls.ExactMarginalLogLikelihood
 
-
         ################# Settings for saving checkpoints ##################################
         self.save_every = 25
 
         # override dataloaderbatch size
-        # self.data_loader_batch_size = len()
 
         # Need to instantiate and get all the training data and training labels (called when initialize_network() is called in super.)
         self.all_training_input = []
@@ -59,7 +57,6 @@ class GPTrainer(NetworkTrainer):
 
         self.likelihood = None
 
-
     def initialize_network(self):
 
         if self.trainer_config.TRAINER.INFERENCE_ONLY:
@@ -69,7 +66,8 @@ class GPTrainer(NetworkTrainer):
         data_batch = next(train_loader)
 
         count = 0
-        #Since 
+
+        # It would be better to deal with this in the Dataset class rather than this hacky way.
         while data_batch is not None:
 
             for s_im in data_batch["image"]:

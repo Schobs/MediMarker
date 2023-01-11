@@ -17,7 +17,7 @@ def initialize_logging():
     logging.basicConfig(level=logging.NOTSET)
 
 
-def get_logger(save_log_path, logger_name="main"):
+def get_logger(save_log_path, logger_name="root"):
     # logging.basicConfig(filename='myapp.log', level=logging.INFO)
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.DEBUG)  # <<< Added Line
@@ -30,7 +30,7 @@ def get_logger(save_log_path, logger_name="main"):
     file_handler.setLevel(logging.DEBUG)
 
     # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s -  %(module)s - %(message)s')
 
     # add formatters to our handlers
     stream_handler.setFormatter(formatter)
@@ -39,7 +39,5 @@ def get_logger(save_log_path, logger_name="main"):
     # add Handlers to our logger
     logger.addHandler(stream_handler)
     logger.addHandler(file_handler)
-
-
 
     return logger

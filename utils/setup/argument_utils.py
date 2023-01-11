@@ -60,7 +60,7 @@ def infer_additional_arguments(yaml_args):
     yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = False
 
     # due to multithreading issue, we must generate heatmap labels in the main thread rather than
-    # multi-thread dataloaders. To fix this in future.ssh tes
+    # multi-thread dataloaders. To fix this in future.
     if yaml_args.SAMPLER.NUM_WORKERS != 0 and yaml_args.SOLVER.REGRESS_SIGMA:
         yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = True
 
@@ -92,9 +92,10 @@ def infer_additional_arguments(yaml_args):
 
             yaml_args.OUTPUT.OUTPUT_DIR = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
                                               Path(yaml_args.OUTPUT.OUTPUT_DIR).relative_to(Path(yaml_args.OUTPUT.OUTPUT_DIR).anchor))
-    #Set logger path
+    # Set logger path
 
-    yaml_args.OUTPUT.LOGGER_OUTPUT = os.path.join(yaml_args.OUTPUT.OUTPUT_DIR,  "_Fold" + str(yaml_args.TRAINER.FOLD) + "_" + str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S")) + "_log.txt")
+    yaml_args.OUTPUT.LOGGER_OUTPUT = os.path.join(yaml_args.OUTPUT.OUTPUT_DIR,  "_Fold" + str(
+        yaml_args.TRAINER.FOLD) + "_" + str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S")) + "_log.txt")
 
     return yaml_args
 
@@ -147,6 +148,7 @@ def argument_checking(yaml_args):
     #   a) ensure SAMPLER.PATCH.SAMPLE_PATCH_SIZE !=  DATASET.INPUT_SIZE if resizing images to input_size
     #   b) ensure SAMPLER.PATCH.SAMPLE_PATCH_SIZE < DATASET.INPUT_SIZE if resizing images to input_size
     #   c) If user is sampling from full resolution, provide a warning that the patch size should be smaller than the image size
+    #   d) cannot regress sigma in patch mode yet due to multi-threading issue. Need to fix dataset method x_y_patch corner being hardcoded [0,0]
 
     if yaml_args.MODEL.ARCHITECTURE == "PHD-Net":
         try:
@@ -202,6 +204,15 @@ def argument_checking(yaml_args):
                 "Make sure the SAMPLER.PATCH.SAMPLE_PATCH_SIZE is smaller than ALL of your input images! Future: make a pre-processing check for this. ",
                 stacklevel=2,
             )
+        # 1d
+        try:
+            if yaml_args.SOLVER.REGRESS_SIGMA:
+                raise ValueError(
+                    "Cannot regress sigma in patch mode yet due to multi-threading issue. Need to fix dataset method x_y_patch corner being hardcoded [0,0]"
+                )
+
+        except ValueError as e:
+            all_errors.append(e)
 
     # deep supervision cases to cover:
     try:
@@ -259,6 +270,21 @@ def argument_checking(yaml_args):
             stacklevel=2,
         )
 
+    # Some GP checking
+
+    if yaml_args.MODEL.ARCHITECTURE == "GP":
+        # 1) the batch size should be -1 i.e. the size of the dataset!
+
+        # 1)
+        try:
+            if yaml_args.SOLVER.DATA_LOADER_BATCH_SIZE != -1:
+                raise ValueError(
+                    "You are using a GP model (MODEL.ARCHITECTURE = GP) but your SOLVER.DATA_LOADER_BATCH_SIZE is not -1. "
+                    "Minibatching not supported for GP so all data needs to be in one batch. Set this by setting SOLVER.DATA_LOADER_BATCH_SIZE = -1."
+                )
+        except ValueError as val_error:
+            all_errors.append(val_error)
+
     if all_errors:
         print("I have identified some issues with your .yaml config file:")
         raise ValueError(all_errors)
@@ -288,7 +314,6 @@ def arg_parse():
         cfg.TRAINER.FOLD = args.fold
     # cfg.freeze()
     cfg = infer_additional_arguments(cfg)
-
 
     argument_checking(cfg)
     return cfg

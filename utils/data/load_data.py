@@ -5,6 +5,9 @@ import nibabel as nib
 from PIL import Image
 import pydicom as dicom
 import numpy as np
+from transforms.transformations import (
+    normalize_cmr,
+)
 
 
 def get_datatype_load(im_path):
@@ -94,3 +97,35 @@ def load_aspire_datalist(
         base_dir = os.path.dirname(data_list_file_path)
 
     return _append_paths(base_dir, expected_data)
+
+
+def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
+    """Load image and resize it to the specified size. Also resize the coordinates to match the new image size.
+
+    Args:
+        image_path (str): _description_
+        coords ([ints]): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    original_image = data_type_load(image_path)
+    original_size = np.expand_dims(np.array(list(original_image.size)), 1)
+    if list(original_image.size) != load_im_size:
+        resizing_factor = [
+            list(original_image.size)[0] / load_im_size[0],
+            list(original_image.size)[1] / load_im_size[1],
+        ]
+        resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
+    else:
+        resizing_factor = [1, 1]
+        resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
+
+    # potentially resize the coords
+    coords = np.round(coords * [1 / resizing_factor[0], 1 / resizing_factor[1]])
+    image = np.expand_dims(
+        normalize_cmr(original_image.resize(load_im_size)), axis=0
+    )
+
+    return resized_factor, original_size, image, coords

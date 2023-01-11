@@ -1,0 +1,668 @@
+2023-01-11 19:38:29,965 - root - INFO - Using data augmentation package imgaug and strategy CenterCropOnly for training split.
+2023-01-11 19:38:29,965 - root - INFO - Loading training data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:38:30,172 - root - INFO - Not caching training image data in memory, will load on the fly. Length of 240 
+2023-01-11 19:38:30,180 - root - INFO - No data Augmentation for validation split.
+2023-01-11 19:38:30,180 - root - INFO - No data Augmentation for validation split.
+2023-01-11 19:38:30,181 - root - INFO - Loading validation data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:38:30,181 - root - INFO - Loading validation data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:38:30,255 - root - INFO - Not caching validation image data in memory, will load on the fly. Length of 60 
+2023-01-11 19:38:30,255 - root - INFO - Not caching validation image data in memory, will load on the fly. Length of 60 
+2023-01-11 19:38:35,352 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:38:35,352 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:38:45,470 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:38:45,470 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:38:55,581 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:38:55,581 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:05,788 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:05,788 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:15,008 - everett - DEBUG - No INI file found: []
+2023-01-11 19:39:15,008 - everett - DEBUG - No INI file found: []
+2023-01-11 19:39:15,013 - everett - DEBUG - No INI file found: ['./.comet.config']
+2023-01-11 19:39:15,013 - everett - DEBUG - No INI file found: ['./.comet.config']
+2023-01-11 19:39:15,013 - everett - DEBUG - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:39:15,013 - everett - DEBUG - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:39:15,013 - everett - DEBUG - No INI file found: ['~/.comet.config']
+2023-01-11 19:39:15,013 - everett - DEBUG - No INI file found: ['~/.comet.config']
+2023-01-11 19:39:15,014 - everett - DEBUG - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:15,014 - everett - DEBUG - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:15,014 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:15,014 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:15,014 - everett - DEBUG - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:15,014 - everett - DEBUG - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:15,014 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:15,014 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:15,014 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:15,017 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:39:15,017 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:39:15,421 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/git-patch/upload?experimentId=a233dba969b4424bb0040908efa37931&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp HTTP/1.1" 200 5
+2023-01-11 19:39:15,421 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/git-patch/upload?experimentId=a233dba969b4424bb0040908efa37931&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp HTTP/1.1" 200 5
+2023-01-11 19:39:15,902 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:15,902 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:22,186 - everett - DEBUG - No INI file found: []
+2023-01-11 19:39:22,186 - everett - DEBUG - No INI file found: []
+2023-01-11 19:39:22,470 - everett - DEBUG - No INI file found: ['./.comet.config']
+2023-01-11 19:39:22,470 - everett - DEBUG - No INI file found: ['./.comet.config']
+2023-01-11 19:39:22,470 - everett - DEBUG - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:39:22,470 - everett - DEBUG - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:39:22,471 - everett - DEBUG - No INI file found: ['~/.comet.config']
+2023-01-11 19:39:22,471 - everett - DEBUG - No INI file found: ['~/.comet.config']
+2023-01-11 19:39:22,471 - everett - DEBUG - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:22,471 - everett - DEBUG - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:22,471 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:22,471 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:22,471 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:22,471 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:22,471 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:22,471 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:22,471 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:22,471 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:22,472 - everett - DEBUG - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:22,472 - everett - DEBUG - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:22,472 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:22,472 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:22,472 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:22,472 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:22,472 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:22,472 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:22,472 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:22,472 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:22,473 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:39:22,473 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:39:22,886 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=a233dba969b4424bb0040908efa37931&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=f74aeb10236b4c53bd97b8fe3273fae1&fileName=conda-environment.yml&overwrite=False&runId=omKaO0swYJwQj4zd3ZrbtJdB4&type=conda-environment-definition&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:39:22,886 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=a233dba969b4424bb0040908efa37931&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=f74aeb10236b4c53bd97b8fe3273fae1&fileName=conda-environment.yml&overwrite=False&runId=omKaO0swYJwQj4zd3ZrbtJdB4&type=conda-environment-definition&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:39:25,053 - everett - DEBUG - No INI file found: []
+2023-01-11 19:39:25,053 - everett - DEBUG - No INI file found: []
+2023-01-11 19:39:25,210 - everett - DEBUG - No INI file found: ['./.comet.config']
+2023-01-11 19:39:25,210 - everett - DEBUG - No INI file found: ['./.comet.config']
+2023-01-11 19:39:25,210 - everett - DEBUG - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:39:25,210 - everett - DEBUG - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:39:25,210 - everett - DEBUG - No INI file found: ['~/.comet.config']
+2023-01-11 19:39:25,210 - everett - DEBUG - No INI file found: ['~/.comet.config']
+2023-01-11 19:39:25,210 - everett - DEBUG - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:25,210 - everett - DEBUG - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:25,211 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:25,211 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:25,211 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:25,211 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:25,211 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:25,211 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:25,211 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:25,211 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:25,211 - everett - DEBUG - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:25,211 - everett - DEBUG - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:25,212 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:25,212 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:25,212 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:25,212 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:25,212 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:25,212 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:25,212 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:25,212 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:25,214 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:39:25,214 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:39:25,718 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=a233dba969b4424bb0040908efa37931&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=49ce9b8af1ed4a6a8a9b0aba07642cb5&fileName=conda-spec.txt&overwrite=False&runId=omKaO0swYJwQj4zd3ZrbtJdB4&type=conda-specification&extension=txt HTTP/1.1" 200 208
+2023-01-11 19:39:25,718 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=a233dba969b4424bb0040908efa37931&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=49ce9b8af1ed4a6a8a9b0aba07642cb5&fileName=conda-spec.txt&overwrite=False&runId=omKaO0swYJwQj4zd3ZrbtJdB4&type=conda-specification&extension=txt HTTP/1.1" 200 208
+2023-01-11 19:39:26,017 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:26,017 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:28,710 - everett - DEBUG - Looking up key: distributed_node_identifier, namespace: ['comet']
+2023-01-11 19:39:28,710 - everett - DEBUG - Looking up key: distributed_node_identifier, namespace: ['comet']
+2023-01-11 19:39:28,711 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,711 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,711 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,711 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,711 - everett - DEBUG - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,711 - everett - DEBUG - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,711 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:28,711 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:28,714 - everett - DEBUG - Looking up key: distributed_node_identifier, namespace: ['comet']
+2023-01-11 19:39:28,714 - everett - DEBUG - Looking up key: distributed_node_identifier, namespace: ['comet']
+2023-01-11 19:39:28,714 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,714 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,714 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,714 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,714 - everett - DEBUG - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,714 - everett - DEBUG - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:39:28,715 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:28,715 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:28,915 - everett - DEBUG - No INI file found: []
+2023-01-11 19:39:28,915 - everett - DEBUG - No INI file found: []
+2023-01-11 19:39:29,004 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/notification/experiment HTTP/1.1" 200 74
+2023-01-11 19:39:29,004 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/notification/experiment HTTP/1.1" 200 74
+2023-01-11 19:39:29,041 - everett - DEBUG - No INI file found: ['./.comet.config']
+2023-01-11 19:39:29,041 - everett - DEBUG - No INI file found: ['./.comet.config']
+2023-01-11 19:39:29,042 - everett - DEBUG - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:39:29,042 - everett - DEBUG - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:39:29,042 - everett - DEBUG - No INI file found: ['~/.comet.config']
+2023-01-11 19:39:29,042 - everett - DEBUG - No INI file found: ['~/.comet.config']
+2023-01-11 19:39:29,042 - everett - DEBUG - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:29,042 - everett - DEBUG - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:29,042 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:29,042 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:29,042 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:29,042 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:29,043 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:29,043 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:39:29,043 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:29,043 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:29,043 - everett - DEBUG - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:29,043 - everett - DEBUG - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:39:29,043 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:29,043 - everett - DEBUG - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:29,043 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:29,043 - everett - DEBUG - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:29,043 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:29,043 - everett - DEBUG - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:39:29,043 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:29,043 - everett - DEBUG - Found nothing--returning NO_VALUE
+2023-01-11 19:39:29,045 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:39:29,045 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:39:29,441 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=a233dba969b4424bb0040908efa37931&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=b15492b553474ee181b989b3def444bb&fileName=conda-info.yml&overwrite=False&runId=omKaO0swYJwQj4zd3ZrbtJdB4&type=conda-info&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:39:29,441 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=a233dba969b4424bb0040908efa37931&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=b15492b553474ee181b989b3def444bb&fileName=conda-info.yml&overwrite=False&runId=omKaO0swYJwQj4zd3ZrbtJdB4&type=conda-info&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:39:30,835 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:30,835 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:31,035 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "GET /api/rest/v2/experiment/metadata?experimentKey=a233dba969b4424bb0040908efa37931 HTTP/1.1" 200 346
+2023-01-11 19:39:31,035 - urllib3.connectionpool - DEBUG - https://www.comet-ml.com:443 "GET /api/rest/v2/experiment/metadata?experimentKey=a233dba969b4424bb0040908efa37931 HTTP/1.1" 200 346
+2023-01-11 19:39:50,705 - root - INFO -  dataset_base - Using data augmentation package imgaug and strategy CenterCropOnly for training split.
+2023-01-11 19:39:50,706 - root - INFO -  dataset_base - Loading training data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:39:50,758 - root - INFO -  dataset_base - Not caching training image data in memory, will load on the fly. Length of 240 
+2023-01-11 19:39:50,898 - root - INFO -  dataset_base - No data Augmentation for validation split.
+2023-01-11 19:39:50,898 - root - INFO -  dataset_base - No data Augmentation for validation split.
+2023-01-11 19:39:50,899 - root - INFO -  dataset_base - Loading validation data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:39:50,899 - root - INFO -  dataset_base - Loading validation data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:39:51,076 - root - INFO -  dataset_base - Not caching validation image data in memory, will load on the fly. Length of 60 
+2023-01-11 19:39:51,076 - root - INFO -  dataset_base - Not caching validation image data in memory, will load on the fly. Length of 60 
+2023-01-11 19:39:56,095 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:39:56,095 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:06,211 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:06,211 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:16,320 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:16,320 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:26,436 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:26,436 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:27,253 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:40:27,253 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:40:27,276 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:40:27,276 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:40:27,276 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:40:27,276 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:40:27,277 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:40:27,277 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:27,277 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:27,279 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:40:27,279 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:40:27,701 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/git-patch/upload?experimentId=94e85e94c48543e38884a2ff248a2716&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp HTTP/1.1" 200 5
+2023-01-11 19:40:27,701 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/git-patch/upload?experimentId=94e85e94c48543e38884a2ff248a2716&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp HTTP/1.1" 200 5
+2023-01-11 19:40:32,511 - everett - DEBUG -  manager - Looking up key: use_http_messages, namespace: ['comet', 'override_feature']
+2023-01-11 19:40:32,511 - everett - DEBUG -  manager - Looking up key: use_http_messages, namespace: ['comet', 'override_feature']
+2023-01-11 19:40:32,511 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES
+2023-01-11 19:40:32,511 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES
+2023-01-11 19:40:32,512 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES
+2023-01-11 19:40:32,512 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES
+2023-01-11 19:40:32,512 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES
+2023-01-11 19:40:32,512 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES
+2023-01-11 19:40:32,512 - everett - DEBUG -  manager - Returning raw: True, parsed: True
+2023-01-11 19:40:32,512 - everett - DEBUG -  manager - Returning raw: True, parsed: True
+2023-01-11 19:40:32,617 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /api/rest/v2/write/experiment/graph HTTP/1.1" 200 55
+2023-01-11 19:40:32,617 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /api/rest/v2/write/experiment/graph HTTP/1.1" 200 55
+2023-01-11 19:40:35,539 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:40:35,539 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:40:35,807 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:40:35,807 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:40:35,807 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:40:35,807 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:40:35,807 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:40:35,807 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:40:35,807 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:35,807 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:35,807 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:35,807 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:35,808 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:35,810 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:40:35,810 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:40:36,225 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=94e85e94c48543e38884a2ff248a2716&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=01eab70d7e26471da7d95aae7369a73f&fileName=conda-environment.yml&overwrite=False&runId=F2CBnf8d43a16ODmxa7pIN3cI&step=71&type=conda-environment-definition&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:40:36,225 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=94e85e94c48543e38884a2ff248a2716&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=01eab70d7e26471da7d95aae7369a73f&fileName=conda-environment.yml&overwrite=False&runId=F2CBnf8d43a16ODmxa7pIN3cI&step=71&type=conda-environment-definition&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:40:36,554 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:36,554 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:38,784 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:40:38,784 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:40:38,789 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:40:38,789 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:40:38,789 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:40:38,789 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:40:38,789 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:40:38,789 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:40:38,789 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:38,789 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:38,789 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:38,789 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:38,790 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:38,793 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:40:38,793 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:40:39,318 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=94e85e94c48543e38884a2ff248a2716&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=7acd943c9a054ba89461128fa49a6b9f&fileName=conda-spec.txt&overwrite=False&runId=F2CBnf8d43a16ODmxa7pIN3cI&step=222&type=conda-specification&extension=txt HTTP/1.1" 200 208
+2023-01-11 19:40:39,318 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=94e85e94c48543e38884a2ff248a2716&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=7acd943c9a054ba89461128fa49a6b9f&fileName=conda-spec.txt&overwrite=False&runId=F2CBnf8d43a16ODmxa7pIN3cI&step=222&type=conda-specification&extension=txt HTTP/1.1" 200 208
+2023-01-11 19:40:43,688 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:40:43,688 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:40:43,692 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:40:43,692 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:40:43,693 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:40:43,693 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:40:43,693 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:40:43,693 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:40:43,693 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:43,693 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:43,693 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:43,693 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:43,693 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:43,693 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:43,693 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:43,693 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:43,694 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:40:43,696 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:40:43,696 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:40:43,965 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/notification/experiment HTTP/1.1" 200 74
+2023-01-11 19:40:43,965 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/notification/experiment HTTP/1.1" 200 74
+2023-01-11 19:40:44,150 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=94e85e94c48543e38884a2ff248a2716&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=0297a321b52846eaa5f61c658687b389&fileName=conda-info.yml&overwrite=False&runId=F2CBnf8d43a16ODmxa7pIN3cI&step=437&type=conda-info&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:40:44,150 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=94e85e94c48543e38884a2ff248a2716&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=0297a321b52846eaa5f61c658687b389&fileName=conda-info.yml&overwrite=False&runId=F2CBnf8d43a16ODmxa7pIN3cI&step=437&type=conda-info&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:40:44,550 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:44,550 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:40:44,760 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "GET /api/rest/v2/experiment/metadata?experimentKey=94e85e94c48543e38884a2ff248a2716 HTTP/1.1" 200 347
+2023-01-11 19:40:44,760 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "GET /api/rest/v2/experiment/metadata?experimentKey=94e85e94c48543e38884a2ff248a2716 HTTP/1.1" 200 347
+2023-01-11 19:44:14,841 - root - INFO -  dataset_base - Using data augmentation package imgaug and strategy CenterCropOnly for training split.
+2023-01-11 19:44:14,841 - root - INFO -  dataset_base - Loading training data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:44:15,858 - root - INFO -  dataset_base - Not caching training image data in memory, will load on the fly. Length of 240
+2023-01-11 19:44:15,987 - root - INFO -  dataset_base - No data Augmentation for validation split.
+2023-01-11 19:44:15,987 - root - INFO -  dataset_base - No data Augmentation for validation split.
+2023-01-11 19:44:15,987 - root - INFO -  dataset_base - Loading validation data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:44:15,987 - root - INFO -  dataset_base - Loading validation data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:44:16,029 - root - INFO -  dataset_base - Not caching validation image data in memory, will load on the fly. Length of 60
+2023-01-11 19:44:16,029 - root - INFO -  dataset_base - Not caching validation image data in memory, will load on the fly. Length of 60
+2023-01-11 19:44:19,389 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:44:19,389 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:44:29,510 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:44:29,510 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:44:39,687 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:44:39,687 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:44:49,802 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:44:49,802 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:44:52,403 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:44:52,403 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:44:52,407 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:44:52,407 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:44:52,408 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:44:52,408 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:44:52,408 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:44:52,408 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:52,408 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:52,409 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:52,409 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:52,409 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:52,409 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:52,411 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:44:52,411 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:44:52,823 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/git-patch/upload?experimentId=8654564c43bd49d59d59ee5ca5c5f48f&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp HTTP/1.1" 200 5
+2023-01-11 19:44:52,823 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/git-patch/upload?experimentId=8654564c43bd49d59d59ee5ca5c5f48f&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp HTTP/1.1" 200 5
+2023-01-11 19:44:55,636 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:44:55,636 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:44:55,641 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:44:55,641 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:44:55,641 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:44:55,641 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:44:55,641 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:44:55,641 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:55,642 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:55,643 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:55,643 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:55,643 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:55,643 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:55,643 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:55,643 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:55,643 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:55,643 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:55,645 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:44:55,645 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:44:56,082 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=8654564c43bd49d59d59ee5ca5c5f48f&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=bf2dd1ccf6f649e79a63e7398a067e6d&fileName=conda-environment.yml&overwrite=False&runId=V2kKr7celDhMqLH3y9klT5Yls&type=conda-environment-definition&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:44:56,082 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=8654564c43bd49d59d59ee5ca5c5f48f&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=bf2dd1ccf6f649e79a63e7398a067e6d&fileName=conda-environment.yml&overwrite=False&runId=V2kKr7celDhMqLH3y9klT5Yls&type=conda-environment-definition&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:44:56,917 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:44:56,917 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:44:56,922 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:44:56,922 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:44:56,922 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:44:56,922 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:44:56,922 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:44:56,922 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:44:56,922 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:56,922 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:56,922 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:56,922 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:56,923 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:56,925 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:44:56,925 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:44:57,432 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=8654564c43bd49d59d59ee5ca5c5f48f&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=3398ae3b2a374c4191691589819385bd&fileName=conda-spec.txt&overwrite=False&runId=V2kKr7celDhMqLH3y9klT5Yls&type=conda-specification&extension=txt HTTP/1.1" 200 208
+2023-01-11 19:44:57,432 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=8654564c43bd49d59d59ee5ca5c5f48f&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=3398ae3b2a374c4191691589819385bd&fileName=conda-spec.txt&overwrite=False&runId=V2kKr7celDhMqLH3y9klT5Yls&type=conda-specification&extension=txt HTTP/1.1" 200 208
+2023-01-11 19:44:59,605 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:44:59,605 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:44:59,610 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:44:59,610 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:44:59,610 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:44:59,610 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:44:59,611 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:44:59,611 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:59,611 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:59,612 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:59,612 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:44:59,612 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:59,612 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:44:59,613 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:44:59,613 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:44:59,694 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/notification/experiment HTTP/1.1" 200 74
+2023-01-11 19:44:59,694 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/notification/experiment HTTP/1.1" 200 74
+2023-01-11 19:44:59,923 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:44:59,923 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:45:00,032 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=8654564c43bd49d59d59ee5ca5c5f48f&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=74fc86938fe541939f90af2d664c6876&fileName=conda-info.yml&overwrite=False&runId=V2kKr7celDhMqLH3y9klT5Yls&type=conda-info&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:45:00,032 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=8654564c43bd49d59d59ee5ca5c5f48f&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=74fc86938fe541939f90af2d664c6876&fileName=conda-info.yml&overwrite=False&runId=V2kKr7celDhMqLH3y9klT5Yls&type=conda-info&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:45:01,344 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:45:01,344 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:45:01,542 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "GET /api/rest/v2/experiment/metadata?experimentKey=8654564c43bd49d59d59ee5ca5c5f48f HTTP/1.1" 200 350
+2023-01-11 19:45:01,542 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "GET /api/rest/v2/experiment/metadata?experimentKey=8654564c43bd49d59d59ee5ca5c5f48f HTTP/1.1" 200 350
+2023-01-11 19:54:55,926 - root - INFO -  dataset_base - Using data augmentation package imgaug and strategy CenterCropOnly for training split.
+2023-01-11 19:54:55,926 - root - INFO -  dataset_base - Loading training data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:54:56,153 - root - INFO -  dataset_base - Not caching training image data in memory, will load on the fly. Length of 240
+2023-01-11 19:54:56,162 - root - INFO -  dataset_base - No data Augmentation for validation split.
+2023-01-11 19:54:56,162 - root - INFO -  dataset_base - No data Augmentation for validation split.
+2023-01-11 19:54:56,163 - root - INFO -  dataset_base - Loading validation data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:54:56,163 - root - INFO -  dataset_base - Loading validation data for CV /mnt/bess/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid/fold0.json 
+2023-01-11 19:54:56,246 - root - INFO -  dataset_base - Not caching validation image data in memory, will load on the fly. Length of 60
+2023-01-11 19:54:56,246 - root - INFO -  dataset_base - Not caching validation image data in memory, will load on the fly. Length of 60
+2023-01-11 19:55:01,357 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:01,357 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:11,485 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:11,485 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:21,721 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:21,721 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:31,857 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:31,857 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:32,314 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:55:32,314 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:55:32,319 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:55:32,319 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:55:32,319 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:55:32,319 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:55:32,319 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:55:32,319 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:55:32,319 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:32,319 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:32,320 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:32,323 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:55:32,323 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:55:32,738 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/git-patch/upload?experimentId=eadf95f743934283a3b45e09f5a909ba&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp HTTP/1.1" 200 5
+2023-01-11 19:55:32,738 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/git-patch/upload?experimentId=eadf95f743934283a3b45e09f5a909ba&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp HTTP/1.1" 200 5
+2023-01-11 19:55:40,022 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:55:40,022 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:55:40,177 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:55:40,177 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:55:40,177 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:55:40,177 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:55:40,177 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:55:40,177 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:55:40,177 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:40,177 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:40,177 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:40,177 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:40,177 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:40,177 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:40,178 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:40,180 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:55:40,180 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:55:40,614 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=eadf95f743934283a3b45e09f5a909ba&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=ec32bf5082824e2d967a59c0a0e5e885&fileName=conda-environment.yml&overwrite=False&runId=KbsraB280eyKrQKVulUF0DmDE&type=conda-environment-definition&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:55:40,614 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=eadf95f743934283a3b45e09f5a909ba&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=ec32bf5082824e2d967a59c0a0e5e885&fileName=conda-environment.yml&overwrite=False&runId=KbsraB280eyKrQKVulUF0DmDE&type=conda-environment-definition&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:55:41,986 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:41,986 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:44,249 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:55:44,249 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:55:44,388 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:55:44,388 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:55:44,389 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:55:44,389 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:55:44,389 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:55:44,389 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:55:44,390 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:44,390 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:44,390 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:44,390 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:44,390 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:44,390 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:44,390 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:44,390 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:44,391 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:44,396 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:55:44,396 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:55:44,900 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=eadf95f743934283a3b45e09f5a909ba&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=56ac59a699664878a50da1c46df8967a&fileName=conda-spec.txt&overwrite=False&runId=KbsraB280eyKrQKVulUF0DmDE&type=conda-specification&extension=txt HTTP/1.1" 200 208
+2023-01-11 19:55:44,900 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=eadf95f743934283a3b45e09f5a909ba&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=56ac59a699664878a50da1c46df8967a&fileName=conda-spec.txt&overwrite=False&runId=KbsraB280eyKrQKVulUF0DmDE&type=conda-specification&extension=txt HTTP/1.1" 200 208
+2023-01-11 19:55:52,132 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:52,132 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:54,645 - everett - DEBUG -  manager - Looking up key: distributed_node_identifier, namespace: ['comet']
+2023-01-11 19:55:54,645 - everett - DEBUG -  manager - Looking up key: distributed_node_identifier, namespace: ['comet']
+2023-01-11 19:55:54,645 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,645 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,646 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,646 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,646 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,646 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,646 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:54,646 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:54,647 - everett - DEBUG -  manager - Looking up key: distributed_node_identifier, namespace: ['comet']
+2023-01-11 19:55:54,647 - everett - DEBUG -  manager - Looking up key: distributed_node_identifier, namespace: ['comet']
+2023-01-11 19:55:54,648 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,648 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,648 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,648 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,648 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,648 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {'COMET_OVERRIDE_FEATURE_ACADEMIC': True, 'COMET_OVERRIDE_FEATURE_ARTIFACTS': True, 'COMET_OVERRIDE_FEATURE_ASSET-STORAGE': True, 'COMET_OVERRIDE_FEATURE_BILLING-REDESIGN': True, 'COMET_OVERRIDE_FEATURE_BREAK-DOWN-BY': False, 'COMET_OVERRIDE_FEATURE_CLOSEST-HOVER-MODE': True, 'COMET_OVERRIDE_FEATURE_CONFUSION-MATRIX': True, 'COMET_OVERRIDE_FEATURE_CUSTOM-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD-CHARTS': True, 'COMET_OVERRIDE_FEATURE_DASHBOARD_TEMPLATES': True, 'COMET_OVERRIDE_FEATURE_DATA-PANEL': True, 'COMET_OVERRIDE_FEATURE_DBS-MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_DISABLE-TABLE-ROW-EXPAND': False, 'COMET_OVERRIDE_FEATURE_GIT-REPRODUCE': True, 'COMET_OVERRIDE_FEATURE_GROUP-BY-ENDPOINT': False, 'COMET_OVERRIDE_FEATURE_GROUPING': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ACCURACY-METRICS-TAB': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-ALERTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-CUSTOM-TRANSFORMATIONS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-DEBUGGER': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-INTERNAL': False, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS': True, 'COMET_OVERRIDE_FEATURE_MODEL-PRODUCTION-MONITORING-SEGMENTS-NEW-PANEL': False, 'COMET_OVERRIDE_FEATURE_MODEL-REGISTRY-CARD-DETAILS-V2': True, 'COMET_OVERRIDE_FEATURE_NEW-WORDPRESS-SITE': True, 'COMET_OVERRIDE_FEATURE_OLD_TEAMS': True, 'COMET_OVERRIDE_FEATURE_PAYMENTS': True, 'COMET_OVERRIDE_FEATURE_PLOTLY-CHARTS': True, 'COMET_OVERRIDE_FEATURE_PUBLIC-PANELS': True, 'COMET_OVERRIDE_FEATURE_PYTHON-PANELS': True, 'COMET_OVERRIDE_FEATURE_QUERY-FILTER': True, 'COMET_OVERRIDE_FEATURE_QUERY-URL-PARSER': False, 'COMET_OVERRIDE_FEATURE_REACT_HEADER_ICON_OVERRIDE': False, 'COMET_OVERRIDE_FEATURE_REPRODUCE-NOTEBOOKS': True, 'COMET_OVERRIDE_FEATURE_SDK_GIT_PATCH': True, 'COMET_OVERRIDE_FEATURE_SDK_GPU_MONITOR': True, 'COMET_OVERRIDE_FEATURE_SDK_HTTP_LOGGING': False, 'COMET_OVERRIDE_FEATURE_SDK_LOG_ENV_VARIABLES': False, 'COMET_OVERRIDE_FEATURE_SDK_METRICS_HTTP_BATCHING': False, 'COMET_OVERRIDE_FEATURE_SDK_USE_HTTP_MESSAGES': False, 'COMET_OVERRIDE_FEATURE_SERVICE-ACCOUNTS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS': True, 'COMET_OVERRIDE_FEATURE_SYSTEM-METRICS-GPU': True, 'COMET_OVERRIDE_FEATURE_TAGS': True, 'COMET_OVERRIDE_FEATURE_TEXT-TAB': True, 'COMET_OVERRIDE_FEATURE_USE_HTTP_MESSAGES': True}> for COMET_DISTRIBUTED_NODE_IDENTIFIER
+2023-01-11 19:55:54,649 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:54,649 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:55,900 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:55:55,900 - everett - DEBUG -  inifile - No INI file found: []
+2023-01-11 19:55:55,906 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:55:55,906 - everett - DEBUG -  inifile - No INI file found: ['./.comet.config']
+2023-01-11 19:55:55,907 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:55:55,907 - everett - DEBUG -  inifile - No INI file found: ['/content/drive/MyDrive/.comet.config']
+2023-01-11 19:55:55,908 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:55:55,908 - everett - DEBUG -  inifile - No INI file found: ['~/.comet.config']
+2023-01-11 19:55:55,908 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:55,908 - everett - DEBUG -  manager - Looking up key: name, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:55,909 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:55,909 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:55,909 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:55,909 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:55,910 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:55,910 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_NAME
+2023-01-11 19:55:55,910 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:55,910 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:55,910 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:55,910 - everett - DEBUG -  manager - Looking up key: value, namespace: ['comet', 'allow_header']
+2023-01-11 19:55:55,911 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:55,911 - everett - DEBUG -  manager - Searching <ConfigOSEnv> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:55,911 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:55,911 - everett - DEBUG -  manager - Searching <ConfigEnvFileEnv: '/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/.env'> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:55,911 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:55,911 - everett - DEBUG -  manager - Searching <ConfigDictEnv: {}> for COMET_ALLOW_HEADER_VALUE
+2023-01-11 19:55:55,911 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:55,911 - everett - DEBUG -  manager - Found nothing--returning NO_VALUE
+2023-01-11 19:55:55,913 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:55:55,913 - urllib3.connectionpool - DEBUG -  connectionpool - Starting new HTTPS connection (1): www.comet-ml.com:443
+2023-01-11 19:55:56,009 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/notification/experiment HTTP/1.1" 200 74
+2023-01-11 19:55:56,009 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/notification/experiment HTTP/1.1" 200 74
+2023-01-11 19:55:56,349 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=eadf95f743934283a3b45e09f5a909ba&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=987460ac16a54cebacf80bc5d9f0b25a&fileName=conda-info.yml&overwrite=False&runId=KbsraB280eyKrQKVulUF0DmDE&type=conda-info&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:55:56,349 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/asset/upload?experimentId=eadf95f743934283a3b45e09f5a909ba&projectId=41af0143b23b470f9874846e538c3a99&apiKey=B5Nk91E6iCmWvBznXXq3Ijhhp&assetId=987460ac16a54cebacf80bc5d9f0b25a&fileName=conda-info.yml&overwrite=False&runId=KbsraB280eyKrQKVulUF0DmDE&type=conda-info&extension=yml HTTP/1.1" 200 208
+2023-01-11 19:55:58,533 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:58,533 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "POST /clientlib/status-report/update HTTP/1.1" 200 159
+2023-01-11 19:55:58,728 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "GET /api/rest/v2/experiment/metadata?experimentKey=eadf95f743934283a3b45e09f5a909ba HTTP/1.1" 200 344
+2023-01-11 19:55:58,728 - urllib3.connectionpool - DEBUG -  connectionpool - https://www.comet-ml.com:443 "GET /api/rest/v2/experiment/metadata?experimentKey=eadf95f743934283a3b45e09f5a909ba HTTP/1.1" 200 344

@@ -3,7 +3,6 @@ import os
 from datetime import datetime
 from comet_ml import Experiment
 import torch
-import logging
 from pandas import ExcelWriter
 from pytorch_lightning.utilities.seed import seed_everything
 
@@ -36,11 +35,11 @@ def main():
 
     # ---- setup logger ----
     # initialize_logging()
-    logger = get_logger(cfg.OUTPUT.LOGGER_OUTPUT, __name__)
+    logger = get_logger(cfg.OUTPUT.LOGGER_OUTPUT)
 
     logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
     logger.info("Config \n %s ", cfg)
-    
+
     exp_name = cfg.OUTPUT.OUTPUT_DIR.split("/")[-1] + "_Fold" + fold + "_" + str(time)
 
     # Set up Comet logging
@@ -57,12 +56,8 @@ def main():
         for tag_ in cfg.OUTPUT.COMET_TAGS:
             writer.add_tag(str(tag_))
 
-        with open(
-            os.path.join(cfg.OUTPUT.OUTPUT_DIR, "comet_" + exp_name + ".txt"),
-            "w",
-            encoding="utf-8",
-        ) as f:
-            f.write("link to exp: " + writer.url)
+        logger.info("The comet.ml experiment HTML is %s ", exp_name)
+
     else:
         writer = None
 
@@ -75,6 +70,8 @@ def main():
 
     ############ Set up model trainer, indicating if we are training or testing ############
     if not cfg.TRAINER.INFERENCE_ONLY:
+        logger.info("TRAINING PHASE")
+
         if writer is not None:
             writer.add_tag("training")
 
@@ -104,7 +101,7 @@ def main():
         trainer.initialize(training_bool=False)
 
     ########### TESTING ##############
-    print("\n Testing")
+    logger.info("TESTING PHASE")
 
     all_model_summaries = {}
     all_model_individuals = {}
@@ -135,10 +132,10 @@ def main():
         writer.add_tag("single_inference")
 
         if cfg.MODEL.CHECKPOINT:
-            print("loading provided checkpoint", cfg.MODEL.CHECKPOINT)
+            logger.info("loading provided checkpoint %s", cfg.MODEL.CHECKPOINT)
 
             model_name = cfg.MODEL.CHECKPOINT.split("/")[-1].split(".model")[0]
-            print("model name: ", model_name)
+            logger.info("model name: %s", model_name)
 
             trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
             summary_results, ind_results = trainer.run_inference(
@@ -149,9 +146,6 @@ def main():
             all_model_individuals[model_name] = ind_results
 
         else:
-            print(
-                "Loading all models in cfg.OUTPUT.OUTPUT_DIR: ", cfg.OUTPUT.OUTPUT_DIR
-            )
             # Load Models that were saved.
             model_paths = []
             model_names = []
@@ -160,6 +154,8 @@ def main():
                 "model_best_valid_coord_error",
                 "model_latest",
             ]
+
+            logger.info("Loading MODELS that match substrings in: %s", models_to_test)
 
             for fname in os.listdir(cfg.OUTPUT.OUTPUT_DIR):
                 if ("fold" + fold in fname and ".model" in fname) and any(
@@ -172,18 +168,10 @@ def main():
                     os.path.join(cfg.OUTPUT.OUTPUT_DIR, (name + ".model"))
                 )
 
-            # model_paths = ["/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_8GS_4MFR_AugAC_DS5/model_best_valid_coord_error_fold0.model"]
-
-            for i in range(len(model_paths)):
-                print("loading ", model_paths[i])
-                trainer.load_checkpoint(model_paths[i], training_bool=False)
-                # summary_results, ind_results = run_inference_model(writer, cfg, model_paths[i], model_names[i], "testing")
-                summary_results, ind_results = trainer.run_inference(
-                    split="testing", debug=cfg.INFERENCE.DEBUG
-                )
-
-                # print(ind_results)
-                # print(summary_results)
+            for i, model_p in enumerate(model_paths):
+                logger.info("loading %s", model_p)
+                trainer.load_checkpoint(model_p, training_bool=False)
+                summary_results, ind_results = trainer.run_inference(split="testing", debug=cfg.INFERENCE.DEBUG)
 
                 all_model_summaries[model_names[i]] = summary_results
                 all_model_individuals[model_names[i]] = ind_results
@@ -198,10 +186,10 @@ def main():
     if writer is not None:
         html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
         writer.log_html(html_to_log)
-        print("Logged all results to CometML.")
+        logger.info("Logged all results to CometML.")
 
-    print(
-        "saving summary of results locally to: ",
+    logger.info(
+        "saving summary of results locally to: %s",
         os.path.join(cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold" + fold + ".xlsx"),
     )
     with ExcelWriter(  # pylint: disable=abstract-class-instantiated
@@ -213,8 +201,8 @@ def main():
         for n, df in (all_model_summaries).items():
             df.to_excel(writer_, n)
 
-    print(
-        "saving individual sample results locally to: ",
+    logger.info(
+        "saving individual sample results locally to: %s",
         os.path.join(
             cfg.OUTPUT.OUTPUT_DIR,
             "individual_results_fold" + fold + output_append + ".xlsx",
