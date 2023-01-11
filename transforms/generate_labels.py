@@ -100,14 +100,22 @@ class GPLabelGenerator(LabelGenerator):
 
     def generate_labels(
         self,
-        **kwargs,
+        landmarks,
+        x_y_corner_patch,
+        landmarks_in_indicator,
+        input_size,
+        hm_sigmas,
+        num_res_supervisions,
+        hm_lambda_scale=100,
+        dtype=np.float32,
+        to_tensor=True,
     ):
         """Simply returns the coordinates of the landmarks as the label."""
 
-        if kwargs["to_tensor"]:
-            return_dict = {"landmarks": torch.from_numpy(kwargs["landmarks"])}
+        if to_tensor:
+            return_dict = {"landmarks": torch.from_numpy(landmarks)}
         else:
-            return_dict = {"landmarks": kwargs["landmarks"]}
+            return_dict = {"landmarks": landmarks}
 
         return return_dict
 

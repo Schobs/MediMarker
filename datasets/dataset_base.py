@@ -184,7 +184,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # Lists to save the image paths (or images if caching), target coordinates (scaled to input size), and full resolution coords.
         self.images = []
         self.target_coordinates = []
-        self.full_res_coordinates = [] # full_res will be same as target if input and original image same size
+        self.full_res_coordinates = []  # full_res will be same as target if input and original image same size
         self.image_paths = []
         self.uids = []
         self.annotation_available = []
@@ -594,14 +594,13 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
             self.logger.info(
                 "\n \n \n the min xy is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
-                and the normalized landmark is %s : ",
-                    y_rand_safe,
-                    x_rand_safe,
-                    x_rand_pad,
-                    y_rand_pad,
-                    landmarks,
-                    padded_lm,
-                    normalized_landmarks,
+                and the normalized landmark is %s : ",                    y_rand_safe,
+                x_rand_safe,
+                x_rand_pad,
+                y_rand_pad,
+                landmarks,
+                padded_lm,
+                normalized_landmarks,
             )
 
             visualize_patch(

@@ -146,10 +146,15 @@ class GPTrainer(NetworkTrainer):
             num_tasks=2, rank=2
         )
 
-        self.network = ExactGPModel(
-            self.all_training_input, self.all_training_labels, self.likelihood
-        )
-        self.network.to(self.device)
+        # Must initialize model with all training input and labels
+        training_data = next(iter(self.train_dataloader))
+        training_inputs = training_data["image"].to(self.device)
+        training_labels = training_data["labels"]["landmarks"].to(self.device)
+
+        # self.network = ExactGPModel(
+        #     iter(self.train_dataloader, self.all_training_labels, self.likelihood
+        # )
+        # self.network.to(self.device)
 
         # Log network and initial weights
         if self.comet_logger:
@@ -232,9 +237,10 @@ class GPTrainer(NetworkTrainer):
         #     test_x = torch.linspace(0, 100, 100)
         #     observed_pred = likelihood(model(test_x))
 
-        # self.optimizer.step()
+        self.optimizer.step()
 
     def run_inference(self, split, debug=False):
+        raise NotImplementedError()
         self.network.eval()
         self.likelihood.eval()
 
@@ -417,7 +423,7 @@ class GPTrainer(NetworkTrainer):
             "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
         )
 
-    @staticmethod
+    @ staticmethod
     def get_resolution_layers(input_size, min_feature_res):
         counter = 1
         while input_size[0] and input_size[1] >= min_feature_res * 2:

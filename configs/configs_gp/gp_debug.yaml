@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpDebug"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/isbiTEST"
 
  
   USE_COMETML_LOGGING: True
@@ -12,8 +12,9 @@ SOLVER:
   DEEP_SUPERVISION: False
   NUM_RES_SUPERVISIONS: 1
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE: 12
+  DATA_LOADER_BATCH_SIZE: -1
   MAX_EPOCHS: 15000 
+  MINI_BATCH_SIZE: 1
   # REGRESS_SIGMA: True
 
   AUTO_MIXED_PRECISION: False
@@ -34,11 +35,11 @@ TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
   CACHE_DATA: False
-  INFERENCE_ONLY: True
+  INFERENCE_ONLY: False
   
 
 SAMPLER:
-  DATA_AUG: None
+  DATA_AUG: "Flatten"
   INPUT_SIZE : [512,512]
   SAMPLE_MODE: 'patch' # ['patch', 'full']
   NUM_WORKERS: 8
