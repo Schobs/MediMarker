@@ -45,8 +45,6 @@ class DictLogger():
     def ensemble_inference_log_template(self):
 
 
-       
-
         # print("standard_info_keys", standard_info_keys)
         return {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)], 
         "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],

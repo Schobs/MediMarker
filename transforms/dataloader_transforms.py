@@ -4,34 +4,24 @@ import albumentations as A
 import albumentations.augmentations.functional as F
 from albumentations.pytorch import ToTensorV2
 import numpy as np
+import torch
 
 
 def custom_flatten(image, keypoints):
+    """Customn transformation to flatten an image and turn it into a tensor.
+
+    Args:
+        image (_type_): _description_
+        keypoints (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
     images_reshape = image[:, :]
     flattened_image = images_reshape.flatten()
     # flattened_image = flattened_image.reshape(1,flattened_image.shape[0], flattened_image.shape[1], 1)
-    flattened_image = flattened_image
+    # flattened_image = torch.from_numpy(flattened_image)
     return flattened_image, keypoints
-
-
-# def custom_flatten_images(images, random_state, parents, hooks):
-#     images_reshape = images[0][:, :, 0]
-#     flattened_image = np.expand_dims(images_reshape.flatten(), axis=1)
-#     # flattened_image = flattened_image.reshape(1,flattened_image.shape[0], flattened_image.shape[1], 1)
-#     flattened_image = [flattened_image]
-#     return flattened_image
-
-
-# def custom_flatten_heatmaps(heatmaps, random_state, parents, hooks):
-#     images_reshape = heatmaps[0][:, :, 0]
-#     flattened_hm = np.expand_dims(images_reshape.flatten(), axis=1)
-#     # flattened_image = flattened_image.reshape(1,flattened_image.shape[0], flattened_image.shape[1], 1)
-#     flattened_hm = [flattened_hm]
-#     return flattened_hm
-
-
-# def custom_flatten_keypoints(keypoints_on_images, random_state, parents, hooks):
-#     return keypoints_on_images
 
 
 def get_aug_package_loader(aug_package):

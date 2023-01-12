@@ -18,6 +18,9 @@ from abc import ABC, abstractmethod
 import imgaug
 import pandas as pd
 
+from utils.logging.python_logger import get_logger
+from utils.setup.argument_utils import checkpoint_loading_checking
+
 
 class NetworkTrainer(ABC):
     """Super class for trainers. I extend this for trainers for U-Net and PHD-Net. They share some functions.y"""
@@ -103,6 +106,8 @@ class NetworkTrainer(ABC):
         self.dict_logger = None
         self.learnable_params = None
 
+        self.logger = get_logger(trainer_config.OUTPUT.LOGGER_OUTPUT)
+
         # Set up in init of extended class (child)
         self.network = types.SimpleNamespace()  # empty object
         self.train_label_generator = self.eval_label_generator = None
@@ -136,7 +141,7 @@ class NetworkTrainer(ABC):
         # torch.backends.cudnn.benchmark = True
 
         if self.profiler:
-            print("Initialized profiler")
+            self.logger.info("Initialized profiler")
             self.profiler.start()
 
         self.initialize_dataloader_settings()
@@ -211,7 +216,7 @@ class NetworkTrainer(ABC):
             msg = "Not initialized auto mixed precision."
 
         if self.print_initiaization_info:
-            print(msg)
+            self.logger.info(msg)
 
     @abstractmethod
     def get_coords_from_heatmap(self, model_output, original_image_size):
@@ -239,7 +244,7 @@ class NetworkTrainer(ABC):
             # We will log the training and validation info here. The keys we set describe all the info we are logging.
             per_epoch_logs = self.dict_logger.get_epoch_logger()
 
-            print("training")
+            self.logger.info("training, %s", self.epoch)
             # Train for X number of batches per epoch e.g. 250
             for _ in range(self.num_batches_per_epoch):
                 l, generator = self.run_iteration(
@@ -254,7 +259,7 @@ class NetworkTrainer(ABC):
                     self.comet_logger.log_metric("training loss iteration", l, step)
                 step += 1
             # del generator
-            print("validation")
+            self.logger.info("validation, %s", self.epoch)
 
             with torch.no_grad():
                 self.network.eval()
@@ -282,7 +287,7 @@ class NetworkTrainer(ABC):
 
         # Save the final weights
         if self.comet_logger:
-            print("Logging weights as histogram...")
+            self.logger.info("Logging weights as histogram...")
             weights = []
             for name in self.network.named_parameters():
                 if "weight" in name[0]:
@@ -489,7 +494,7 @@ class NetworkTrainer(ABC):
                 self.comet_logger, per_epoch_logs, self.epoch
             )
 
-        print("Epoch %s logs: %s" % (self.epoch, per_epoch_logs))
+        self.logger.info("Epoch %s logs: %s" % (self.epoch, per_epoch_logs))
 
         # Checks for it this epoch was best in validation loss or validation coord error!
         if per_epoch_logs["validation_all_loss_all"] < self.best_valid_loss:
@@ -507,9 +512,8 @@ class NetworkTrainer(ABC):
 
         if self.epochs_wo_val_improv == self.early_stop_patience:
             continue_training = False
-            print(
-                "EARLY STOPPING. Validation Coord Error did not reduce for %s epochs. "
-                % self.early_stop_patience
+            self.logger.info(
+                "EARLY STOPPING. Validation Coord Error did not reduce for %s epochs. ", self.early_stop_patience
             )
 
         self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
@@ -529,7 +533,7 @@ class NetworkTrainer(ABC):
             self.save_intermediate_checkpoints
             and (self.epoch % self.save_every == (self.save_every - 1))
         ) or self.epoch == self.max_num_epochs - 1:
-            print("saving scheduled checkpoint file...")
+            self.logger.info("saving scheduled checkpoint file...")
             if not self.save_latest_only:
                 self.save_checkpoint(
                     os.path.join(
@@ -547,9 +551,9 @@ class NetworkTrainer(ABC):
                     self.output_folder, "model_latest_fold" + (fold_str) + ".model"
                 )
             )
-            print("done")
+            self.logger.info("saved latest checkpoint")
         if new_best_valid_bool:
-            print(
+            self.logger.info(
                 "saving scheduled checkpoint file as it's new best on validation set..."
             )
             self.save_checkpoint(
@@ -559,12 +563,9 @@ class NetworkTrainer(ABC):
                 )
             )
 
-            print("done")
+            self.logger.info("saved checkpoint at new best valid loss: %s", self.best_valid_loss)
 
         if new_best_valid_coord_bool:
-            print(
-                "saving scheduled checkpoint file as it's new best on validation set for coord error..."
-            )
             self.save_checkpoint(
                 os.path.join(
                     self.output_folder,
@@ -572,7 +573,7 @@ class NetworkTrainer(ABC):
                 )
             )
 
-            print("done")
+            self.logger.info("saved checkpoint at new best valid coord error: %s", self.best_valid_coord_error)
 
     def maybe_rescale_coords(self, pred_coords, data_dict):
         """Maybe rescale coordinates based on evaluation parameters, and decide which target coords to evaluate against.
@@ -613,11 +614,11 @@ class NetworkTrainer(ABC):
     def patchify_and_predict(self, single_sample, logged_vars):
         """Function that takens in a large input image, patchifies it and runs each patch through the model & stitches heatmap together
 
-        #1) should split up into patches of given patch-size.
-        #2) should run patches through in batches using run_iteration, NOT LOGGING ANYTHING but needs to return the OUTPUTS somehow.
+        # 1) should split up into patches of given patch-size.
+        # 2) should run patches through in batches using run_iteration, NOT LOGGING ANYTHING but needs to return the OUTPUTS somehow.
             MUST ADD OPTION TO RETURN OUTPUTS in run_iteration?
-        #3) Need to use method to stitch patches together (future, phdnet will use patch size 512 512 for now).
-        #4) call log_key_variables function now with the final big heatmap as the "output". The logging should work as usual from that.
+        # 3) Need to use method to stitch patches together (future, phdnet will use patch size 512 512 for now).
+        # 4) call log_key_variables function now with the final big heatmap as the "output". The logging should work as usual from that.
 
         Returns:
             _type_: _description_
@@ -627,16 +628,16 @@ class NetworkTrainer(ABC):
     def run_inference(self, split, debug=False):
         """Function to run inference on a full sized input
 
-        #0) instantitate test dataset and dataloader
-        #1A) if FULL:
+        # 0) instantitate test dataset and dataloader
+        # 1A) if FULL:
             i) iterate dataloader and run_iteration each time to go through and save results.
             ii) should run using run_iteration with logged_vars to log
         1B) if PATCHIFYING full_res_output  <- this can be fututre addition
             i) use patchify_and_predict to stitch hm together with logged_vars to log
 
-        #2) need a way to deal with the key dictionary & combine all samples
-        #3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
-        #4) return individual results & do summary results.
+        # 2) need a way to deal with the key dictionary & combine all samples
+        # 3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
+        # 4) return individual results & do summary results.
         """
 
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
@@ -911,7 +912,7 @@ class NetworkTrainer(ABC):
         else:
             self.training_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
 
-        self.checkpoint_loading_checking()
+        checkpoint_loading_checking(self.trainer_config, self.sampler_mode, self.training_resolution)
 
         if self.auto_mixed_precision:
             self._maybe_init_amp()
@@ -920,42 +921,7 @@ class NetworkTrainer(ABC):
                 self.amp_grad_scaler.load_state_dict(checkpoint_info["amp_grad_scaler"])
 
         if self.print_initiaization_info:
-            print("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch))
-
-    def checkpoint_loading_checking(self):
-        """Checks that the loaded checkpoint is compatible with the current model and training settings.
-
-        Raises:
-            ValueError: _description_
-            ValueError: _description_
-        """
-
-        # Check the sampler in config is the same as the one in the checkpoint.
-        if self.sampler_mode != self.trainer_config.SAMPLER.SAMPLE_MODE:
-            raise ValueError(
-                "model was trained using SAMPLER.SAMPLE_MODE %s but attempting to load with SAMPLER.SAMPLE_MODE %s. \
-                Please amend this in config file."
-                % (self.sampler_mode, self.trainer_config.SAMPLER.SAMPLE_MODE)
-            )
-
-        # check if the training resolution from config is the same as the one in the checkpoint.
-        if self.sampler_mode == "patch":
-            if (
-                self.training_resolution
-                != self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
-            ):
-                raise ValueError(
-                    "model was trained using SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM %s but attempting to load with self.training_resolution %s. \
-                    Please amend this in config file."
-                    % (self.training_resolution, self.training_resolution)
-                )
-        else:
-            if self.training_resolution != self.trainer_config.SAMPLER.INPUT_SIZE:
-                raise ValueError(
-                    "model was trained using SAMPLER.INPUT_SIZE %s but attempting to load with self.training_resolution %s. \
-                    Please amend this in config file."
-                    % (self.training_resolution, self.trainer_config.SAMPLER.INPUT_SIZE)
-                )
+            self.logger.info("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch))
 
     def initialize_dataloader_settings(self):
         """Initializes dataloader settings. If debug use only main thread to load data bc we only
@@ -1028,13 +994,11 @@ class NetworkTrainer(ABC):
                     self.trainer_config.SAMPLER.INPUT_SIZE,
                     dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE,
                 )
-            print(
-                'WARNING: NOT performing validation. Instead performing "validation" on training set for coord error metrics.'
-            )
+            self.logger.warning(
+                'WARNING: NOT performing validation. Instead performing "validation" on training set for coord error metrics.')
 
-        print(
-            "Using %s Dataloader workers and persist workers bool : %s "
-            % (self.num_workers_cfg, self.persist_workers)
+        self.logger.info(
+            "Using %s Dataloader workers and persist workers bool : %s ", self.num_workers_cfg, self.persist_workers
         )
 
         train_batch_size = self.maybe_alter_batch_size(train_dataset)
@@ -1043,7 +1007,7 @@ class NetworkTrainer(ABC):
         self.train_dataloader = DataLoader(
             train_dataset,
             batch_size=train_batch_size,
-            shuffle=True,
+            shuffle=False,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
             worker_init_fn=NetworkTrainer.worker_init_fn,

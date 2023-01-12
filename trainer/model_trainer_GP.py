@@ -47,13 +47,13 @@ class GPTrainer(NetworkTrainer):
         # override dataloaderbatch size
 
         # Need to instantiate and get all the training data and training labels (called when initialize_network() is called in super.)
-        self.all_training_input = []
-        self.all_training_labels = []
-        self.all_testing_input = []
-        self.all_testing_labels = []
+        # self.all_training_input = []
+        # self.all_training_labels = []
+        # self.all_testing_input = []
+        # self.all_testing_labels = []
 
-        self.all_training_input_ims = []
-        self.all_testing_input_ims = []
+        # self.all_training_input_ims = []
+        # self.all_testing_input_ims = []
 
         self.likelihood = None
 
@@ -62,83 +62,78 @@ class GPTrainer(NetworkTrainer):
         if self.trainer_config.TRAINER.INFERENCE_ONLY:
             self.set_training_dataloaders()
 
-        train_loader = iter(self.train_dataloader)
-        data_batch = next(train_loader)
+        # train_loader = iter(self.train_dataloader)
+        # data_batch = next(train_loader)
 
-        count = 0
+        # count = 0
 
-        # It would be better to deal with this in the Dataset class rather than this hacky way.
-        while data_batch is not None:
+        # # It would be better to deal with this in the Dataset class rather than this hacky way.
+        # while data_batch is not None:
+        #     print("doing databatch (should be once")
+        #     for s_im in data_batch["image"]:
+        #         self.all_training_input_ims.append(s_im)
+        #     image_flattened = torch.flatten(data_batch["image"], start_dim=1)
+        #     self.all_training_input.append(image_flattened)
 
-            for s_im in data_batch["image"]:
-                self.all_training_input_ims.append(s_im)
-            image_flattened = torch.flatten(data_batch["image"], start_dim=1)
-            self.all_training_input.append(image_flattened)
+        #     targ_coord_reshaped = (data_batch["target_coords"].reshape(-1, 2).type(torch.float32))
+        #     self.all_training_labels.append(targ_coord_reshaped)
 
-            targ_coord_reshaped = (data_batch["target_coords"].reshape(-1, 2).type(torch.float32))
-            self.all_training_labels.append(targ_coord_reshaped)
+        #     count += 1
+        #     try:
+        #         data_batch = next(train_loader)
+        #     except StopIteration:
+        #         data_batch = None
 
-            count += 1
-            try:
-                data_batch = next(train_loader)
-            except StopIteration:
-                data_batch = None
+        #     # if count >2:
+        #     #     break
+        #     # break
 
-            # if count >2:
-            #     break
-            # break
+        # val_loader = iter(self.valid_dataloader)
+        # data_batch = next(val_loader)
+        # count = 0
 
-        val_loader = iter(self.valid_dataloader)
-        data_batch = next(val_loader)
-        count = 0
+        # while data_batch is not None:
+        #     print("doing valid databatch (should be once")
 
-        while data_batch is not None:
-            for s_im in data_batch["image"]:
-                self.all_testing_input_ims.append(s_im)
-            self.all_testing_input.append(
-                torch.flatten(data_batch["image"], start_dim=1)
-            )
-            self.all_testing_labels.append(
-                (data_batch["target_coords"].reshape(-1, 2).type(torch.float32))
-            )
-            try:
-                data_batch = next(val_loader)
-            except StopIteration:
-                data_batch = None
+        #     for s_im in data_batch["image"]:
+        #         self.all_testing_input_ims.append(s_im)
+        #     self.all_testing_input.append(
+        #         torch.flatten(data_batch["image"], start_dim=1)
+        #     )
+        #     self.all_testing_labels.append(
+        #         (data_batch["target_coords"].reshape(-1, 2).type(torch.float32))
+        #     )
+        #     try:
+        #         data_batch = next(val_loader)
+        #     except StopIteration:
+        #         data_batch = None
 
-            # count += 1
-            # if count >2:
-            #     break
+        #     # count += 1
+        #     # if count >2:
+        #     #     break
 
-        self.all_training_input = torch.stack(self.all_training_input)
-        self.all_training_input = self.all_training_input.reshape(
-            self.all_training_input.shape[0] * self.all_training_input.shape[1], -1
-        ).to(self.device)
-        self.all_training_labels = torch.stack(self.all_training_labels)
-        self.all_training_labels = self.all_training_labels.reshape(
-            self.all_training_labels.shape[0] * self.all_training_labels.shape[1], -1
-        ).to(self.device)
+        # self.all_training_input = torch.stack(self.all_training_input)
+        # self.all_training_input = self.all_training_input.reshape(
+        #     self.all_training_input.shape[0] * self.all_training_input.shape[1], -1
+        # ).to(self.device)
+        # self.all_training_labels = torch.stack(self.all_training_labels)
+        # self.all_training_labels = self.all_training_labels.reshape(
+        #     self.all_training_labels.shape[0] * self.all_training_labels.shape[1], -1
+        # ).to(self.device)
 
-        self.all_testing_input = torch.stack(self.all_testing_input)
-        self.all_testing_input = self.all_testing_input.reshape(
-            self.all_testing_input.shape[0] * self.all_testing_input.shape[1], -1
-        ).to(self.device)
-        self.all_testing_labels = torch.stack(self.all_testing_labels)
-        self.all_testing_labels = self.all_testing_labels.reshape(
-            self.all_testing_labels.shape[0] * self.all_testing_labels.shape[1], -1
-        ).to(self.device)
+        # self.all_testing_input = torch.stack(self.all_testing_input)
+        # self.all_testing_input = self.all_testing_input.reshape(
+        #     self.all_testing_input.shape[0] * self.all_testing_input.shape[1], -1
+        # ).to(self.device)
+        # self.all_testing_labels = torch.stack(self.all_testing_labels)
+        # self.all_testing_labels = self.all_testing_labels.reshape(
+        #     self.all_testing_labels.shape[0] * self.all_testing_labels.shape[1], -1
+        # ).to(self.device)
 
-        print("all_training_input shape: ", self.all_training_input.shape)
-        print("all_training_labels shape: ", self.all_training_labels.shape)
-        print("all_testing_input shape: ", self.all_testing_input.shape)
-        print("all_testing_labels shape: ", self.all_testing_labels.shape)
-
-        # self.all_training_input = torch.linspace(0, 1, 100)
-
-        # self.all_training_labels = torch.stack([
-        #     torch.sin(self.all_training_input * (2 * math.pi)) + torch.randn(self.all_training_input.size()) * 0.2,
-        #     torch.cos(self.all_training_input * (2 * math.pi)) + torch.randn(self.all_training_input.size()) * 0.2,
-        # ], -1).to(self.device)
+        # self.logger.info("all_training_input shape: %s", self.all_training_input.shape)
+        # self.logger.info("all_training_labels shape: %s", self.all_training_labels.shape)
+        # self.logger.info("all_testing_input shape: %s", self.all_testing_input.shape)
+        # self.logger.info("all_testing_labels shape: %s", self.all_testing_labels.shape)
 
         # self.all_training_input = self.all_training_input.to(self.device)
         # Let's make the network
@@ -147,14 +142,13 @@ class GPTrainer(NetworkTrainer):
         )
 
         # Must initialize model with all training input and labels
-        training_data = next(iter(self.train_dataloader))
-        training_inputs = training_data["image"].to(self.device)
-        training_labels = training_data["labels"]["landmarks"].to(self.device)
+        self.training_data = next(iter(self.train_dataloader))
+        self.all_training_input = torch.squeeze(self.training_data["image"]).type(torch.float32).to(self.device)
+        self.all_training_labels = torch.squeeze(
+            self.training_data["label"]["landmarks"]).type(torch.float32).to(self.device)
 
-        # self.network = ExactGPModel(
-        #     iter(self.train_dataloader, self.all_training_labels, self.likelihood
-        # )
-        # self.network.to(self.device)
+        self.network = ExactGPModel(self.all_training_input, self.all_training_labels, self.likelihood)
+        self.network.to(self.device)
 
         # Log network and initial weights
         if self.comet_logger:
@@ -170,10 +164,6 @@ class GPTrainer(NetworkTrainer):
         assert self.network is not None, "self.initialize_network must be called first"
 
         self.learnable_params = list(self.network.parameters())
-        if self.regress_sigma:
-            for sig in self.sigmas:
-                self.learnable_params.append(sig)
-
         self.optimizer = self.optimizer(self.learnable_params, **self.optimizer_kwargs)
 
         print("Initialised optimizer.")
@@ -194,23 +184,21 @@ class GPTrainer(NetworkTrainer):
             # Zero gradients from previous iteration
             self.optimizer.zero_grad()
             # Output from model
-            print("training input shape :", self.all_training_input.shape)
+            self.logger.info("training input shape : %s", self.all_training_input.shape)
             output = self.network(self.all_training_input)
-            print(output)
+            self.logger.info(output)
             # Calc loss and backprop gradients
             loss, loss_dict = self.loss(output, self.all_training_labels)
 
             loss.backward()
             self.optimizer.step()
-            print(
-                "Iter %d/%d - Loss: %.3f  noise: %.3f"
-                % (
-                    self.epoch + 1,
-                    self.max_num_epochs,
-                    loss.item(),
-                    # self.network.covar_module.base_kernel.lengthscale.item(),
-                    self.network.likelihood.noise.item(),
-                )
+            self.logger.info(
+                "Iter %d/%d - Loss: %.3f  noise: %.3f",
+                self.epoch + 1,
+                self.max_num_epochs,
+                loss.item(),
+                # self.network.covar_module.base_kernel.lengthscale.item(),
+                self.network.likelihood.noise.item(),
             )
             self.epoch += 1
 

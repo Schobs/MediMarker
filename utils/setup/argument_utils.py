@@ -289,7 +289,39 @@ def argument_checking(yaml_args):
         print("I have identified some issues with your .yaml config file:")
         raise ValueError(all_errors)
 
+def checkpoint_loading_checking(trainer_config, sampler_mode, training_resolution):
+    """Checks that the loaded checkpoint is compatible with the current model and training settings.
 
+    Raises:
+        ValueError: _description_
+        ValueError: _description_
+    """
+
+    # Check the sampler in config is the same as the one in the checkpoint.
+    if sampler_mode != trainer_config.SAMPLER.SAMPLE_MODE:
+        raise ValueError(
+            f"model was trained using SAMPLER.SAMPLE_MODE {sampler_mode} but attempting to load with SAMPLER.SAMPLE_MODE {trainer_config.SAMPLER.SAMPLE_MODE}. \
+            Please amend this in config file."
+        )
+
+    # check if the training resolution from config is the same as the one in the checkpoint.
+    if sampler_mode == "patch":
+        if (
+            training_resolution
+            != trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
+        ):
+            raise ValueError(
+                "model was trained using SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM %s but attempting to load with self.training_resolution %s. \
+                Please amend this in config file."
+                % (training_resolution, trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM)
+            )
+    else:
+        if training_resolution != trainer_config.SAMPLER.INPUT_SIZE:
+            raise ValueError(
+                "model was trained using SAMPLER.INPUT_SIZE %s but attempting to load with self.training_resolution %s. \
+                Please amend this in config file."
+                % (training_resolution, trainer_config.SAMPLER.INPUT_SIZE)
+            )
 def arg_parse():
     """Parses shell arguments, loads the default config file and merges it with user defined arguments. Calls the argument checker.
     Returns:

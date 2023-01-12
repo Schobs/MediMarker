@@ -34,7 +34,7 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: False
+  CACHE_DATA: True
   INFERENCE_ONLY: False
   
 
@@ -42,7 +42,7 @@ SAMPLER:
   DATA_AUG: "Flatten"
   INPUT_SIZE : [512,512]
   SAMPLE_MODE: 'patch' # ['patch', 'full']
-  NUM_WORKERS: 8
+  NUM_WORKERS: 0
   DEBUG: False
   PATCH:
     SAMPLER_BIAS: 1.0
