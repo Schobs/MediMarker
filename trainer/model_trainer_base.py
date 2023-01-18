@@ -47,14 +47,13 @@ class NetworkTrainer(ABC):
         # Dataloader info
         self.data_loader_batch_size = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE
         self.num_batches_per_epoch = self.trainer_config.SOLVER.MINI_BATCH_SIZE
-        self.gen_hms_in_mainthread = (
-            self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
-        )
-        self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
+        self.gen_hms_in_mainthread = self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
+
+        # self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
 
         # Patch centering args
 
-        patch_sampler_generic_args = {"sample_patch_size": self.sampler_mode,
+        patch_sampler_generic_args = {"sample_patch_size": self.trainer_config.SAMPLER.SAMPLE_MODE,
                                       "sample_patch_from_resolution": self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM}
 
         patch_sampler_bias_args = {"sampling_bias": self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS}
@@ -67,12 +66,32 @@ class NetworkTrainer(ABC):
                                             "biased": patch_sampler_bias_args,
                                             "centred": patch_sampler_centring_args}
 
-        self.landmarks = self.trainer_config.DATASET.LANDMARKS
-        self.training_resolution = (
-            self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
-            if self.sampler_mode == "patch_bias"
-            else self.trainer_config.SAMPLER.INPUT_SIZE
-        )
+        self.generic_dataset_args = {"landmarks": self.trainer_config.DATASET.LANDMARKS,
+                                     "annotation_path": self.trainer_config.DATASET.SRC_TARGETS,
+                                     "image_modality": self.trainer_config.DATASET.IMAGE_MODALITY,
+                                     "root_path": self.trainer_config.DATASET.ROOT,
+                                     "fold": self.trainer_config.TRAINER.FOLD,
+                                     "dataset_split_size": self.trainer_config.DATASET.TRAINSET_SIZE}
+
+        self.data_aug_args_training = {"data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
+                                       "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
+                                       }
+        self.data_aug_args_evaluation = {"data_augmentation_strategy": None,
+                                         "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
+                                         }
+        self.label_generator_args = {
+            "generate_heatmaps_here": not self.gen_hms_in_mainthread,
+            "hm_lambda_scale": self.trainer_config.MODEL.HM_LAMBDA_SCALE
+        }
+
+        self.train_label_generator = self.eval_label_generator = None
+        self.num_res_supervision = 1
+
+        # self.landmarks = self.trainer_config.DATASET.LANDMARKS
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
+            self.training_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
+        else:
+            self.training_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
 
         # Set up logger & profiler
         self.profiler = profiler
@@ -84,7 +103,7 @@ class NetworkTrainer(ABC):
 
         # Trainer variables
         self.perform_validation = self.trainer_config.TRAINER.PERFORM_VALIDATION
-        self.fold = self.trainer_config.TRAINER.FOLD
+        # self.fold = self.trainer_config.TRAINER.FOLD
         self.continue_checkpoint = self.trainer_config.MODEL.CHECKPOINT
 
         self.auto_mixed_precision = self.trainer_config.SOLVER.AUTO_MIXED_PRECISION
@@ -96,7 +115,7 @@ class NetworkTrainer(ABC):
         self.sigmas = [
             torch.tensor(x, dtype=float, device=self.device, requires_grad=True)
             for x in np.repeat(
-                self.trainer_config.MODEL.GAUSS_SIGMA, len(self.landmarks)
+                self.trainer_config.MODEL.GAUSS_SIGMA, len(self.generic_dataset_args["landmarks"])
             )
         ]
 
@@ -126,10 +145,8 @@ class NetworkTrainer(ABC):
 
         # Set up in init of extended class (child)
         self.network = types.SimpleNamespace()  # empty object
-        self.train_label_generator = self.eval_label_generator = None
         self.optimizer = None
         self.loss = types.SimpleNamespace()  # empty object
-        self.num_res_supervision = 1
 
         # Can be changed in extended class (child)
         self.early_stop_patience = 150
@@ -174,7 +191,7 @@ class NetworkTrainer(ABC):
 
         # This is the logger that will save epoch results to log & log variables at inference, extend this for any extra stuff you want to log/save at evaluation!
         self.dict_logger = DictLogger(
-            len(self.landmarks),
+            len(self.generic_dataset_args["landmarks"]),
             self.regress_sigma,
             self.loss.loss_seperated_keys,
             self.dataset_class.additional_sample_attribute_keys,
@@ -186,7 +203,7 @@ class NetworkTrainer(ABC):
 
         self.print_initiaization_info = False
 
-    @abstractmethodself.patch_centring_args
+    @abstractmethod
     def initialize_network(self):
         """
         Initialize the network here!
@@ -544,7 +561,7 @@ class NetworkTrainer(ABC):
         :return:
         """
 
-        fold_str = str(self.fold)
+        fold_str = str(self.generic_dataset_args["fold"])
         if (
             self.save_intermediate_checkpoints
             and (self.epoch % self.save_every == (self.save_every - 1))
@@ -657,7 +674,7 @@ class NetworkTrainer(ABC):
         """
 
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
-        if self.sampler_mode == "patch_bias":
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
             if (
                 self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
                 == "patchify_and_stitch"
@@ -772,7 +789,7 @@ class NetworkTrainer(ABC):
         """
 
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
-        if self.sampler_mode == "patch_bias":
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
             if (
                 self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
                 == "patchify_and_stitch"
@@ -803,7 +820,7 @@ class NetworkTrainer(ABC):
         smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX
 
         self.ensemble_handler = EnsembleUncertainties(
-            uncertainty_estimation_keys, smha_model_idx, self.landmarks
+            uncertainty_estimation_keys, smha_model_idx, self.generic_dataset_args["landmarks"]
         )
 
         # network evaluation mode
@@ -814,7 +831,7 @@ class NetworkTrainer(ABC):
             uncert_key: [] for uncert_key in self.ensemble_handler.uncertainty_keys
         }
         all_ind_errors = {
-            uncert_key: [[] for x in range(len(self.landmarks))]
+            uncert_key: [[] for x in range(len(self.generic_dataset_args["landmarks"]))]
             for uncert_key in self.ensemble_handler.uncertainty_keys
         }
 
@@ -937,7 +954,7 @@ class NetworkTrainer(ABC):
                 self.amp_grad_scaler.load_state_dict(checkpoint_info["amp_grad_scaler"])
 
         if self.print_initiaization_info:
-            self.logger.info("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch))
+            self.logger.info("Loaded checkpoint %s. Epoch: %s, " ,model_path, self.epoch)
 
     def initialize_dataloader_settings(self):
         """Initializes dataloader settings. If debug use only main thread to load data bc we only
@@ -962,62 +979,44 @@ class NetworkTrainer(ABC):
 
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
 
+        #### Training dataset ####
         train_dataset = self.dataset_class(
-            annotation_path=self.trainer_config.DATASET.SRC_TARGETS,
-            landmarks=self.landmarks,
             LabelGenerator=self.train_label_generator,
             split="training",
             sample_mode=self.sampler_mode,
-            # sample_patch_size=self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
-            # sample_patch_bias=self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS,
-            # sample_patch_from_resolution=self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
             patch_sampler_args=self.dataset_patch_sampling_args,
-
-            root_path=self.trainer_config.DATASET.ROOT,
+            dataset_args=self.generic_dataset_args,
+            data_aug_args=self.data_aug_args_training,
+            label_generator_args=self.label_generator_args,
             sigmas=np_sigmas,
-            generate_hms_here=not self.gen_hms_in_mainthread,
-            cv=self.fold,
             cache_data=self.trainer_config.TRAINER.CACHE_DATA,
             num_res_supervisions=self.num_res_supervision,
             debug=self.trainer_config.SAMPLER.DEBUG,
             input_size=self.trainer_config.SAMPLER.INPUT_SIZE,
-            hm_lambda_scale=self.trainer_config.MODEL.HM_LAMBDA_SCALE,
-            data_augmentation_strategy=self.trainer_config.SAMPLER.DATA_AUG,
-            data_augmentation_package=self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
-            dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE,
         )
 
-        if self.perform_validation:
-            # if patchify, we want to return the full image
-            if self.sampler_mode == "patch_bias":
-                valid_dataset = self.get_evaluation_dataset(
-                    "validation",
-                    self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
-                )
-            else:
-                valid_dataset = self.get_evaluation_dataset(
-                    "validation", self.trainer_config.SAMPLER.INPUT_SIZE
-                )
+        #### Validation dataset ####
 
+        # If not performing validation, just use the training set for validation.
+        if self.perform_validation:
+            validation_split = "validation"
         else:
-            if self.sampler_mode == "patch_bias":
-                valid_dataset = self.get_evaluation_dataset(
-                    "training",
-                    self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
-                    dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE,
-                )
-            else:
-                valid_dataset = self.get_evaluation_dataset(
-                    "training",
-                    self.trainer_config.SAMPLER.INPUT_SIZE,
-                    dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE,
-                )
+            validation_split = "training"
             self.logger.warning(
                 'WARNING: NOT performing validation. Instead performing "validation" on training set for coord error metrics.')
 
-        self.logger.info(
-            "Using %s Dataloader workers and persist workers bool : %s ", self.num_workers_cfg, self.persist_workers
-        )
+        # Image loading size different for patch vs. full image sampling
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
+            img_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
+        else:
+            img_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
+
+        valid_dataset = self.get_evaluation_dataset(validation_split, img_resolution)
+
+        #### Create DataLoaders ####
+
+        self.logger.info("Using %s Dataloader workers and persist workers bool : %s ",
+                         self.num_workers_cfg, self.persist_workers)
 
         train_batch_size = self.maybe_alter_batch_size(train_dataset)
         valid_batch_size = self.maybe_alter_batch_size(valid_dataset)
@@ -1041,7 +1040,7 @@ class NetworkTrainer(ABC):
             pin_memory=True,
         )
 
-    def get_evaluation_dataset(self, split, load_im_size, dataset_split_size=-1):
+    def get_evaluation_dataset(self, split, load_im_size):
         """Gets an evaluation dataset based on split given (must be "validation" or "testing").
             We do not perform patch sampling on evaluation dataset, always returning the full image (sample_mode = "full").
             Patchifying the evaluation image is too large memory constraint to do in batches here.
@@ -1056,23 +1055,18 @@ class NetworkTrainer(ABC):
         # assert split in ["validation", "testing"]
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
         dataset = self.dataset_class(
-            annotation_path=self.trainer_config.DATASET.SRC_TARGETS,
-            landmarks=self.landmarks,
             LabelGenerator=self.eval_label_generator,
             split=split,
             sample_mode=self.trainer_config.SAMPLER.EVALUATION_SAMPLE_MODE,
             patch_sampler_args=self.dataset_patch_sampling_args,
-            root_path=self.trainer_config.DATASET.ROOT,
+            dataset_args=self.generic_dataset_args,
+            data_aug_args=self.data_aug_args_evaluation,
+            label_generator_args=self.label_generator_args,
             sigmas=np_sigmas,
-            generate_hms_here=not self.gen_hms_in_mainthread,
-            cv=self.fold,
             cache_data=self.trainer_config.TRAINER.CACHE_DATA,
             num_res_supervisions=self.num_res_supervision,
             debug=self.trainer_config.SAMPLER.DEBUG,
-            data_augmentation_strategy=None,
             input_size=load_im_size,
-            hm_lambda_scale=self.trainer_config.MODEL.HM_LAMBDA_SCALE,
-            dataset_split_size=dataset_split_size,
         )
         return dataset
 

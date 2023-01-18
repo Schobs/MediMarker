@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from utils.im_utils.patch_helpers import sample_patch_with_bias, get_patch_stitching_info
+from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_centred, get_patch_stitching_info
 
 import numpy as np
 import torch
@@ -45,54 +45,35 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
     def __init__(
         self,
-        landmarks,
         sigmas,
         patch_sampler_args,
+        dataset_args,
+        data_aug_args,
+        label_generator_args,
         LabelGenerator,
-        hm_lambda_scale: float,
-        annotation_path: str,
-        generate_hms_here: bool,
         sample_mode: str,
-        image_modality: str = "CMRI",
         split: str = "training",
-        root_path: str = "./data",
-        cv: int = -1,
         cache_data: bool = False,
         debug: bool = False,
         input_size=[512, 512],
         num_res_supervisions: int = 5,
-        data_augmentation_strategy: str = None,
-        data_augmentation_package: str = None,
-        dataset_split_size: int = -1,
         additional_sample_attribute_keys=[],
-        # center_patch_args={"xlsx_path": None, "xlsx_sheet": None, "center_patch_jitter": 0.0},
-
-
     ):
         """Initialize the dataset. This is the base class for all datasets.
 
         Args:
-            landmarks (_type_): _description_
             sigmas (_type_): _description_
+            patch_sampler_args (Dict): A dict of arguments for the patch sampler.
+            dataset_args (Dict): A dict of arguments for the generic dataset arguments.
+            data_aug_args (Dict): A dict of arguments for the data augmentation.
+            label_generator_args (Dict): A dict of arguments for the Label Generator.
             LabelGenerator (_type_): _description_
-            hm_lambda_scale (float): _description_
-            annotation_path (str): _description_
-            generate_hms_here (bool): _description_
             sample_mode (str): _description_
-            image_modality (str, optional): _description_. Defaults to "CMRI".
             split (str, optional): _description_. Defaults to "training".
-            root_path (str, optional): _description_. Defaults to "./data".
-            cv (int, optional): _description_. Defaults to -1.
             cache_data (bool, optional): _description_. Defaults to False.
             debug (bool, optional): _description_. Defaults to False.
             input_size (list, optional): _description_. Defaults to [512, 512].
-            sample_patch_size (list, optional): _description_. Defaults to [512, 512].
-            sample_patch_bias (float, optional): _description_. Defaults to 0.66.
-            sample_patch_from_resolution (list, optional): _description_. Defaults to [512, 512].
             num_res_supervisions (int, optional): _description_. Defaults to 5.
-            data_augmentation_strategy (str, optional): _description_. Defaults to None.
-            data_augmentation_package (str, optional): _description_. Defaults to None.
-            dataset_split_size (int, optional): _description_. Defaults to -1.
             additional_sample_attribute_keys (list, optional): _description_. Defaults to [].
 
         Raises:
@@ -107,14 +88,25 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         # We are passing in the label generator here, this is unique to each model_trainer class.
         self.LabelGenerator = LabelGenerator
+        self.hm_lambda_scale = label_generator_args["hm_lambda_scale"]
+        self.generate_hms_here = label_generator_args["generate_heatmaps_here"]
 
-        self.dataset_split_size = dataset_split_size
-        self.data_augmentation_strategy = data_augmentation_strategy
-        self.hm_lambda_scale = hm_lambda_scale
-        self.data_augmentation_package = data_augmentation_package
+        self.data_augmentation_strategy = data_aug_args["data_augmentation_strategy"]
+        self.data_augmentation_package = data_aug_args["data_augmentation_package"]
 
-        self.generate_hms_here = generate_hms_here
-        self.heatmap_label_size = self.input_size
+        self.sample_patch_size = patch_sampler_args["generic"]["sample_patch_size"]
+        self.sample_patch_bias = patch_sampler_args["biased"]["sampling_bias"]
+        self.sample_patch_from_resolution = patch_sampler_args["generic"]["sample_patch_from_resolution"]
+        self.center_patch_on_coords_path = patch_sampler_args["centred"]["xlsx_path"]
+        self.center_patch_sheet = patch_sampler_args["centred"]["xlsx_sheet"]
+        self.center_patch_jitter = patch_sampler_args["centred"]["center_patch_jitter"]
+
+        self.root_path = Path(dataset_args["root_path"])
+        self.annotation_path = Path(dataset_args["annotation_path"])
+        self.image_modality = dataset_args["image_modality"]
+        self.landmarks = dataset_args["landmarks"]
+        self.cv = dataset_args["fold"]
+        self.dataset_split_size = dataset_args["dataset_split_size"]
 
         # Additional sample attributes found in the json datalist to return with each sample
         self.additional_sample_attribute_keys = additional_sample_attribute_keys
@@ -126,19 +118,30 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         self.sample_mode = sample_mode
 
-        self.sample_patch_size = patch_sampler_args["generic"]["sample_patch_size"]
-        self.sample_patch_bias = patch_sampler_args["biased"]["sampling_bias"]
-        self.sample_patch_from_resolution = patch_sampler_args["generic"]["sample_patch_from_resolution"]
-        self.center_patch_on_coords_path = patch_sampler_args["centred"]["xlsx_path"]
-        self.center_patch_sheet = patch_sampler_args["centred"]["xlsx_sheet"]
-        self.center_patch_jitter = patch_sampler_args["centred"]["center_patch_jitter"]
+        self.split = split
+        self.sigmas = sigmas
+
+        self.cache_data = cache_data
+        self.debug = debug
+
+        self.num_res_supervisions = num_res_supervisions
+
+        # Lists to save the image paths (or images if caching), target coordinates (scaled to input size), and full resolution coords.
+        self.images = []
+        self.target_coordinates = []
+        self.full_res_coordinates = []  # full_res will be same as target if input and original image same size
+        self.image_paths = []
+        self.uids = []
+        self.annotation_available = []
+        self.original_image_sizes = []
+        self.image_resizing_factors = []
 
         if self.sample_mode == "patch_bias" or self.sample_mode == "patch_centred":
             # Get the patches origin information. Use this for stitching together in valid/testing
             self.load_im_size = self.sample_patch_from_resolution
             self.input_size = self.sample_patch_size
 
-            # if we're sampling patches w/o aug we still need to center crop so change the aug strategy
+            # if we're sampling patches w/o aug we still need to center crop so change the aug strategy to at least do this.
             if self.data_augmentation_strategy == None:
                 self.data_augmentation_package = "imgaug"
                 self.data_augmentation_strategy = "CenterCropOnly"
@@ -149,6 +152,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             self.input_size = input_size
         else:
             raise ValueError("sample mode %s not recognized." % self.sample_mode)
+
+        self.heatmap_label_size = self.input_size
 
         ############# Set Data Augmentation #############
 
@@ -165,36 +170,13 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             )
             self.logger.info(
                 "Using data augmentation package %s and strategy %s for %s split.",
-                data_augmentation_package, self.data_augmentation_strategy, split
+                self.data_augmentation_package, self.data_augmentation_strategy, split
             )
 
         self.heatmaps_to_tensor = transforms.Compose([HeatmapsToTensor()])
 
-        self.root_path = Path(root_path)
-        self.annotation_path = Path(annotation_path)
-        self.image_modality = image_modality
-        self.landmarks = landmarks
-        self.split = split
-        self.sigmas = sigmas
-
-        self.cv = cv
-        self.cache_data = cache_data
-        self.debug = debug
-
-        self.num_res_supervisions = num_res_supervisions
-
-        # Lists to save the image paths (or images if caching), target coordinates (scaled to input size), and full resolution coords.
-        self.images = []
-        self.target_coordinates = []
-        self.full_res_coordinates = []  # full_res will be same as target if input and original image same size
-        self.image_paths = []
-        self.uids = []
-        self.annotation_available = []
-        self.original_image_sizes = []
-        self.image_resizing_factors = []
-
         # We are using cross-validation, following our convention of naming each json train with the append "foldX" where (X= self.cv)
-        if cv >= 0:
+        if self.cv >= 0:
             label_std = os.path.join("fold" + str(self.cv) + ".json")
             self.logger.info(
                 "Loading %s data for CV %s ", self.split, os.path.join(self.annotation_path, label_std)
@@ -286,9 +268,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
     def __len__(self):
         return len(self.images)
 
-    def set_use_cache(self, use_cache):
-        self.use_cache = use_cache
-
     def check_uids_unique(self):
         """Make sure all uids are unique
         """
@@ -360,8 +339,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         untransformed_coords = coords
         untransformed_im = image
 
-        # Do data augmentation
-        if self.data_augmentation_strategy != None:
+        # Do data augmentation (always minimum of centre crop if patch sampling).
+        if self.data_augmentation_strategy is not None:
 
             # By default, the origin is 0,0 unless we sample from the middle of the image somewhere.
             # If sampling patches we first sample the patch with a little wiggle room, & normalize the lms. The transform center-crops it back.
@@ -371,23 +350,24 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     untransformed_coords,
                     landmarks_in_indicator,
                     x_y_corner,
-                ) = sample_patch_with_bias(untransformed_im, untransformed_coords)
+                ) = sample_patch_with_bias(untransformed_im, untransformed_coords, self.sample_patch_bias, self.load_im_size,  self.sample_patch_size, self.logger, self.debug)
+
+            # Sample a patch centred on given coordinates for this sample.
             elif self.sample_mode == "patch_centred":
+                coords_to_centre_around = self.patch_centring_coords[this_uid]
                 (
                     untransformed_im,
                     untransformed_coords,
                     landmarks_in_indicator,
                     x_y_corner,
-                ) = sample_patch_centred(untransformed_im, untransformed_coords)
+                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.logger, self.debug)
 
             kps = KeypointsOnImage(
                 [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
                 shape=untransformed_im[0].shape,
             )
 
-            transformed_sample = self.transform(
-                image=untransformed_im[0], keypoints=kps
-            )  # list where [0] is image and [1] are coords.
+            transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)  # list where [0] is image and [1] are coords.
             input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
             input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
 

@@ -410,11 +410,3 @@ class GPTrainer(NetworkTrainer):
         raise NotImplementedError(
             "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
         )
-
-    @ staticmethod
-    def get_resolution_layers(input_size, min_feature_res):
-        counter = 1
-        while input_size[0] and input_size[1] >= min_feature_res * 2:
-            counter += 1
-            input_size = [x / 2 for x in input_size]
-        return counter
