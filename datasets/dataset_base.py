@@ -17,8 +17,7 @@ from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_a
 from utils.im_utils.visualisation import visualize_patch
 
 
-from utils.logging.python_logger import get_logger
-
+import logging
 from abc import ABC, ABCMeta
 
 
@@ -84,7 +83,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         super(DatasetBase, self).__init__()
 
         # Logger
-        self.logger = get_logger("root")
+        self.logger = logging.getLogger()
 
         # We are passing in the label generator here, this is unique to each model_trainer class.
         self.LabelGenerator = LabelGenerator
@@ -367,7 +366,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 shape=untransformed_im[0].shape,
             )
 
-            transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)  # list where [0] is image and [1] are coords.
+            # list where [0] is image and [1] are coords.
+            transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
             input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
             input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
 

@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 import imgaug
 import pandas as pd
 
-from utils.logging.python_logger import get_logger
+import logging
 from utils.setup.argument_utils import checkpoint_loading_checking
 
 
@@ -49,7 +49,7 @@ class NetworkTrainer(ABC):
         self.num_batches_per_epoch = self.trainer_config.SOLVER.MINI_BATCH_SIZE
         self.gen_hms_in_mainthread = self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
 
-        # self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
+        self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
 
         # Patch centering args
 
@@ -87,7 +87,6 @@ class NetworkTrainer(ABC):
         self.train_label_generator = self.eval_label_generator = None
         self.num_res_supervision = 1
 
-        # self.landmarks = self.trainer_config.DATASET.LANDMARKS
         if self.sampler_mode in ["patch_bias", "patch_centred"]:
             self.training_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
         else:
@@ -103,15 +102,14 @@ class NetworkTrainer(ABC):
 
         # Trainer variables
         self.perform_validation = self.trainer_config.TRAINER.PERFORM_VALIDATION
-        # self.fold = self.trainer_config.TRAINER.FOLD
         self.continue_checkpoint = self.trainer_config.MODEL.CHECKPOINT
 
         self.auto_mixed_precision = self.trainer_config.SOLVER.AUTO_MIXED_PRECISION
 
-        # Training params
         self.max_num_epochs = self.trainer_config.SOLVER.MAX_EPOCHS
         # Regressing sigma parameters for heatmaps
         self.regress_sigma = self.trainer_config.SOLVER.REGRESS_SIGMA
+
         self.sigmas = [
             torch.tensor(x, dtype=float, device=self.device, requires_grad=True)
             for x in np.repeat(
@@ -141,7 +139,7 @@ class NetworkTrainer(ABC):
         self.dict_logger = None
         self.learnable_params = None
 
-        self.logger = get_logger(trainer_config.OUTPUT.LOGGER_OUTPUT)
+        self.logger = logging.getLogger()
 
         # Set up in init of extended class (child)
         self.network = types.SimpleNamespace()  # empty object
@@ -954,7 +952,7 @@ class NetworkTrainer(ABC):
                 self.amp_grad_scaler.load_state_dict(checkpoint_info["amp_grad_scaler"])
 
         if self.print_initiaization_info:
-            self.logger.info("Loaded checkpoint %s. Epoch: %s, " ,model_path, self.epoch)
+            self.logger.info("Loaded checkpoint %s. Epoch: %s, ", model_path, self.epoch)
 
     def initialize_dataloader_settings(self):
         """Initializes dataloader settings. If debug use only main thread to load data bc we only

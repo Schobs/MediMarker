@@ -93,8 +93,14 @@ def infer_additional_arguments(yaml_args):
             yaml_args.OUTPUT.OUTPUT_DIR = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
                                               Path(yaml_args.OUTPUT.OUTPUT_DIR).relative_to(Path(yaml_args.OUTPUT.OUTPUT_DIR).anchor))
 
-            yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
-                                                                        Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).relative_to(Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).anchor))
+            if yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH is not None:
+                yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                                            Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).relative_to(Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).anchor))
+
+            if yaml_args.MODEL.CHECKPOINT is not None:
+                yaml_args.MODEL.CHECKPOINT = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                 Path(yaml_args.MODEL.CHECKPOINT).relative_to(Path(yaml_args.MODEL.CHECKPOINT).anchor))
+
     # Set logger path
 
     yaml_args.OUTPUT.LOGGER_OUTPUT = os.path.join(yaml_args.OUTPUT.OUTPUT_DIR,  "_Fold" + str(

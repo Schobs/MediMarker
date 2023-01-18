@@ -41,7 +41,7 @@ TRAINER:
 SAMPLER:
   DATA_AUG: "Flatten"
   INPUT_SIZE : [512,512]
-  SAMPLE_MODE: 'patch_bias' # ['patch_bias', 'full', "patch_centred"]
+  SAMPLE_MODE: 'patch_bias' # ['patch_centred', 'full', "patch_centred"]
   NUM_WORKERS: 8
   DEBUG: False
   PATCH:

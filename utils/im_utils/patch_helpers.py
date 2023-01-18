@@ -1,8 +1,7 @@
 import json
 import numpy as np
 from utils.im_utils.visualisation import visualize_patch
-from utils.logging.python_logger import get_logger
-
+import logging
 
 def sample_patch_with_bias(image, landmarks, sample_patch_bias, load_im_size,  sample_patch_size, logger, debug, lm_safe_region=0, safe_padding=128):
     """Samples a patch from the image. It ensures a landmark is in a patch with a self.sample_patch_bias% chance.
@@ -23,7 +22,7 @@ def sample_patch_with_bias(image, landmarks, sample_patch_bias, load_im_size,  s
 
     """
 
-    logger = get_logger("root")
+    logger = logging.getLogger()
     z_rand = np.random.uniform(0, 1)
     landmarks_in_indicator = []
     if z_rand >= (1 - sample_patch_bias):
@@ -175,7 +174,7 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
     Returns:
         _type_: _description_
     """
-    logger = get_logger("root")
+    logger = logging.getLogger()
 
     assert len(coords_to_centre_around) == 1, "Only one landmark to centre sampled patch around is supported"
     if groundtruth_lms is not None:

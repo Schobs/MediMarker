@@ -17,9 +17,9 @@ def initialize_logging():
     logging.basicConfig(level=logging.NOTSET)
 
 
-def get_logger(save_log_path, logger_name="root"):
+def get_logger(save_log_path):
     # logging.basicConfig(filename='myapp.log', level=logging.INFO)
-    logger = logging.getLogger(logger_name)
+    logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)  # <<< Added Line
     # create console handler and set level to info
     stream_handler = logging.StreamHandler()

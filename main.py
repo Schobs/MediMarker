@@ -139,7 +139,7 @@ def main():
 
             trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
             summary_results, ind_results = trainer.run_inference(
-                split="testing", debug=cfg.INFERENCE.DEBUG
+                split="training", debug=cfg.INFERENCE.DEBUG
             )
 
             all_model_summaries[model_name] = summary_results

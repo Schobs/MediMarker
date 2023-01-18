@@ -150,11 +150,11 @@ def maybe_get_coordinates_from_xlsx(datapath, uids, landmarks_to_return, sheet_n
     """
     if datapath is None:
         return None
-    
+
     if sheet_name is None:
         sheet_name = 0
 
-    datafame = pd.read_excel(datapath, sheet_name=sheet_name)
+    datafame = pd.read_excel(datapath, sheet_name=sheet_name,  dtype={"uid": 'string'})
 
     if isinstance(landmarks_to_return, int):
         cols_to_return = ["L"+str(landmarks_to_return)]
@@ -164,11 +164,11 @@ def maybe_get_coordinates_from_xlsx(datapath, uids, landmarks_to_return, sheet_n
         return ValueError("landmarks_to_return must be int or list of ints")
 
     filtered_df = datafame[datafame['uid'].isin(uids)]
-    assert return_data.shape[0] == len(uids), "Not all uids found in csv file"
+    assert filtered_df.shape[0] == len(uids), "Not all uids found in csv file"
 
-    return_data = filtered_df.loc[:, [uids] + cols_to_return]
+    return_data = filtered_df.loc[:, ["uid"] + cols_to_return]
 
-    return_dict = return_data.apply(lambda x: {'uid': x.uid, 'landmarks': x.tolist()[1:]}, axis=1).tolist()
+    # return_dict = return_data.apply(lambda x: {'uid': x.uid, 'landmarks': x.tolist()[1:]}, axis=1).tolist()
 
     # return_data.to_dict(orient='list')
 
