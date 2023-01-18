@@ -51,10 +51,26 @@ class NetworkTrainer(ABC):
             self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
         )
         self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
+
+        # Patch centering args
+
+        patch_sampler_generic_args = {"sample_patch_size": self.sampler_mode,
+                                      "sample_patch_from_resolution": self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM}
+
+        patch_sampler_bias_args = {"sampling_bias": self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS}
+
+        patch_sampler_centring_args = {"xlsx_path": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH,
+                                       "xlsx_sheet": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET,
+                                       "center_patch_jitter": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_JITTER}
+
+        self.dataset_patch_sampling_args = {"generic": patch_sampler_generic_args,
+                                            "biased": patch_sampler_bias_args,
+                                            "centred": patch_sampler_centring_args}
+
         self.landmarks = self.trainer_config.DATASET.LANDMARKS
         self.training_resolution = (
             self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
-            if self.sampler_mode == "patch"
+            if self.sampler_mode == "patch_bias"
             else self.trainer_config.SAMPLER.INPUT_SIZE
         )
 
@@ -170,7 +186,7 @@ class NetworkTrainer(ABC):
 
         self.print_initiaization_info = False
 
-    @abstractmethod
+    @abstractmethodself.patch_centring_args
     def initialize_network(self):
         """
         Initialize the network here!
@@ -641,7 +657,7 @@ class NetworkTrainer(ABC):
         """
 
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
-        if self.sampler_mode == "patch":
+        if self.sampler_mode == "patch_bias":
             if (
                 self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
                 == "patchify_and_stitch"
@@ -756,7 +772,7 @@ class NetworkTrainer(ABC):
         """
 
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
-        if self.sampler_mode == "patch":
+        if self.sampler_mode == "patch_bias":
             if (
                 self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
                 == "patchify_and_stitch"
@@ -952,9 +968,11 @@ class NetworkTrainer(ABC):
             LabelGenerator=self.train_label_generator,
             split="training",
             sample_mode=self.sampler_mode,
-            sample_patch_size=self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
-            sample_patch_bias=self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS,
-            sample_patch_from_resolution=self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
+            # sample_patch_size=self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
+            # sample_patch_bias=self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS,
+            # sample_patch_from_resolution=self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
+            patch_sampler_args=self.dataset_patch_sampling_args,
+
             root_path=self.trainer_config.DATASET.ROOT,
             sigmas=np_sigmas,
             generate_hms_here=not self.gen_hms_in_mainthread,
@@ -971,7 +989,7 @@ class NetworkTrainer(ABC):
 
         if self.perform_validation:
             # if patchify, we want to return the full image
-            if self.sampler_mode == "patch":
+            if self.sampler_mode == "patch_bias":
                 valid_dataset = self.get_evaluation_dataset(
                     "validation",
                     self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
@@ -982,7 +1000,7 @@ class NetworkTrainer(ABC):
                 )
 
         else:
-            if self.sampler_mode == "patch":
+            if self.sampler_mode == "patch_bias":
                 valid_dataset = self.get_evaluation_dataset(
                     "training",
                     self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
@@ -1043,9 +1061,7 @@ class NetworkTrainer(ABC):
             LabelGenerator=self.eval_label_generator,
             split=split,
             sample_mode=self.trainer_config.SAMPLER.EVALUATION_SAMPLE_MODE,
-            sample_patch_size=self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
-            sample_patch_bias=self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS,
-            sample_patch_from_resolution=self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
+            patch_sampler_args=self.dataset_patch_sampling_args,
             root_path=self.trainer_config.DATASET.ROOT,
             sigmas=np_sigmas,
             generate_hms_here=not self.gen_hms_in_mainthread,

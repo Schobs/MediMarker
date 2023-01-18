@@ -34,7 +34,7 @@ _C.DATASET.TRAINSET_SIZE = -1  # -1 for full trainset size or int <= len(trainin
 
 
 _C.SAMPLER = CN()
-_C.SAMPLER.SAMPLE_MODE = "full"  # ['patch', 'full']
+_C.SAMPLER.SAMPLE_MODE = "full"  # ['full', "patch_bias", 'patch_centred']
 
 _C.SAMPLER.DEBUG = False
 _C.SAMPLER.INPUT_SIZE = [512, 512]
@@ -47,17 +47,17 @@ _C.SAMPLER.NUM_WORKERS = 0
 
 
 _C.SAMPLER.PATCH = CN()
-_C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = "input_size"  # ['full', 'input_size']
-
+# ['full', 'input_size'] # if input_size, will resize image to SAMPLER.INPUT_SIZE first.
+_C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = "input_size"
 _C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [512, 512]
-
-_C.SAMPLER.PATCH.SAMPLER_BIAS = 0.66
 # ["patchify_and_stitch", "fully_convolutional"] # patchify_and_stitch if you wish to patchify and stitch the RESOLUTION_TO_SAMPLE_FROM sized image, fully_convolutional to use input size directly RESOLUTION_TO_SAMPLE_FROM
 _C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional"
-# _C.SAMPLER.SAMPLE_PATCH = False
-# _C.SAMPLER.SAMPLE_PATCH_SIZE = [512,512]
-# _C.SAMPLER.SAMPLE_FROM_FULLRES =  True
-# _C.SAMPLER.SAMPLER_BIAS = 0.66
+
+_C.SAMPLER.PATCH.SAMPLER_BIAS = 0.66
+
+_C.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH = None
+_C.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET = None
+_C.SAMPLER.PATCH.CENTRED_PATCH_JITTER = 0.0
 
 # U:\tale2\Shared\data\CMRI\ASPIRE\4CH_labels
 # ---------------------------------------------------------------------------- #

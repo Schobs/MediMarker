@@ -184,7 +184,7 @@ class GPTrainer(NetworkTrainer):
             # Zero gradients from previous iteration
             self.optimizer.zero_grad()
             # Output from model
-            self.logger.info("training input shape : %s", self.all_training_input.shape)
+            # self.logger.info("training input shape : %s", self.all_training_input.shape)
             output = self.network(self.all_training_input)
             self.logger.info(output)
             # Calc loss and backprop gradients

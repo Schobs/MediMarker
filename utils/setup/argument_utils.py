@@ -134,7 +134,7 @@ def argument_checking(yaml_args):
         all_errors.append(e)
 
     try:
-        accepted_samplers = ["patch", "full"]
+        accepted_samplers = ["patch_bias", "patch_centred", "full"]
         if yaml_args.SAMPLER.SAMPLE_MODE not in accepted_samplers:
             raise ValueError(
                 "SAMPLER.SAMPLE_MODE %s not recognised. Choose from %s"
@@ -160,7 +160,7 @@ def argument_checking(yaml_args):
         except ValueError as er_msg:
             all_errors.append(er_msg)
 
-    if yaml_args.SAMPLER.SAMPLE_MODE == "patch":
+    if yaml_args.SAMPLER.SAMPLE_MODE in ["patch_bias", "patch_centred"]:
 
         # 1a
         try:
@@ -170,7 +170,7 @@ def argument_checking(yaml_args):
                 == yaml_args.SAMPLER.INPUT_SIZE
             ):
                 raise ValueError(
-                    """You want to train the model by sampling patches (SAMPLER.SAMPLE_MODE == "patch") from the image resized to input size defined by """
+                    """You want to train the model by sampling patches (SAMPLER.SAMPLE_MODE == "patch_bias" or "patch_centred") from the image resized to input size defined by """
                     """SAMPLER.INPUT_SIZE, indicated by SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "input_size"""
                     """However, your SAMPLER.SAMPLE_PATCH_SIZE (%s) is the same as your input size SAMPLER.INPUT_SIZE (%s). You are doing "full" sampling, """
                     """ unintentionally running the wrong scheme."""
@@ -289,6 +289,7 @@ def argument_checking(yaml_args):
         print("I have identified some issues with your .yaml config file:")
         raise ValueError(all_errors)
 
+
 def checkpoint_loading_checking(trainer_config, sampler_mode, training_resolution):
     """Checks that the loaded checkpoint is compatible with the current model and training settings.
 
@@ -305,7 +306,7 @@ def checkpoint_loading_checking(trainer_config, sampler_mode, training_resolutio
         )
 
     # check if the training resolution from config is the same as the one in the checkpoint.
-    if sampler_mode == "patch":
+    if sampler_mode in ["patch_bias", "patch_centred"]:
         if (
             training_resolution
             != trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
@@ -322,6 +323,8 @@ def checkpoint_loading_checking(trainer_config, sampler_mode, training_resolutio
                 Please amend this in config file."
                 % (training_resolution, trainer_config.SAMPLER.INPUT_SIZE)
             )
+
+
 def arg_parse():
     """Parses shell arguments, loads the default config file and merges it with user defined arguments. Calls the argument checker.
     Returns:

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from utils.im_utils.patch_helpers import sample_patch_with_bias, get_patch_stitching_info
 
 import numpy as np
 import torch
@@ -12,7 +13,7 @@ from transforms.transformations import (
 )
 from transforms.dataloader_transforms import get_aug_package_loader
 
-from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image
+from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image, maybe_get_coordinates_from_xlsx
 from utils.im_utils.visualisation import visualize_patch
 
 
@@ -46,6 +47,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self,
         landmarks,
         sigmas,
+        patch_sampler_args,
         LabelGenerator,
         hm_lambda_scale: float,
         annotation_path: str,
@@ -58,14 +60,13 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         cache_data: bool = False,
         debug: bool = False,
         input_size=[512, 512],
-        sample_patch_size=[512, 512],
-        sample_patch_bias=0.66,
-        sample_patch_from_resolution=[512, 512],
         num_res_supervisions: int = 5,
         data_augmentation_strategy: str = None,
         data_augmentation_package: str = None,
         dataset_split_size: int = -1,
         additional_sample_attribute_keys=[],
+        # center_patch_args={"xlsx_path": None, "xlsx_sheet": None, "center_patch_jitter": 0.0},
+
 
     ):
         """Initialize the dataset. This is the base class for all datasets.
@@ -107,17 +108,13 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # We are passing in the label generator here, this is unique to each model_trainer class.
         self.LabelGenerator = LabelGenerator
 
+        self.dataset_split_size = dataset_split_size
         self.data_augmentation_strategy = data_augmentation_strategy
         self.hm_lambda_scale = hm_lambda_scale
         self.data_augmentation_package = data_augmentation_package
 
         self.generate_hms_here = generate_hms_here
-        self.sample_mode = sample_mode
-        self.sample_patch_size = sample_patch_size
-        self.sample_patch_bias = sample_patch_bias
-        self.sample_patch_from_resolution = sample_patch_from_resolution
-
-        self.dataset_split_size = dataset_split_size
+        self.heatmap_label_size = self.input_size
 
         # Additional sample attributes found in the json datalist to return with each sample
         self.additional_sample_attribute_keys = additional_sample_attribute_keys
@@ -125,15 +122,21 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             k: [] for k in self.additional_sample_attribute_keys
         }
 
-        if self.sample_mode == "patch":
-            # Get the patches origin information. Use this for stitching together in valid/testing
-            self.load_im_size = sample_patch_from_resolution
-            self.input_size = sample_patch_size
+        ############# Set Sample Mode #############
 
-            # Coordinates of each patch origin in the image
-            self.patchified_idxs = self.get_patch_stitching_info(
-                self.load_im_size, self.sample_patch_size
-            )
+        self.sample_mode = sample_mode
+
+        self.sample_patch_size = patch_sampler_args["generic"]["sample_patch_size"]
+        self.sample_patch_bias = patch_sampler_args["biased"]["sampling_bias"]
+        self.sample_patch_from_resolution = patch_sampler_args["generic"]["sample_patch_from_resolution"]
+        self.center_patch_on_coords_path = patch_sampler_args["centred"]["xlsx_path"]
+        self.center_patch_sheet = patch_sampler_args["centred"]["xlsx_sheet"]
+        self.center_patch_jitter = patch_sampler_args["centred"]["center_patch_jitter"]
+
+        if self.sample_mode == "patch_bias" or self.sample_mode == "patch_centred":
+            # Get the patches origin information. Use this for stitching together in valid/testing
+            self.load_im_size = self.sample_patch_from_resolution
+            self.input_size = self.sample_patch_size
 
             # if we're sampling patches w/o aug we still need to center crop so change the aug strategy
             if self.data_augmentation_strategy == None:
@@ -142,14 +145,12 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         elif self.sample_mode == "full":
             #  If not sample_patches then just 1 big patch!
-            self.patchified_idxs = [[0, 0]]
             self.load_im_size = input_size
             self.input_size = input_size
         else:
             raise ValueError("sample mode %s not recognized." % self.sample_mode)
 
-        self.heatmap_label_size = self.input_size
-        # ratio between original image and load_image size, to resize landmarks.
+        ############# Set Data Augmentation #############
 
         if self.data_augmentation_strategy == None:
             self.logger.info("No data Augmentation for %s split.", split)
@@ -267,6 +268,10 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             # Extended dataset class can add more attributes to each sample here
             self.add_additional_sample_attributes(data)
 
+        # Maybe get external coordinates from xlsx for patch_centred sampling.
+        self.patch_centring_coords = maybe_get_coordinates_from_xlsx(
+            self.center_patch_on_coords_path, self.uids, self.landmarks, sheet_name=self.center_patch_sheet)  # may return none
+
         if self.cache_data:
             self.logger.info(
                 "Cached all %s data in memory. Length of %s", self.split,  len(self.images)
@@ -360,13 +365,20 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
             # By default, the origin is 0,0 unless we sample from the middle of the image somewhere.
             # If sampling patches we first sample the patch with a little wiggle room, & normalize the lms. The transform center-crops it back.
-            if self.sample_mode == "patch":
+            if self.sample_mode == "patch_bias":
                 (
                     untransformed_im,
                     untransformed_coords,
                     landmarks_in_indicator,
                     x_y_corner,
-                ) = self.sample_patch(untransformed_im, untransformed_coords)
+                ) = sample_patch_with_bias(untransformed_im, untransformed_coords)
+            elif self.sample_mode == "patch_centred":
+                (
+                    untransformed_im,
+                    untransformed_coords,
+                    landmarks_in_indicator,
+                    x_y_corner,
+                ) = sample_patch_centred(untransformed_im, untransformed_coords)
 
             kps = KeypointsOnImage(
                 [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
@@ -390,6 +402,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 for xy in input_coords
             ]
 
+        # Don't do data augmentation.
         else:
 
             input_coords = coords
@@ -476,181 +489,3 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             self.num_res_supervisions,
             self.hm_lambda_scale,
         )
-
-    def sample_patch(self, image, landmarks, lm_safe_region=0, safe_padding=128):
-        """Samples a patch from the image. It ensures a landmark is in a patch with a self.sample_patch_bias% chance.
-            The patch image is larger than the patch-size by safe_padding on every side for safer data augmentation.
-            Therefore, the image is first padded with zeros on each side to stop out of bounds when sampling from the edges.
-
-        Args:
-            image (_type_): image to sample
-            landmarks (_type_): list of landmarks
-            lm_safe_region (int, optional): # pixels away from the edge the landmark must be to count as "in" the patch . Defaults to 0.
-            safe_padding (int, optional): How much bigger on each edge the patch should be for safer data augmentation . Defaults to 128.
-
-        Returns:
-            _type_: cropped padded sample
-            landmarks normalised to within the patch
-            binary indicator of which landmarks are in the patch.
-
-        """
-
-        z_rand = np.random.uniform(0, 1)
-        landmarks_in_indicator = []
-        if z_rand >= (1 - self.sample_patch_bias):
-
-            # Keep sampling until landmark is in patch
-            while 1 not in landmarks_in_indicator:
-                landmarks_in_indicator = []
-
-                #
-                y_rand = np.random.randint(
-                    0, self.load_im_size[1] - self.sample_patch_size[1]
-                )
-                x_rand = np.random.randint(
-                    0, self.load_im_size[0] - self.sample_patch_size[0]
-                )
-
-                for lm in landmarks:
-                    landmark_in = 0
-
-                    # Safe region means landmark is not right on the edge
-                    if (
-                        y_rand + lm_safe_region
-                        <= lm[1]
-                        <= (y_rand + self.sample_patch_size[1]) - lm_safe_region
-                    ):
-                        if (
-                            x_rand + lm_safe_region
-                            <= lm[0]
-                            <= (x_rand + self.sample_patch_size[0]) - lm_safe_region
-                        ):
-                            landmark_in = 1
-
-                    landmarks_in_indicator.append(landmark_in)
-
-                # Tested with the extremes, its all ok.
-                # y_rand = self.load_im_size[1]-self.sample_patch_size[1]
-                # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
-                # y_rand = 0
-                # x_rand = 0
-                # y_rand = safe_padding
-                # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
-
-        else:
-            y_rand = np.random.randint(
-                0, self.load_im_size[1] - self.sample_patch_size[1]
-            )
-            x_rand = np.random.randint(
-                0, self.load_im_size[0] - self.sample_patch_size[0]
-            )
-
-            for lm in landmarks:
-                landmark_in = 0
-                if (
-                    y_rand + lm_safe_region
-                    <= lm[1]
-                    <= y_rand + self.sample_patch_size[1] - lm_safe_region
-                ):
-                    if (
-                        x_rand + lm_safe_region
-                        <= lm[0]
-                        <= (x_rand + self.sample_patch_size[0]) - lm_safe_region
-                    ):
-                        landmark_in = 1
-                landmarks_in_indicator.append(landmark_in)
-
-        # Add the safe padding size
-        y_rand_safe = y_rand + safe_padding
-        x_rand_safe = x_rand + safe_padding
-
-        # First pad image
-        padded_image = np.expand_dims(
-            np.pad(image[0], (safe_padding, safe_padding)), axis=0
-        )
-        padded_patch_size = [x + (2 * safe_padding) for x in self.sample_patch_size]
-
-        # We pad before and after the slice.
-        y_rand_pad = y_rand_safe - safe_padding
-        x_rand_pad = x_rand_safe - safe_padding
-        cropped_padded_sample = padded_image[
-            :,
-            y_rand_pad: y_rand_pad + padded_patch_size[1],
-            x_rand_pad: x_rand_pad + padded_patch_size[0],
-        ]
-
-        # Calculate the new origin: 2*safe_padding bc we padded image & then added pad to the patch.
-        normalized_landmarks = [
-            [
-                (lm[0] + 2 * safe_padding) - (x_rand_safe),
-                (lm[1] + 2 * safe_padding) - (y_rand_safe),
-            ]
-            for lm in landmarks
-        ]
-
-        if self.debug:
-            padded_lm = [
-                [lm[0] + safe_padding, lm[1] + safe_padding] for lm in landmarks
-            ]
-
-            self.logger.info(
-                "\n \n \n the min xy is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
-                and the normalized landmark is %s : ",                    y_rand_safe,
-                x_rand_safe,
-                x_rand_pad,
-                y_rand_pad,
-                landmarks,
-                padded_lm,
-                normalized_landmarks,
-            )
-
-            visualize_patch(
-                image[0],
-                landmarks[0],
-                padded_image[0],
-                padded_lm[0],
-                cropped_padded_sample[0],
-                normalized_landmarks[0],
-                [x_rand_pad, y_rand_pad],
-            )
-        return (
-            cropped_padded_sample,
-            normalized_landmarks,
-            landmarks_in_indicator,
-            [x_rand, y_rand],
-        )
-
-    def get_patch_stitching_info(self, image_size, patch_size):
-        """
-        Get stitching info for breaking up an input image into patches,
-        where each patch overlaps with the next by 50% in x,y. The x,y, indicies are returned for each
-        patch so we know how to slice the full resolution image.
-
-        Args:
-            image (_type_): _description_
-        Returns
-            patch_start_idxs ([[x,y]]) list of x,y indicies of where to slice for each patch
-
-        """
-        patch_start_idxs = []
-
-        break_x = break_y = False
-        for x in range(0, int(image_size[0]), int(patch_size[0] / 2)):
-            for y in range(0, int(image_size[1]), int(patch_size[1] / 2)):
-                break_y = False
-                # Ensure we do not go past the boundaries of the image
-                if x > image_size[0] - patch_size[0]:
-                    x = image_size[0] - patch_size[0]
-                    break_x = True
-                if y > image_size[1] - patch_size[1]:
-                    y = image_size[1] - patch_size[1]
-                    break_y = True
-                # torch loads images y-x so swap axis here
-                patch_start_idxs.append([x, y])
-
-                if break_y:
-                    break
-            if break_x:
-                break
-
-        return patch_start_idxs

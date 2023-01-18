@@ -40,7 +40,7 @@ SAMPLER:
   # DATA_AUG: 'AffineComplex'
   # DATA_AUG: None
   INPUT_SIZE : [128,128]
-  SAMPLE_MODE: 'patch' # ['patch', 'full']
+  SAMPLE_MODE: 'patch_bias' # ['patch', 'full']
   NUM_WORKERS: 8
   DEBUG: False
   PATCH:

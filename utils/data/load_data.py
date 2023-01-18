@@ -9,6 +9,8 @@ from transforms.transformations import (
     normalize_cmr,
 )
 
+import pandas as pd
+
 
 def get_datatype_load(im_path):
     """Decides the image load function based on the suffix of the image path.
@@ -129,3 +131,45 @@ def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
     )
 
     return resized_factor, original_size, image, coords
+
+
+def maybe_get_coordinates_from_xlsx(datapath, uids, landmarks_to_return, sheet_name=None):
+    """
+        Read csv file of data, returns samples whesplitre the value of the "split" column
+        is contained in the "fold" variable. The columns cols_to_return are returned.
+
+    Args:
+        datapath (str): Path to csv file of uncertainty results,
+        split (str): column name for split e.g. Validation, testing,
+        fold (int or [int]]): fold/s contained in the split column to return,
+        cols_to_return ([str]): Which columns to return (default="All").
+
+
+    Returns:
+        [pandas dataframe, pandas dataframe]: dataframe selected
+    """
+    if datapath is None:
+        return None
+    
+    if sheet_name is None:
+        sheet_name = 0
+
+    datafame = pd.read_excel(datapath, sheet_name=sheet_name)
+
+    if isinstance(landmarks_to_return, int):
+        cols_to_return = ["L"+str(landmarks_to_return)]
+    elif isinstance(landmarks_to_return, (list, pd.core.series.Series, np.ndarray)):
+        cols_to_return = ["L"+str(i) for i in landmarks_to_return]
+    else:
+        return ValueError("landmarks_to_return must be int or list of ints")
+
+    filtered_df = datafame[datafame['uid'].isin(uids)]
+    assert return_data.shape[0] == len(uids), "Not all uids found in csv file"
+
+    return_data = filtered_df.loc[:, [uids] + cols_to_return]
+
+    return_dict = return_data.apply(lambda x: {'uid': x.uid, 'landmarks': x.tolist()[1:]}, axis=1).tolist()
+
+    # return_data.to_dict(orient='list')
+
+    return return_dict

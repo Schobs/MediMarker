@@ -431,7 +431,7 @@ Parameters concerning both full image & patch sampling, data augmentation and cp
     *Default:* 0
 
     
-- **SAMPLER_MODE** ("full" OR "patch"): The sampling mode. "full" will resize images to the resolution of SAMPLER.INPUT_SIZE, and use these images for training (recommended). "patch" will sample patches from the images using the settings of SAMPLER.PATCH (beta).
+- **SAMPLER_MODE** ("full" OR "patch_bias"): The sampling mode. "full" will resize images to the resolution of SAMPLER.INPUT_SIZE, and use these images for training (recommended). "patch_bias" will sample patches from the images using the settings of SAMPLER.PATCH (beta).
     
      *Default:* "full"
 

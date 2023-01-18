@@ -41,7 +41,7 @@ DATASET:
 SAMPLER:
   DATA_AUG: None
   INPUT_SIZE : [512,512]
-  SAMPLE_MODE: 'patch' # ['patch', 'full']
+  SAMPLE_MODE: 'patch_bias' # ['patch', 'full']
   NUM_WORKERS: 8
   DEBUG: False
   PATCH:

@@ -40,7 +40,7 @@ class UnetTrainer(NetworkTrainer):
         self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
         self.input_size = (
             self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE
-            if self.sampler_mode == "patch"
+            if self.sampler_mode == "patch_bias"
             else self.trainer_config.SAMPLER.INPUT_SIZE
         )
 
@@ -257,8 +257,8 @@ class UnetTrainer(NetworkTrainer):
 
         for idx, patch in enumerate(patch_predictions):
             full_heatmap[
-                stitching_info[idx][1] : stitching_info[idx][1] + patch_size_y,
-                stitching_info[idx][0] : stitching_info[idx][0] + patch_size_x,
+                stitching_info[idx][1]: stitching_info[idx][1] + patch_size_y,
+                stitching_info[idx][0]: stitching_info[idx][0] + patch_size_x,
             ] += patch.detach.cpu().numpy()
 
         plt.imshow(full_heatmap)
