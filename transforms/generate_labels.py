@@ -131,12 +131,13 @@ class GPLabelGenerator(LabelGenerator):
         """Visually debug a sample. Provide logging and visualisation of the sample."""
 
         # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
-        visualize_image_trans_coords(
-            untrans_image[0],
-            untrans_coords,
-            sample_dict["image"][0],
-            sample_dict["target_coords"],
-        )
+        pass
+        # visualize_image_trans_coords(
+        #     untrans_image[0],
+        #     untrans_coords,
+        #     sample_dict["image"][0],
+        #     sample_dict["target_coords"],
+        # )
 
     def debug_crop(
         self, original_im, cropped_im, original_lms, normalized_lms, lms_indicators

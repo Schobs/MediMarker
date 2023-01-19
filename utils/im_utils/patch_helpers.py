@@ -3,6 +3,7 @@ import numpy as np
 from utils.im_utils.visualisation import visualize_patch
 import logging
 
+
 def sample_patch_with_bias(image, landmarks, sample_patch_bias, load_im_size,  sample_patch_size, logger, debug, lm_safe_region=0, safe_padding=128):
     """Samples a patch from the image. It ensures a landmark is in a patch with a self.sample_patch_bias% chance.
         The patch image is larger than the patch-size by safe_padding on every side for safer data augmentation.
@@ -216,8 +217,8 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
     padded_patch_size = [x + (2 * safe_padding) for x in sample_patch_size]
 
     # We pad before and after the slice.
-    y_rand_pad = y_rand_safe - safe_padding
-    x_rand_pad = x_rand_safe - safe_padding
+    y_rand_pad = int(y_rand_safe - safe_padding)
+    x_rand_pad = int(x_rand_safe - safe_padding)
 
     cropped_padded_sample = padded_image[
         :,
@@ -225,27 +226,30 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
         x_rand_pad: x_rand_pad + padded_patch_size[0],
     ]
 
-    if groundtruth_lms is None:
+    if groundtruth_lms is not None:
         # Calculate the new origin: 2*safe_padding bc we padded image & then added pad to the patch.
         normalized_landmarks = [
             [
-                (groundtruth_lms[0][0] + 2 * safe_padding) - (x_min),
-                (groundtruth_lms[0][1] + 2 * safe_padding) - (y_min),
+                (groundtruth_lms[0][0] + 2*safe_padding) - (x_rand_safe),
+                (groundtruth_lms[0][1] + 2*safe_padding) - (y_rand_safe),
             ]
         ]
+    # If not provided, just return 0,0
+    else:
+        normalized_landmarks = [[0, 0]]
 
     normalized_centre_coords = [
         [
-            (coords_to_centre_around[0][0] + 2 * safe_padding) - (x_min),
-            (coords_to_centre_around[0][1] + 2 * safe_padding) - (y_min),
+            (coords_to_centre_around[0][0] + safe_padding) - (x_min),
+            (coords_to_centre_around[0][1] + safe_padding) - (y_min),
         ]
     ]
 
     if debug:
-        padded_lm = [centre_coord[0] + safe_padding, centre_coord[1] + safe_padding]
+        padded_lm = [groundtruth_lms[0][0] + safe_padding, groundtruth_lms[0][1] + safe_padding]
 
         logger.info(
-            "\n \n \n the min xy is [%s,%s].  the min xy safe is [%s,%s]. padded is [%s, %s] normal landmark is %s, padded lm is %s \
+            "\n \n \n the min xy is [%s,%s].  the min xy safe is [%s,%s]. padded is [%s, %s] full centre coord landmark is %s, full Gt is %s, padded lm is %s \
             and the normalized landmark is %s  and normalized centre coords is %s. Is GT in patch? %s: ",
             x_min,
             y_min,
@@ -254,6 +258,7 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
             x_rand_pad,
             y_rand_pad,
             centre_coord,
+            groundtruth_lms,
             padded_lm,
             normalized_landmarks,
             normalized_centre_coords,
@@ -264,7 +269,7 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
             image[0],
             centre_coord,
             padded_image[0],
-            padded_lm[0],
+            padded_lm,
             cropped_padded_sample[0],
             normalized_landmarks[0],
             [x_rand_pad, y_rand_pad],

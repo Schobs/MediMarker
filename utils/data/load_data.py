@@ -102,6 +102,18 @@ def load_aspire_datalist(
     return _append_paths(base_dir, expected_data)
 
 
+def resize_coordinates(coords,  resizing_factor):
+    """Resize the coordinates by a resizing factor.
+    Args:
+        coords ([ints]): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    return np.round(coords * [1 / resizing_factor[0], 1 / resizing_factor[1]])
+
+
 def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
     """Load image and resize it to the specified size. Also resize the coordinates to match the new image size.
 
@@ -126,7 +138,7 @@ def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
         resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
 
     # potentially resize the coords
-    coords = np.round(coords * [1 / resizing_factor[0], 1 / resizing_factor[1]])
+    coords = resize_coordinates(coords,  resizing_factor)
     image = np.expand_dims(
         normalize_cmr(original_image.resize(load_im_size)), axis=0
     )

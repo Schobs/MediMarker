@@ -53,7 +53,7 @@ class NetworkTrainer(ABC):
 
         # Patch centering args
 
-        patch_sampler_generic_args = {"sample_patch_size": self.trainer_config.SAMPLER.SAMPLE_MODE,
+        patch_sampler_generic_args = {"sample_patch_size": self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
                                       "sample_patch_from_resolution": self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM}
 
         patch_sampler_bias_args = {"sampling_bias": self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS}
@@ -165,9 +165,8 @@ class NetworkTrainer(ABC):
 
     def initialize(self, training_bool=True):
         """
-        Initialize profiler, comet logger, training/val dataloaders, network, optimizer, loss, automixed precision
-        and maybe load a checkpoint.
-
+        Initialize profiler, comet logger, training/val dataloaders, network, optimizer, 
+        loss, automixed precision 
         """
         # torch.backends.cudnn.benchmark = True
 
@@ -187,7 +186,8 @@ class NetworkTrainer(ABC):
         if self.comet_logger:
             self.comet_logger.log_parameters(self.trainer_config)
 
-        # This is the logger that will save epoch results to log & log variables at inference, extend this for any extra stuff you want to log/save at evaluation!
+        # This is the logger that will save epoch results to log & log variables at inference, extend this for any extra
+        # stuff you want to log/save at evaluation!
         self.dict_logger = DictLogger(
             len(self.generic_dataset_args["landmarks"]),
             self.regress_sigma,
@@ -257,8 +257,8 @@ class NetworkTrainer(ABC):
 
     def train(self):
         """
-        The main training loop. For every epoch we train and validate. Each training epoch covers a number of minibatches of a certain batch size,
-        defined in the config file.
+        The main training loop. For every epoch we train and validate. Each training epoch covers a number of minibatches 
+        of a certain batch size, defined in the config file.
         """
         if not self.was_initialized:
             self.initialize(True)
@@ -285,6 +285,7 @@ class NetworkTrainer(ABC):
                     split="training",
                     log_coords=False,
                     logged_vars=per_epoch_logs,
+                    restart_dataloader=True
                 )
                 if self.comet_logger:
                     self.comet_logger.log_metric("training loss iteration", l, step)
@@ -303,6 +304,7 @@ class NetworkTrainer(ABC):
                         split="validation",
                         log_coords=True,
                         logged_vars=per_epoch_logs,
+                        restart_dataloader=False
                     )
 
             self.epoch_end_time = time()
@@ -335,6 +337,7 @@ class NetworkTrainer(ABC):
         logged_vars=None,
         debug=False,
         direct_data_dict=None,
+        restart_dataloader=True,
     ):
         """Runs a single iteration of a forward pass. It can perform back-propagation (training) or not (validation, testing), indicated w/ bool backprop.
             It can also retrieve coordindates from predicted heatmap and log variables using DictLogger, dictated by the keys in the logged_vars dict.
@@ -355,15 +358,13 @@ class NetworkTrainer(ABC):
             generator: The generator, which is now one iteration ahead from the input generator, or may have been reinitialized if it ran out of samples (if training).
         """
 
-        so = time()
-
         # We can either give the generator to be iterated or a data_dict directly
         if direct_data_dict is None:
             try:
                 data_dict = next(generator)
 
             except StopIteration:
-                if split != "training":
+                if not restart_dataloader:
                     return 0, None
                 else:
                     generator = iter(dataloader)
@@ -431,7 +432,6 @@ class NetworkTrainer(ABC):
                 loss_dict = {}
 
         # Log info from this iteration.
-        s = time()
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
 
@@ -467,7 +467,6 @@ class NetworkTrainer(ABC):
                         extra_info,
                     )
 
-        e = time()
         if self.profiler:
             self.profiler.step()
 
@@ -525,7 +524,7 @@ class NetworkTrainer(ABC):
                 self.comet_logger, per_epoch_logs, self.epoch
             )
 
-        self.logger.info("Epoch %s logs: %s" % (self.epoch, per_epoch_logs))
+        self.logger.info("Epoch %s logs: %s", self.epoch, per_epoch_logs)
 
         # Checks for it this epoch was best in validation loss or validation coord error!
         if per_epoch_logs["validation_all_loss_all"] < self.best_valid_loss:
@@ -718,6 +717,7 @@ class NetworkTrainer(ABC):
                     log_coords=True,
                     logged_vars=evaluation_logs,
                     debug=debug,
+                    restart_dataloader=False
                 )
             del generator
             print()
@@ -803,7 +803,7 @@ class NetworkTrainer(ABC):
         inference_resolution = self.training_resolution
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
-        self.test_dataloader = DataLoader(
+        test_dataloader = DataLoader(
             test_dataset,
             batch_size=self.data_loader_batch_size,
             shuffle=False,
@@ -817,7 +817,7 @@ class NetworkTrainer(ABC):
         )
         smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX
 
-        self.ensemble_handler = EnsembleUncertainties(
+        ensemble_handler = EnsembleUncertainties(
             uncertainty_estimation_keys, smha_model_idx, self.generic_dataset_args["landmarks"]
         )
 
@@ -826,15 +826,15 @@ class NetworkTrainer(ABC):
 
         # Initialise esenmble results dictionaries
         ensemble_result_dicts = {
-            uncert_key: [] for uncert_key in self.ensemble_handler.uncertainty_keys
+            uncert_key: [] for uncert_key in ensemble_handler.uncertainty_keys
         }
         all_ind_errors = {
             uncert_key: [[] for x in range(len(self.generic_dataset_args["landmarks"]))]
-            for uncert_key in self.ensemble_handler.uncertainty_keys
+            for uncert_key in ensemble_handler.uncertainty_keys
         }
 
         # Iterate through dataloader and save to log
-        generator = iter(self.test_dataloader)
+        generator = iter(test_dataloader)
         if inference_full_image:
             # Need to load and get results from each checkpoint. Load checkpoint for each batch because of memory issues running through entire dataloader
             # and saving multiple outputs for every checkpoint. In future can improve this by going through X (e.g.200 samples/10 batches) before changing checkpoint.
@@ -847,20 +847,22 @@ class NetworkTrainer(ABC):
                         # Directly pass the next data_dict to run_iteration rather than iterate it within.
                         l, _ = self.run_iteration(
                             generator,
-                            self.test_dataloader,
+                            test_dataloader,
                             backprop=False,
                             split=split,
                             log_coords=True,
                             logged_vars=evaluation_logs,
                             debug=debug,
                             direct_data_dict=direct_data_dict,
+                            restart_dataloader=False
+
                         )
 
                     # Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)
                     (
                         ensembles_analyzed,
                         ind_landmark_errors,
-                    ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
+                    ) = ensemble_handler.ensemble_inference_with_uncertainties(
                         evaluation_logs
                     )
 

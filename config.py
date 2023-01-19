@@ -120,6 +120,8 @@ _C.MODEL.PHDNET.CLAMP_DIST = None
 
 
 _C.INFERENCE = CN()
+_C.INFERENCE.SPLIT = "testing"  #Split/s of the data to perform inference. Can specify multiple splits.
+
 _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
 _C.INFERENCE.FIT_GAUSS = (
     False  # If false, uses max, if true, first fits gaussian to output heatmap.

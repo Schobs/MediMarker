@@ -103,6 +103,7 @@ def main():
     ########### TESTING ##############
     logger.info("TESTING PHASE")
 
+    inference_split = cfg.INFERENCE.SPLIT
     all_model_summaries = {}
     all_model_individuals = {}
 
@@ -117,7 +118,7 @@ def main():
             all_model_summaries,
             all_model_individuals,
         ) = trainer.run_inference_ensemble_models(
-            split="testing",
+            split=inference_split,
             checkpoint_list=cfg.INFERENCE.ENSEMBLE_CHECKPOINTS,
             debug=cfg.INFERENCE.DEBUG,
         )
@@ -139,14 +140,14 @@ def main():
 
             trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
             summary_results, ind_results = trainer.run_inference(
-                split="training", debug=cfg.INFERENCE.DEBUG
+                split=inference_split, debug=cfg.INFERENCE.DEBUG
             )
 
             all_model_summaries[model_name] = summary_results
             all_model_individuals[model_name] = ind_results
 
         else:
-            # Load Models that were saved.
+            # Load top models predefined below.
             model_paths = []
             model_names = []
             models_to_test = [
@@ -171,7 +172,7 @@ def main():
             for i, model_p in enumerate(model_paths):
                 logger.info("loading %s", model_p)
                 trainer.load_checkpoint(model_p, training_bool=False)
-                summary_results, ind_results = trainer.run_inference(split="testing", debug=cfg.INFERENCE.DEBUG)
+                summary_results, ind_results = trainer.run_inference(split=inference_split, debug=cfg.INFERENCE.DEBUG)
 
                 all_model_summaries[model_names[i]] = summary_results
                 all_model_individuals[model_names[i]] = ind_results
@@ -182,7 +183,7 @@ def main():
         else:
             output_append = ""
 
-    # Now Save all model results to a spreadsheet
+    ########### Now Save all model results to a spreadsheet #############
     if writer is not None:
         html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
         writer.log_html(html_to_log)

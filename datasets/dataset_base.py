@@ -13,7 +13,7 @@ from transforms.transformations import (
 )
 from transforms.dataloader_transforms import get_aug_package_loader
 
-from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image, maybe_get_coordinates_from_xlsx
+from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image, maybe_get_coordinates_from_xlsx, resize_coordinates
 from utils.im_utils.visualisation import visualize_patch
 
 
@@ -108,10 +108,10 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.dataset_split_size = dataset_args["dataset_split_size"]
 
         # Additional sample attributes found in the json datalist to return with each sample
-        self.additional_sample_attribute_keys = additional_sample_attribute_keys
+        self.additional_sample_attribute_keys = additional_sample_attribute_keys if additional_sample_attribute_keys is not None else []
         self.additional_sample_attributes = {
             k: [] for k in self.additional_sample_attribute_keys
-        } if self.additional_sample_attribute_keys is not None else []
+        }
 
         ############# Set Sample Mode #############
 
@@ -186,9 +186,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 base_dir=self.root_path,
             )
 
-            if self.dataset_split_size != -1:
-                datalist = datalist[: self.dataset_split_size]
-                self.logger.info("datalist: %s", datalist)
         # Not using CV, load the specified json file
         else:
             self.logger.info(
@@ -199,6 +196,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             )
 
         # datalist = datalist[:20]
+        if self.dataset_split_size != -1:
+            datalist = datalist[: self.dataset_split_size]
+            self.logger.info("datalist truncated to length: %s, giving: %s", self.dataset_split_size, datalist)
 
         # based on first image extenstion, get the load function.
         self.datatype_load = get_datatype_load(datalist[0]["image"])
@@ -234,6 +234,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     image,
                     interested_landmarks,
                 ) = load_and_resize_image(data["image"], interested_landmarks, self.load_im_size, self.datatype_load)
+
                 self.images.append(image)
                 self.image_resizing_factors.append(resized_factor)
                 self.original_image_sizes.append(original_size)
@@ -284,10 +285,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         Add more attributes to each sample.
 
         """
-        if self.additional_sample_attribute_keys:
-            for k_ in self.additional_sample_attribute_keys:
-                keyed_data = extra_data[k_]
-                self.additional_sample_attributes[k_].append(keyed_data)
+        for k_ in self.additional_sample_attribute_keys:
+            keyed_data = extra_data[k_]
+            self.additional_sample_attributes[k_].append(keyed_data)
 
     def __getitem__(self, index):
         """Main function of the dataloader. Gets a data sample.
@@ -354,13 +354,13 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
             # Sample a patch centred on given coordinates for this sample.
             elif self.sample_mode == "patch_centred":
-                coords_to_centre_around = self.patch_centring_coords[this_uid]
+                coords_to_centre_around = resize_coordinates(self.patch_centring_coords[this_uid],  resized_factor[0])
                 (
                     untransformed_im,
                     untransformed_coords,
                     landmarks_in_indicator,
                     x_y_corner,
-                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.logger, self.debug)
+                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords)
 
             kps = KeypointsOnImage(
                 [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
@@ -369,6 +369,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
             # list where [0] is image and [1] are coords.
             transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
+
             input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
             input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
 
