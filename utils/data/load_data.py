@@ -10,6 +10,7 @@ from transforms.transformations import (
 )
 
 import pandas as pd
+import ast
 
 
 def get_datatype_load(im_path):
@@ -156,20 +157,22 @@ def maybe_get_coordinates_from_xlsx(datapath, uids, landmarks_to_return, sheet_n
 
     datafame = pd.read_excel(datapath, sheet_name=sheet_name,  dtype={"uid": 'string'})
 
-    if isinstance(landmarks_to_return, int):
-        cols_to_return = ["L"+str(landmarks_to_return)]
-    elif isinstance(landmarks_to_return, (list, pd.core.series.Series, np.ndarray)):
-        cols_to_return = ["L"+str(i) for i in landmarks_to_return]
-    else:
-        return ValueError("landmarks_to_return must be int or list of ints")
+    # if isinstance(landmarks_to_return, int):
+    #     cols_to_return = ["L"+str(landmarks_to_return)]
+    # elif isinstance(landmarks_to_return, (list, pd.core.series.Series, np.ndarray)):
+    #     cols_to_return = ["L"+str(i) for i in landmarks_to_return]
+    # else:
+    #     return ValueError("landmarks_to_return must be int or list of ints")
 
     filtered_df = datafame[datafame['uid'].isin(uids)]
     assert filtered_df.shape[0] == len(uids), "Not all uids found in csv file"
 
-    return_data = filtered_df.loc[:, ["uid"] + cols_to_return]
+    return_data = filtered_df.loc[:, ["uid", "predicted_coords"]]
 
-    # return_dict = return_data.apply(lambda x: {'uid': x.uid, 'landmarks': x.tolist()[1:]}, axis=1).tolist()
-
-    # return_data.to_dict(orient='list')
+    # Parse the string to remove newlines and convert to numpy array. Only return columns requested. Create dict:
+    # {'uid1': [landmark1, landmark2, ...], 'uid2': [landmark1, landmark2, ...]}
+    return_dict = dict(zip(return_data.uid, np.array([ast.literal_eval(
+        x.replace(".", ",").replace("\n", ",")) for x in return_data.predicted_coords.tolist()])[:, landmarks_to_return]))
+#
 
     return return_dict

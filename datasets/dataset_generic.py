@@ -21,7 +21,7 @@ class DatasetGeneric(DatasetBase):
         #TO DO
     """
 
-    additional_sample_attribute_keys = []
+    additional_sample_attribute_keys = None
 
     def __init__(self, **kwargs):
 

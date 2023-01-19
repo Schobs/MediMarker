@@ -56,7 +56,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         debug: bool = False,
         input_size=[512, 512],
         num_res_supervisions: int = 5,
-        additional_sample_attribute_keys=[],
+        additional_sample_attribute_keys=None,
     ):
         """Initialize the dataset. This is the base class for all datasets.
 
@@ -111,7 +111,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.additional_sample_attribute_keys = additional_sample_attribute_keys
         self.additional_sample_attributes = {
             k: [] for k in self.additional_sample_attribute_keys
-        }
+        } if self.additional_sample_attribute_keys is not None else []
 
         ############# Set Sample Mode #############
 
@@ -284,9 +284,10 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         Add more attributes to each sample.
 
         """
-        for k_ in self.additional_sample_attribute_keys:
-            keyed_data = extra_data[k_]
-            self.additional_sample_attributes[k_].append(keyed_data)
+        if self.additional_sample_attribute_keys:
+            for k_ in self.additional_sample_attribute_keys:
+                keyed_data = extra_data[k_]
+                self.additional_sample_attributes[k_].append(keyed_data)
 
     def __getitem__(self, index):
         """Main function of the dataloader. Gets a data sample.
