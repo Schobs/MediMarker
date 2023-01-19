@@ -29,7 +29,8 @@ DATASET:
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0]
-    
+  TRAINSET_SIZE: 20  # -1 for full trainset size or int <= len(training_set)
+
  
 TRAINER:
   PERFORM_VALIDATION: True
@@ -42,7 +43,7 @@ SAMPLER:
   DATA_AUG: "Flatten"
   INPUT_SIZE : [512,512]
   SAMPLE_MODE: 'patch_centred' # ['patch_bias', 'full', "patch_centred"]
-  NUM_WORKERS: 2
+  NUM_WORKERS: 0
   DEBUG: False
   PATCH:
     SAMPLER_BIAS: 1.0
@@ -57,6 +58,9 @@ MODEL:
   GAUSS_SIGMA: 2
   ARCHITECTURE: "GP"  # ["U-Net" , "PHD-Net"]
   # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gp_test1/GPmodel_fold0.model"
+
+INFERENCE:
+  EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
 
 SSH: 
   AUTO_AMEND_PATHS: True

@@ -628,7 +628,7 @@ class NetworkTrainer(ABC):
                 self.device
             )  # C3 (and C1 if input size == full res size so full & target the same)
 
-        # C2
+        # C3
         if self.use_full_res_coords and not self.resize_first:
             upscale_factor = torch.tensor(
                 [data_dict["resizing_factor"][0], data_dict["resizing_factor"][1]]

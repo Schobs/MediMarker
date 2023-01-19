@@ -142,11 +142,19 @@ class GPTrainer(NetworkTrainer):
         )
 
         # Must initialize model with all training input and labels
+        self.logger.info("Loading training data...")
         self.training_data = next(iter(self.train_dataloader))
         self.all_training_input = torch.squeeze(self.training_data["image"]).type(torch.float32).to(self.device)
         self.all_training_labels = torch.squeeze(
             self.training_data["label"]["landmarks"]).type(torch.float32).to(self.device)
 
+        self.logger.info("Loading validation data...")
+        self.validation_data = next(iter(self.valid_dataloader))
+        # self.all_validation_input = torch.squeeze(self.training_data["image"]).type(torch.float32).to(self.device)
+        # self.all_validation_labels = torch.squeeze(
+        #     self.validation_data["label"]["landmarks"]).type(torch.float32).to(self.device)
+
+        self.logger.info("Initializing model with validation data...")
         self.network = ExactGPModel(self.all_training_input, self.all_training_labels, self.likelihood)
         self.network.to(self.device)
 
@@ -179,8 +187,11 @@ class GPTrainer(NetworkTrainer):
         if not self.was_initialized:
             self.initialize(True)
 
+        continue_training = True
         step = 0
-        while self.epoch < self.max_num_epochs:
+        while self.epoch < self.max_num_epochs and continue_training:
+            per_epoch_logs = self.dict_logger.get_epoch_logger()
+
             # Zero gradients from previous iteration
             self.optimizer.zero_grad()
             # Output from model
@@ -206,26 +217,104 @@ class GPTrainer(NetworkTrainer):
             self.comet_logger.log_metric(
                 "noise", self.network.likelihood.noise.item(), self.epoch
             )
+            per_epoch_logs = self.log_iter(output, per_epoch_logs, loss_dict, self.all_training_input, "training")
             # self.comet_logger.log_metric("training loss", loss, self.epoch)
 
-        self.best_valid_loss_epoch = self.epoch
+            if self.epoch % 50 == 0:
+                per_epoch_logs = self.validation(self.dict_logger.get_epoch_logger())
+                continue_training = self.on_epoch_end(per_epoch_logs)
 
-        self.best_valid_coords_epoch = self.epoch
-        self.save_checkpoint(
-            os.path.join(
-                self.output_folder, "GP_model_latest__fold" + str(self.fold) + ".model"
-            )
-        )
+        # self.save_checkpoint(
+        #     os.path.join(
+        #         self.output_folder, "GP_model_latest__fold" + str(self.generic_dataset_args["fold"]) + ".model"
+        #     )
+        # )
 
-        # Get into evaluation (predictive posterior) mode
+    def validation(self, per_epoch_logs):
+        self.network.eval()
+        self.likelihood.eval()
 
-        # # Test points are regularly spaced along [0,1]
-        # # Make predictions by feeding model through likelihood
-        # with torch.no_grad(), gpytorch.settings.fast_pred_var():
-        #     test_x = torch.linspace(0, 100, 100)
-        #     observed_pred = likelihood(model(test_x))
+        # print("observed_preds: ", observed_preds.shape)
+        # Test points are regularly spaced along [0,1]
+        # Make predictions by feeding model through likelihood
+        # inference_input = self.all_training_input[0].reshape(1,-1)
+        # inference_input = self.all_validation_input
+        # inference_labels = self.all_validation_labels
 
-        self.optimizer.step()
+        # print("inference_input shape: ", self.validation_data.shape)
+        for sample_idx, data_dict in enumerate(self.validation_data):
+            with torch.no_grad(), gpytorch.settings.fast_pred_var():
+
+                data = torch.squeeze(data_dict["image"]).type(torch.float32).to(self.device)
+                target = torch.squeeze(data_dict["label"]["landmarks"]).type(torch.float32).to(self.device)
+
+                predictions = self.likelihood(
+                    self.network(torch.unsqueeze(data, dim=0))
+                )
+
+                # observed_pred = observed_preds[sample_idx]
+
+                mean = predictions.mean.cpu().detach().numpy()
+                lower, upper = predictions.confidence_region()
+
+                cov_matr = predictions.covariance_matrix.cpu().detach().numpy()
+                err = np.linalg.norm(mean - target)
+
+                self.logger.info(
+                    "predictions for sample %s: %s and label %s with error %s",
+                    sample_idx, mean, target, err
+                )
+
+                self.logger.info(
+                    "mean shape %s and cov shape %s : ",
+                    mean.shape,
+                    cov_matr.shape,
+                )
+                self.logger.info("mean %s and cov %s", mean, cov_matr)
+
+                per_epoch_logs = self.log_iter(mean, per_epoch_logs, {}, data_dict,
+                                               "validation", log_coords=True, pred_coords=mean)
+
+        # all_val_errors.append(err)
+        return per_epoch_logs
+
+    def log_iter(self, output, logged_vars, loss_dict, data_dict, split, debug=False,  log_coords=False, pred_coords=None):
+        # Log info from this iteration.
+        if list(logged_vars.keys()) != []:
+            with torch.no_grad():
+
+                (
+                    pred_coords,
+                    pred_coords_input_size,
+                    extra_info,
+                    target_coords,
+                ) = self.maybe_get_coords(output, log_coords, data_dict)
+
+                logged_vars = self.dict_logger.log_key_variables(
+                    logged_vars,
+                    pred_coords,
+                    extra_info,
+                    target_coords,
+                    loss_dict,
+                    data_dict,
+                    log_coords,
+                    split,
+                )
+                if debug:
+                    debug_vars = [
+                        x
+                        for x in logged_vars["individual_results"]
+                        if x["uid"] in data_dict["uid"]
+                    ]
+                    self.eval_label_generator.debug_prediction(
+                        data_dict,
+                        output,
+                        pred_coords,
+                        pred_coords_input_size,
+                        debug_vars,
+                        extra_info,
+                    )
+        return logged_vars
 
     def run_inference(self, split, debug=False):
         raise NotImplementedError()
@@ -236,6 +325,12 @@ class GPTrainer(NetworkTrainer):
         # Test points are regularly spaced along [0,1]
         # Make predictions by feeding model through likelihood
         # inference_input = self.all_training_input[0].reshape(1,-1)
+
+        self.logger.info("Loading Testing data...")
+        self.testing = next(iter(self.test_dataloader))
+        self.all_validation_input = torch.squeeze(self.training_data["image"]).type(torch.float32).to(self.device)
+        self.all_validation_labels = torch.squeeze(
+            self.validation_data["label"]["landmarks"]).type(torch.float32).to(self.device)
         inference_input = self.all_testing_input
         inference_labels = self.all_testing_labels
         inference_ims = self.all_testing_input_ims
@@ -386,7 +481,7 @@ class GPTrainer(NetworkTrainer):
             [int, int]: predicted coordinates
         """
 
-        return
+        return output
 
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
         """
