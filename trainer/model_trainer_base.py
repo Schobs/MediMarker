@@ -45,7 +45,9 @@ class NetworkTrainer(ABC):
         # Dataset class to use
         self.dataset_class = dataset_class
         # Dataloader info
-        self.data_loader_batch_size = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE
+        self.data_loader_batch_size_train = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN
+        self.data_loader_batch_size_eval = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_EVAL
+
         self.num_batches_per_epoch = self.trainer_config.SOLVER.MINI_BATCH_SIZE
         self.gen_hms_in_mainthread = self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
 
@@ -687,8 +689,9 @@ class NetworkTrainer(ABC):
         inference_resolution = self.training_resolution
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
-        test_batch_size = self.maybe_alter_batch_size(test_dataset)
-        self.test_dataloader = DataLoader(
+        test_batch_size = self.maybe_alter_batch_size(test_dataset, self.data_loader_batch_size_eval)
+
+        test_dataloader = DataLoader(
             test_dataset,
             batch_size=test_batch_size,
             shuffle=False,
@@ -705,13 +708,13 @@ class NetworkTrainer(ABC):
         self.network.eval()
 
         # then iterate through dataloader and save to log
-        generator = iter(self.test_dataloader)
+        generator = iter(test_dataloader)
         if inference_full_image:
             while generator != None:
                 print("-", end="")
                 l, generator = self.run_iteration(
                     generator,
-                    self.test_dataloader,
+                    test_dataloader,
                     backprop=False,
                     split=split,
                     log_coords=True,
@@ -803,9 +806,11 @@ class NetworkTrainer(ABC):
         inference_resolution = self.training_resolution
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
+        test_batch_size = self.maybe_alter_batch_size(test_dataset, self.data_loader_batch_size_eval)
+
         test_dataloader = DataLoader(
             test_dataset,
-            batch_size=self.data_loader_batch_size,
+            batch_size=test_batch_size,
             shuffle=False,
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
@@ -1018,8 +1023,8 @@ class NetworkTrainer(ABC):
         self.logger.info("Using %s Dataloader workers and persist workers bool : %s ",
                          self.num_workers_cfg, self.persist_workers)
 
-        train_batch_size = self.maybe_alter_batch_size(train_dataset)
-        valid_batch_size = self.maybe_alter_batch_size(valid_dataset)
+        train_batch_size = self.maybe_alter_batch_size(train_dataset, self.data_loader_batch_size_train)
+        valid_batch_size = self.maybe_alter_batch_size(valid_dataset, self.data_loader_batch_size_eval)
 
         self.train_dataloader = DataLoader(
             train_dataset,
@@ -1107,12 +1112,12 @@ class NetworkTrainer(ABC):
         """
         imgaug.seed(np.random.get_state()[1][0] + worker_id)
 
-    def maybe_alter_batch_size(self, dataset):
+    def maybe_alter_batch_size(self, dataset, batch_size):
         """If the batch size is set to -1, then we use the entire dataset as the batch size.
             This is used when using GPs since we cannot mini-batch the GP training.
         """
 
-        if self.data_loader_batch_size == -1:
+        if batch_size == -1:
             return dataset.__len__()
         else:
-            return self.data_loader_batch_size
+            return batch_size

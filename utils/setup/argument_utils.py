@@ -286,10 +286,10 @@ def argument_checking(yaml_args):
 
         # 1)
         try:
-            if yaml_args.SOLVER.DATA_LOADER_BATCH_SIZE != -1:
+            if yaml_args.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN != -1:
                 raise ValueError(
-                    "You are using a GP model (MODEL.ARCHITECTURE = GP) but your SOLVER.DATA_LOADER_BATCH_SIZE is not -1. "
-                    "Minibatching not supported for GP so all data needs to be in one batch. Set this by setting SOLVER.DATA_LOADER_BATCH_SIZE = -1."
+                    "You are using a GP model (MODEL.ARCHITECTURE = GP) but your SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN is not -1. "
+                    "Minibatching not supported for GP so all data needs to be in one batch. Set this by setting SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN = -1."
                 )
         except ValueError as val_error:
             all_errors.append(val_error)

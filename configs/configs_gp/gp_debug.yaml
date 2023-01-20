@@ -12,11 +12,12 @@ SOLVER:
   DEEP_SUPERVISION: False
   NUM_RES_SUPERVISIONS: 1
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE: -1
+  DATA_LOADER_BATCH_SIZE_TRAIN: -1
   MAX_EPOCHS: 15000 
   MINI_BATCH_SIZE: 1
   # REGRESS_SIGMA: True
-
+  DATA_LOADER_BATCH_SIZE_EVAL: 1
+  BASE_LR: 0.1
   AUTO_MIXED_PRECISION: False
 
 
@@ -29,20 +30,22 @@ DATASET:
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0]
-  TRAINSET_SIZE: 20  # -1 for full trainset size or int <= len(training_set)
+  TRAINSET_SIZE: -1  # -1 for full trainset size or int <= len(training_set)
 
  
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
   CACHE_DATA: False
-  INFERENCE_ONLY: False
+  INFERENCE_ONLY: True
   
 
 SAMPLER:
   DATA_AUG: "Flatten"
   INPUT_SIZE : [512,512]
   SAMPLE_MODE: 'patch_centred' # ['patch_bias', 'full', "patch_centred"]
+  EVALUATION_SAMPLE_MODE: "patch_centred"  # ['patch_bias', 'full', "patch_centred"]
+
   NUM_WORKERS: 0
   DEBUG: False
   PATCH:

@@ -226,7 +226,7 @@ Now your dataset is in the correct directory structure and you have the JSON ann
         OUTPUT_DIR: "/path_to_output_folder/results"
 
     SOLVER:
-        DATA_LOADER_BATCH_SIZE: 32
+        DATA_LOADER_BATCH_SIZE_TRAIN: 32
 
     DATASET:
         ROOT: '/path_to_image_root/root_image_folder'
@@ -249,7 +249,7 @@ Now your dataset is in the correct directory structure and you have the JSON ann
 - TRAINER.FOLD: The fold number to use for training. This number will match the number in fold0.json, fold1.json etc. **If you are using cross-validation, set this to -1**.
 - TRAINER.CACHE_DATA: If you are using a small dataset, it is recommended to set this to True. This will cache the dataset in memory, which will speed up training. However, if you are using a large dataset, you may run out of memory. *Try as True first.*
 - TRAINER.INFERENCE_ONLY: If you want to train first, set this to False. If you have already trained a model and want to run inference on a new dataset, set this to True.
-- SOLVER.DATA_LOADER_BATCH_SIZE: The batch size to use for training. This should be set to the largest batch size your GPU can handle. First, try high and go smaller if you run out of memory. This will be automated in future.
+- SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN: The batch size to use for training. This should be set to the largest batch size your GPU can handle. First, try high and go smaller if you run out of memory. This will be automated in future.
 - SAMPLER.INPUT_SIZE: The size you want to resize the images to for training. Regardless of resolution uniformity in the dataset, you need to resize them to a common size. If possible, use the median size of the dataset. If the median resolution is too big to fit into memory, [512, 512] is a good bet. Alternatively you can use full-resolution images via patch-based training, explained in [[Patch-based Training]]. This will be automated in future.
 
 There are many other options you can set in the config file such as data augmentation scheme, learning schedule, architecture choice & parameters, loss function, sigma regression etc. See [[Config File]] for more information.
@@ -485,11 +485,11 @@ Configurations for the back propagation algorithm, learning rate policy, loss fu
     
      *Default:* 1000
 
-- **MINI_BATCH_SIZE** (int): How many mini-batches of size SOLVER.DATA_LOADER_BATCH_SIZE to train with per epoch.
+- **MINI_BATCH_SIZE** (int): How many mini-batches of size SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN to train with per epoch.
     
      *Default:* 150
 
-- **DATA_LOADER_BATCH_SIZE** (int): Number of samples per batch. Set as large as you can without running out of memory. Will automate this in future.
+- **DATA_LOADER_BATCH_SIZE_TRAIN** (int): Number of samples per batch. Set as large as you can without running out of memory. Will automate this in future.
     
      *Default:* 12
 

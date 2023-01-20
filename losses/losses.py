@@ -419,11 +419,11 @@ class GPLoss(nn.Module):
     def __init__(self, loss_func):
         super(GPLoss, self).__init__()
         self.loss = loss_func
-        self.loss_seperated_keys = ["all_loss"]
+        self.loss_seperated_keys = ["all_loss_all"]
 
-    def forward(self, x, y):
+    def forward(self, x, y, sigmas):
 
-        l = -self.loss(x, y)
+        l = -self.loss(x, y["landmarks"])
 
         loss_seperated = {"all_loss": l}
 

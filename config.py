@@ -72,7 +72,10 @@ _C.SOLVER.DECAY_POLICY = "poly"  # ["poly", None]
 # _C.SOLVER.TYPE = "SGD"
 _C.SOLVER.MAX_EPOCHS = 1000
 _C.SOLVER.MINI_BATCH_SIZE = 150
-_C.SOLVER.DATA_LOADER_BATCH_SIZE = 12
+_C.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN = 12
+_C.SOLVER.DATA_LOADER_BATCH_SIZE_EVAL = 12
+
+
 _C.SOLVER.NUM_RES_SUPERVISIONS = 5
 _C.SOLVER.AUTO_MIXED_PRECISION = True
 _C.SOLVER.DEEP_SUPERVISION = True
@@ -120,7 +123,7 @@ _C.MODEL.PHDNET.CLAMP_DIST = None
 
 
 _C.INFERENCE = CN()
-_C.INFERENCE.SPLIT = "testing"  #Split/s of the data to perform inference. Can specify multiple splits.
+_C.INFERENCE.SPLIT = "testing"  # Split/s of the data to perform inference. Can specify multiple splits.
 
 _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
 _C.INFERENCE.FIT_GAUSS = (

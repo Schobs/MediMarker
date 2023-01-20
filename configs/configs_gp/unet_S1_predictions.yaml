@@ -2,7 +2,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_validation"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_test"
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
@@ -12,13 +12,13 @@ SOLVER:
   DEEP_SUPERVISION: True
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE: 12
-  MAX_EPOCHS: 258
+  DATA_LOADER_BATCH_SIZE_TRAIN: 12
+  # MAX_EPOCHS: 258
   # REGRESS_SIGMA: True
 
 
 INFERENCE:
-  SPLIT: "validation"
+  SPLIT: "testing"
 
 
 DATASET:
