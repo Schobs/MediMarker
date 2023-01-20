@@ -288,159 +288,159 @@ class GPTrainer(NetworkTrainer):
     #                 )
     #     return logged_vars
 
-    def run_inference(self, split, debug=False):
-        raise NotImplementedError()
-        self.network.eval()
-        self.likelihood.eval()
+    # def run_inference(self, split, debug=False):
+    #     raise NotImplementedError()
+    #     self.network.eval()
+    #     self.likelihood.eval()
 
-        # print("observed_preds: ", observed_preds.shape)
-        # Test points are regularly spaced along [0,1]
-        # Make predictions by feeding model through likelihood
-        # inference_input = self.all_training_input[0].reshape(1,-1)
+    #     # print("observed_preds: ", observed_preds.shape)
+    #     # Test points are regularly spaced along [0,1]
+    #     # Make predictions by feeding model through likelihood
+    #     # inference_input = self.all_training_input[0].reshape(1,-1)
 
-        self.logger.info("Loading Testing data...")
-        self.testing = next(iter(self.test_dataloader))
-        self.all_validation_input = torch.squeeze(self.training_data["image"]).type(torch.float32).to(self.device)
-        self.all_validation_labels = torch.squeeze(
-            self.validation_data["label"]["landmarks"]).type(torch.float32).to(self.device)
-        inference_input = self.all_testing_input
-        inference_labels = self.all_testing_labels
-        inference_ims = self.all_testing_input_ims
-        print("inference_input shape: ", inference_input.shape)
-        print("training input shape: ", self.all_training_input.shape)
-        # print("all training ims shape: ", self.all_training_input_ims.shape)
-        # with torch.no_grad(), gpytorch.settings.fast_pred_var():
-        #     predictions = self.likelihood(self.network(inference_input))
+    #     self.logger.info("Loading Testing data...")
+    #     self.testing = next(iter(self.test_dataloader))
+    #     self.all_validation_input = torch.squeeze(self.training_data["image"]).type(torch.float32).to(self.device)
+    #     self.all_validation_labels = torch.squeeze(
+    #         self.validation_data["label"]["landmarks"]).type(torch.float32).to(self.device)
+    #     inference_input = self.all_testing_input
+    #     inference_labels = self.all_testing_labels
+    #     inference_ims = self.all_testing_input_ims
+    #     print("inference_input shape: ", inference_input.shape)
+    #     print("training input shape: ", self.all_training_input.shape)
+    #     # print("all training ims shape: ", self.all_training_input_ims.shape)
+    #     # with torch.no_grad(), gpytorch.settings.fast_pred_var():
+    #     #     predictions = self.likelihood(self.network(inference_input))
 
-        #     # observed_pred = observed_preds[sample_idx]
+    #     #     # observed_pred = observed_preds[sample_idx]
 
-        #     mean = predictions.mean.cpu().detach().numpy()
-        #     lower, upper = predictions.confidence_region()
+    #     #     mean = predictions.mean.cpu().detach().numpy()
+    #     #     lower, upper = predictions.confidence_region()
 
-        #     cov_matr = predictions.covariance_matrix.cpu().detach().numpy()
+    #     #     cov_matr = predictions.covariance_matrix.cpu().detach().numpy()
 
-        #     # first_sample_cv = [[cov_matr[0,0], cov_matr[0,1]], [cov_matr[1,0], cov_matr[1,1]]]
+    #     #     # first_sample_cv = [[cov_matr[0,0], cov_matr[0,1]], [cov_matr[1,0], cov_matr[1,1]]]
 
-        #     print("mean shape: ", mean.shape)
+    #     #     print("mean shape: ", mean.shape)
 
-        #     print("cov matrx shape: ", cov_matr.shape)
-        #     print("cov matrx: ", cov_matr)
+    #     #     print("cov matrx shape: ", cov_matr.shape)
+    #     #     print("cov matrx: ", cov_matr)
 
-        # print("all attributes: ", dir(predictions))
+    #     # print("all attributes: ", dir(predictions))
 
-        for sample_idx in range(len(inference_input)):
-            with torch.no_grad(), gpytorch.settings.fast_pred_var():
-                predictions = self.likelihood(
-                    self.network(torch.unsqueeze(inference_input[sample_idx], dim=0))
-                )
+    #     for sample_idx in range(len(inference_input)):
+    #         with torch.no_grad(), gpytorch.settings.fast_pred_var():
+    #             predictions = self.likelihood(
+    #                 self.network(torch.unsqueeze(inference_input[sample_idx], dim=0))
+    #             )
 
-                # observed_pred = observed_preds[sample_idx]
+    #             # observed_pred = observed_preds[sample_idx]
 
-                mean = predictions.mean.cpu().detach().numpy()
-                lower, upper = predictions.confidence_region()
+    #             mean = predictions.mean.cpu().detach().numpy()
+    #             lower, upper = predictions.confidence_region()
 
-                cov_matr = predictions.covariance_matrix.cpu().detach().numpy()
-                print(
-                    "predictions for sample %s: %s and label %s "
-                    % (sample_idx, mean, inference_labels[sample_idx])
-                )
+    #             cov_matr = predictions.covariance_matrix.cpu().detach().numpy()
+    #             print(
+    #                 "predictions for sample %s: %s and label %s "
+    #                 % (sample_idx, mean, inference_labels[sample_idx])
+    #             )
 
-                print(
-                    "mean and cov shape for this sample idx : ",
-                    mean.shape,
-                    cov_matr.shape,
-                )
-                print("mean and cov for this sample idx : ", mean, cov_matr)
+    #             print(
+    #                 "mean and cov shape for this sample idx : ",
+    #                 mean.shape,
+    #                 cov_matr.shape,
+    #             )
+    #             print("mean and cov for this sample idx : ", mean, cov_matr)
 
-                # PLot the 2D contour
+    #             # PLot the 2D contour
 
-                f, ax = plt.subplots(1, 2, figsize=(8, 3))
+    #             f, ax = plt.subplots(1, 2, figsize=(8, 3))
 
-                # create  kernel
-                m1 = mean[0]
-                s1 = cov_matr
-                k1 = multivariate_normal(mean=m1, cov=s1)
+    #             # create  kernel
+    #             m1 = mean[0]
+    #             s1 = cov_matr
+    #             k1 = multivariate_normal(mean=m1, cov=s1)
 
-                # create a grid of (x,y) coordinates at which to evaluate the kernels
-                xlim = (0, np.sqrt(len(inference_input[sample_idx])))
-                ylim = (0, np.sqrt(len(inference_input[sample_idx])))
-                xres = int(np.sqrt(len(inference_input[sample_idx])))
-                yres = int(np.sqrt(len(inference_input[sample_idx])))
+    #             # create a grid of (x,y) coordinates at which to evaluate the kernels
+    #             xlim = (0, np.sqrt(len(inference_input[sample_idx])))
+    #             ylim = (0, np.sqrt(len(inference_input[sample_idx])))
+    #             xres = int(np.sqrt(len(inference_input[sample_idx])))
+    #             yres = int(np.sqrt(len(inference_input[sample_idx])))
 
-                x = np.linspace(xlim[0], xlim[1], xres)
-                y = np.linspace(ylim[0], ylim[1], yres)
-                xx, yy = np.meshgrid(x, y)
+    #             x = np.linspace(xlim[0], xlim[1], xres)
+    #             y = np.linspace(ylim[0], ylim[1], yres)
+    #             xx, yy = np.meshgrid(x, y)
 
-                # evaluate kernels at grid points
-                xxyy = np.c_[xx.ravel(), yy.ravel()]
-                zz = k1.pdf(xxyy)
+    #             # evaluate kernels at grid points
+    #             xxyy = np.c_[xx.ravel(), yy.ravel()]
+    #             zz = k1.pdf(xxyy)
 
-                # reshape and plot image
-                img = zz.reshape((xres, yres))
-                ax[1].imshow(img)
+    #             # reshape and plot image
+    #             img = zz.reshape((xres, yres))
+    #             ax[1].imshow(img)
 
-                # show image with label
-                print("this im tensor shape: ", inference_ims[sample_idx].shape)
-                image_ex = inference_ims[sample_idx].cpu().detach().numpy()[0]
-                image_label = inference_labels[sample_idx].cpu().detach().numpy()
-                print("image ex shape ", image_ex.shape)
-                ax[0].imshow(image_ex)
+    #             # show image with label
+    #             print("this im tensor shape: ", inference_ims[sample_idx].shape)
+    #             image_ex = inference_ims[sample_idx].cpu().detach().numpy()[0]
+    #             image_label = inference_labels[sample_idx].cpu().detach().numpy()
+    #             print("image ex shape ", image_ex.shape)
+    #             ax[0].imshow(image_ex)
 
-                rect1 = patches.Rectangle(
-                    (int(image_label[0]), int(image_label[1])),
-                    3,
-                    3,
-                    linewidth=2,
-                    edgecolor="g",
-                    facecolor="none",
-                )
-                ax[0].add_patch(rect1)
+    #             rect1 = patches.Rectangle(
+    #                 (int(image_label[0]), int(image_label[1])),
+    #                 3,
+    #                 3,
+    #                 linewidth=2,
+    #                 edgecolor="g",
+    #                 facecolor="none",
+    #             )
+    #             ax[0].add_patch(rect1)
 
-                rect2 = patches.Rectangle(
-                    (int(image_label[0]), int(image_label[1])),
-                    3,
-                    3,
-                    linewidth=2,
-                    edgecolor="g",
-                    facecolor="none",
-                )
-                ax[1].add_patch(rect2)
-                rect3 = patches.Rectangle(
-                    (int(m1[0]), int(m1[1])),
-                    3,
-                    3,
-                    linewidth=2,
-                    edgecolor="r",
-                    facecolor="none",
-                )
-                ax[1].add_patch(rect3)
+    #             rect2 = patches.Rectangle(
+    #                 (int(image_label[0]), int(image_label[1])),
+    #                 3,
+    #                 3,
+    #                 linewidth=2,
+    #                 edgecolor="g",
+    #                 facecolor="none",
+    #             )
+    #             ax[1].add_patch(rect2)
+    #             rect3 = patches.Rectangle(
+    #                 (int(m1[0]), int(m1[1])),
+    #                 3,
+    #                 3,
+    #                 linewidth=2,
+    #                 edgecolor="r",
+    #                 facecolor="none",
+    #             )
+    #             ax[1].add_patch(rect3)
 
-                plt.show()
-                plt.close()
+    #             plt.show()
+    #             plt.close()
 
-        # # This contains predictions for both tasks, flattened out
-        # # The first half of the predictions is for the first task
-        # # The second half is for the second task
+    #     # # This contains predictions for both tasks, flattened out
+    #     # # The first half of the predictions is for the first task
+    #     # # The second half is for the second task
 
-        # # Plot training data as black stars
-        # y1_ax.plot(self.all_training_input.detach().numpy(), self.all_training_labels[:, 0].detach().numpy(), 'k*')
-        # # Predictive mean as blue line
-        # y1_ax.plot(test_x.numpy(), mean[:, 0].numpy(), 'b')
-        # # Shade in confidence
-        # y1_ax.fill_between(test_x.numpy(), lower[:, 0].numpy(), upper[:, 0].numpy(), alpha=0.5)
-        # y1_ax.set_ylim([-3, 3])
-        # y1_ax.legend(['Observed Data', 'Mean', 'Confidence'])
-        # y1_ax.set_title('Observed Values (Likelihood)')
+    #     # # Plot training data as black stars
+    #     # y1_ax.plot(self.all_training_input.detach().numpy(), self.all_training_labels[:, 0].detach().numpy(), 'k*')
+    #     # # Predictive mean as blue line
+    #     # y1_ax.plot(test_x.numpy(), mean[:, 0].numpy(), 'b')
+    #     # # Shade in confidence
+    #     # y1_ax.fill_between(test_x.numpy(), lower[:, 0].numpy(), upper[:, 0].numpy(), alpha=0.5)
+    #     # y1_ax.set_ylim([-3, 3])
+    #     # y1_ax.legend(['Observed Data', 'Mean', 'Confidence'])
+    #     # y1_ax.set_title('Observed Values (Likelihood)')
 
-        # # Plot training data as black stars
-        # y2_ax.plot(train_x.detach().numpy(), train_y[:, 1].detach().numpy(), 'k*')
-        # # Predictive mean as blue line
-        # y2_ax.plot(test_x.numpy(), mean[:, 1].numpy(), 'b')
-        # # Shade in confidence
-        # y2_ax.fill_between(test_x.numpy(), lower[:, 1].numpy(), upper[:, 1].numpy(), alpha=0.5)
-        # y2_ax.set_ylim([-3, 3])
-        # y2_ax.legend(['Observed Data', 'Mean', 'Confidence'])
-        # y2_ax.set_title('Observed Values (Likelihood)')
+    #     # # Plot training data as black stars
+    #     # y2_ax.plot(train_x.detach().numpy(), train_y[:, 1].detach().numpy(), 'k*')
+    #     # # Predictive mean as blue line
+    #     # y2_ax.plot(test_x.numpy(), mean[:, 1].numpy(), 'b')
+    #     # # Shade in confidence
+    #     # y2_ax.fill_between(test_x.numpy(), lower[:, 1].numpy(), upper[:, 1].numpy(), alpha=0.5)
+    #     # y2_ax.set_ylim([-3, 3])
+    #     # y2_ax.legend(['Observed Data', 'Mean', 'Confidence'])
+    #     # y2_ax.set_title('Observed Values (Likelihood)')
 
     def get_coords_from_heatmap(self, model_output, original_image_size):
         """Gets x,y coordinates from a model output. Here we use the final layer prediction of the U-Net,
