@@ -11,6 +11,8 @@ from transforms.transformations import (
     HeatmapsToTensor,
     normalize_cmr,
 )
+
+from tqdm import tqdm
 from transforms.dataloader_transforms import get_aug_package_loader
 
 from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image, maybe_get_coordinates_from_xlsx, resize_coordinates
@@ -19,6 +21,7 @@ from utils.im_utils.visualisation import visualize_patch
 
 import logging
 from abc import ABC, ABCMeta
+from alive_progress import alive_bar
 
 
 class DatasetMeta(ABCMeta, type(data.Dataset)):
@@ -195,6 +198,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 self.annotation_path, data_list_key=self.split, base_dir=self.root_path
             )
 
+            print("done")
+
         # datalist = datalist[:20]
         if self.dataset_split_size != -1:
             datalist = datalist[: self.dataset_split_size]
@@ -205,50 +210,57 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         self.load_function = lambda img: img
 
-        for idx, data in enumerate(datalist):
-            # Add coordinate labels as sample attribute, if annotations available
-            if (not isinstance(data["coordinates"], list)) or (
-                "has_annotation" in data.keys() and data["has_annotation"] == False
-            ):
-                # Case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
-                interested_landmarks = np.array([[0, 0]] * len(self.landmarks))
-                self.annotation_available.append(False)
-                self.full_res_coordinates.append(interested_landmarks)
+        # bar_logger
 
-                if self.split == "training" or self.split == "validation":
-                    raise ValueError(
-                        "Training/Validation data must have annotations. Check your data. Sample that failed: ",
-                        data,
-                    )
-            else:
-                # Case when we have annotations.
-                interested_landmarks = np.array(data["coordinates"])[self.landmarks, :2]
-                self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks, :2])
-                self.annotation_available.append(True)
+        with alive_bar(len(datalist), force_tty=True) as loading_bar:
+            loading_bar.text('Loading Data...')
+            for idx, data in enumerate(datalist):
+                self.logger.info("idx: %s", idx)
+                # Add coordinate labels as sample attribute, if annotations available
+                if (not isinstance(data["coordinates"], list)) or (
+                    "has_annotation" in data.keys() and data["has_annotation"] == False
+                ):
+                    # Case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
+                    interested_landmarks = np.array([[0, 0]] * len(self.landmarks))
+                    self.annotation_available.append(False)
+                    self.full_res_coordinates.append(interested_landmarks)
 
-            if self.cache_data:
-                # Determine original size and log whether we needed to resize it
-                (
-                    resized_factor,
-                    original_size,
-                    image,
-                    interested_landmarks,
-                ) = load_and_resize_image(data["image"], interested_landmarks, self.load_im_size, self.datatype_load)
+                    if self.split == "training" or self.split == "validation":
+                        raise ValueError(
+                            "Training/Validation data must have annotations. Check your data. Sample that failed: ",
+                            data,
+                        )
+                else:
+                    # Case when we have annotations.
+                    interested_landmarks = np.array(data["coordinates"])[self.landmarks, :2]
+                    self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks, :2])
+                    self.annotation_available.append(True)
 
-                self.images.append(image)
-                self.image_resizing_factors.append(resized_factor)
-                self.original_image_sizes.append(original_size)
+                if self.cache_data:
+                    # Determine original size and log whether we needed to resize it
+                    (
+                        resized_factor,
+                        original_size,
+                        image,
+                        interested_landmarks,
+                    ) = load_and_resize_image(data["image"], interested_landmarks, self.load_im_size, self.datatype_load)
 
-            else:
-                # Not caching, so just append image path.
-                self.images.append(data["image"])
+                    self.images.append(image)
+                    self.image_resizing_factors.append(resized_factor)
+                    self.original_image_sizes.append(original_size)
 
-            self.target_coordinates.append(interested_landmarks)
-            self.image_paths.append(data["image"])
-            self.uids.append(data["id"])
+                else:
+                    # Not caching, so just append image path.
+                    self.images.append(data["image"])
 
-            # Extended dataset class can add more attributes to each sample here
-            self.add_additional_sample_attributes(data)
+                self.target_coordinates.append(interested_landmarks)
+                self.image_paths.append(data["image"])
+                self.uids.append(data["id"])
+
+                # Extended dataset class can add more attributes to each sample here
+                self.add_additional_sample_attributes(data)
+
+                loading_bar()  # pylint: disable=not-callable
 
         # Maybe get external coordinates from xlsx for patch_centred sampling.
         self.patch_centring_coords = maybe_get_coordinates_from_xlsx(

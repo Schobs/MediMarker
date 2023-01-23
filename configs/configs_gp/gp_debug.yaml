@@ -25,8 +25,10 @@ SOLVER:
 
 DATASET:
   # DEBUG: True
-  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
-  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  # ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  # SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/'
+  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0]
@@ -36,7 +38,7 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: False
+  CACHE_DATA: True
   INFERENCE_ONLY: True
   
 
@@ -53,7 +55,7 @@ SAMPLER:
     RESOLUTION_TO_SAMPLE_FROM:  "input_size"
     SAMPLE_PATCH_SIZE: [64,64]
     # CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAS_DS5/individual_results_allfolds.xlsx"
-    CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_train_and_val/individual_results_fold0.xlsx"
+    CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_all/individual_results_fold0.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error_f0"
     CENTRED_PATCH_JITTER: 0.0
 

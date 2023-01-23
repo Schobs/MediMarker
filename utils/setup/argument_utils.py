@@ -83,23 +83,30 @@ def infer_additional_arguments(yaml_args):
     if yaml_args.SSH.AUTO_AMEND_PATHS:
 
         if "SSH_CONNECTION" not in os.environ:
-            yaml_args.DATASET.ROOT = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
-                                         Path(yaml_args.DATASET.ROOT).relative_to(Path(yaml_args.DATASET.ROOT).anchor))
+            if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.DATASET.ROOT:
+                yaml_args.DATASET.ROOT = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                             Path(yaml_args.DATASET.ROOT).relative_to(Path(yaml_args.DATASET.ROOT).anchor))
 
-            # yaml_args.DATASET.ROOT = os.path.join(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT, yaml_args.DATASET.ROOT)
-            yaml_args.DATASET.SRC_TARGETS = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
-                                                Path(yaml_args.DATASET.SRC_TARGETS).relative_to(Path(yaml_args.DATASET.SRC_TARGETS).anchor))
+            if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.DATASET.SRC_TARGETS:
+                yaml_args.DATASET.SRC_TARGETS = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                    Path(yaml_args.DATASET.SRC_TARGETS).relative_to(Path(yaml_args.DATASET.SRC_TARGETS).anchor))
 
-            yaml_args.OUTPUT.OUTPUT_DIR = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
-                                              Path(yaml_args.OUTPUT.OUTPUT_DIR).relative_to(Path(yaml_args.OUTPUT.OUTPUT_DIR).anchor))
+            if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.OUTPUT.OUTPUT_DIR:
+
+                yaml_args.OUTPUT.OUTPUT_DIR = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                  Path(yaml_args.OUTPUT.OUTPUT_DIR).relative_to(Path(yaml_args.OUTPUT.OUTPUT_DIR).anchor))
 
             if yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH is not None:
-                yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
-                                                                            Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).relative_to(Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).anchor))
+                if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH:
+
+                    yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                                                Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).relative_to(Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).anchor))
 
             if yaml_args.MODEL.CHECKPOINT is not None:
-                yaml_args.MODEL.CHECKPOINT = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
-                                                 Path(yaml_args.MODEL.CHECKPOINT).relative_to(Path(yaml_args.MODEL.CHECKPOINT).anchor))
+                if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.MODEL.CHECKPOINT:
+
+                    yaml_args.MODEL.CHECKPOINT = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                     Path(yaml_args.MODEL.CHECKPOINT).relative_to(Path(yaml_args.MODEL.CHECKPOINT).anchor))
 
     # Set logger path
 

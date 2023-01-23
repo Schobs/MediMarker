@@ -36,7 +36,6 @@ def main():
     # ---- setup logger ----
     # initialize_logging()
     logger = get_logger(cfg.OUTPUT.LOGGER_OUTPUT)
-
     logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
     logger.info("Config \n %s ", cfg)
 

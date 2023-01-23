@@ -57,6 +57,10 @@ class GPTrainer(NetworkTrainer):
                                          "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
                                          }
 
+        self.training_data = None
+        self.all_training_input = None
+        self.all_training_labels = None
+
     def initialize_network(self):
 
         if self.trainer_config.TRAINER.INFERENCE_ONLY:
@@ -67,7 +71,7 @@ class GPTrainer(NetworkTrainer):
         )
 
         # Must initialize model with all training input and labels
-        self.logger.info("Loading training data...")
+        self.logger.info("Loading training data for the GP...")
         self.training_data = next(iter(self.train_dataloader))
 
         self.training_data["image"] = torch.squeeze(self.training_data["image"]).type(torch.float32)
@@ -86,16 +90,16 @@ class GPTrainer(NetworkTrainer):
         # self.all_validation_labels = torch.squeeze(
         #     self.validation_data["label"]["landmarks"]).type(torch.float32).to(self.device)
 
-        self.logger.info("Initializing model with training data...")
+        self.logger.info("Initializing GP model with training data...")
         self.network = ExactGPModel(self.all_training_input, self.all_training_labels, self.likelihood)
         self.network.to(self.device)
 
         # Log network and initial weights
         if self.comet_logger:
             self.comet_logger.set_model_graph(str(self.network))
-            print("Logged the model graph.")
+            self.logger.info("Logged the model graph.")
 
-        print(
+        self.logger.info(
             "Initialized network architecture. #parameters: ",
             sum(p.numel() for p in self.network.parameters()),
         )
@@ -106,13 +110,13 @@ class GPTrainer(NetworkTrainer):
         self.learnable_params = list(self.network.parameters())
         self.optimizer = self.optimizer(self.learnable_params, **self.optimizer_kwargs)
 
-        print("Initialised optimizer.")
+        self.logger.info("Initialised optimizer.")
 
     def initialize_loss_function(self):
         self.loss_func = self.loss_func(self.likelihood, self.network)
         self.loss = GPLoss(self.loss_func)
 
-        print("initialized Loss function.")
+        self.logger.info("initialized Loss function.")
 
     # Override the train function
     def train(self):

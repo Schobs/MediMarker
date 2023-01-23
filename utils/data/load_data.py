@@ -1,5 +1,7 @@
+import logging
 import os
 import json
+import time
 from typing import Optional
 import nibabel as nib
 from PIL import Image
@@ -125,7 +127,13 @@ def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
         _type_: _description_
     """
 
+    logger = logging.getLogger()
+    s = time.time()
+
     original_image = data_type_load(image_path)
+    # logger.info("time im load: %s", time.time()-s)
+    s = time.time()
+
     original_size = np.expand_dims(np.array(list(original_image.size)), 1)
     if list(original_image.size) != load_im_size:
         resizing_factor = [
@@ -142,6 +150,8 @@ def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
     image = np.expand_dims(
         normalize_cmr(original_image.resize(load_im_size)), axis=0
     )
+
+    # logger.info("time im resize: %s", time.time()-s)
 
     return resized_factor, original_size, image, coords
 

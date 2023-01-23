@@ -178,8 +178,9 @@ _C.OUTPUT.RESULTS_CSV_APPEND = None
 # ---------------------------------------------------------------------------- #
 
 _C.SSH = CN()
-_C.SSH.AUTO_AMEND_PATHS = False
+_C.SSH.AUTO_AMEND_PATHS = True
 _C.SSH.LOCAL_PATH_TO_SSH_MOUNT = "/mnt/bess"
+_C.SSH.MATCH_SSH_STRING_FOR_AMEND = '/shared/tale2/'
 
 
 def get_cfg_defaults():
