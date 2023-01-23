@@ -98,7 +98,7 @@ class UnetTrainer(NetworkTrainer):
             )
 
         ################# Settings for saving checkpoints ##################################
-        self.save_every = 25
+        # self.save_every = 25
 
     def initialize_network(self):
         """Initialise the network."""

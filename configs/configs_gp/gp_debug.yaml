@@ -66,6 +66,7 @@ MODEL:
 
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
-
+  DEBUG: True
+  
 SSH: 
   AUTO_AMEND_PATHS: True

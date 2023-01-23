@@ -125,12 +125,12 @@ class NetworkTrainer(ABC):
 
         # Checkpointing params
         self.save_every = 25
+        self.validate_every = self.trainer_config.TRAINER.VALIDATE_EVERY
+
         self.save_latest_only = (
             self.trainer_config.TRAINER.SAVE_LATEST_ONLY
         )  # if false it will not store/overwrite _latest but separate files each
-        self.save_intermediate_checkpoints = (
-            True  # whether or not to save checkpoint_latest
-        )
+
 
         # Loss function
 
@@ -159,6 +159,7 @@ class NetworkTrainer(ABC):
         self.epoch = 0
         self.best_valid_loss = 999999999999999999999999999
         self.best_valid_coord_error = 999999999999999999999999999
+        self.best_valid_coords_epoch = 0
         self.best_valid_loss_epoch = 0
         self.epochs_wo_val_improv = 0
         self.print_initiaization_info = True
@@ -167,8 +168,8 @@ class NetworkTrainer(ABC):
 
     def initialize(self, training_bool=True):
         """
-        Initialize profiler, comet logger, training/val dataloaders, network, optimizer, 
-        loss, automixed precision 
+        Initialize profiler, comet logger, training/val dataloaders, network, optimizer,
+        loss, automixed precision
         """
         # torch.backends.cudnn.benchmark = True
 
@@ -259,7 +260,7 @@ class NetworkTrainer(ABC):
 
     def train(self):
         """
-        The main training loop. For every epoch we train and validate. Each training epoch covers a number of minibatches 
+        The main training loop. For every epoch we train and validate. Each training epoch covers a number of minibatches
         of a certain batch size, defined in the config file.
         """
         if not self.was_initialized:
@@ -292,22 +293,24 @@ class NetworkTrainer(ABC):
                 if self.comet_logger:
                     self.comet_logger.log_metric("training loss iteration", l, step)
                 step += 1
-            # del generator
-            self.logger.info("validation, %s", self.epoch)
 
-            with torch.no_grad():
-                self.network.eval()
-                generator = iter(self.valid_dataloader)
-                while generator != None:
-                    l, generator = self.run_iteration(
-                        generator,
-                        self.valid_dataloader,
-                        backprop=False,
-                        split="validation",
-                        log_coords=True,
-                        logged_vars=per_epoch_logs,
-                        restart_dataloader=False
-                    )
+            if self.epoch % self.validate_every == 0:
+                # del generator
+                self.logger.info("validation, %s", self.epoch)
+
+                with torch.no_grad():
+                    self.network.eval()
+                    generator = iter(self.valid_dataloader)
+                    while generator != None:
+                        l, generator = self.run_iteration(
+                            generator,
+                            self.valid_dataloader,
+                            backprop=False,
+                            split="validation",
+                            log_coords=True,
+                            logged_vars=per_epoch_logs,
+                            restart_dataloader=False
+                        )
 
             self.epoch_end_time = time()
 
@@ -561,23 +564,13 @@ class NetworkTrainer(ABC):
         """
 
         fold_str = str(self.generic_dataset_args["fold"])
-        if (
-            self.save_intermediate_checkpoints
-            and (self.epoch % self.save_every == (self.save_every - 1))
-        ) or self.epoch == self.max_num_epochs - 1:
+        if (self.epoch % self.save_every == 0) or (self.epoch == self.max_num_epochs - 1):
             self.logger.info("saving scheduled checkpoint file...")
             if not self.save_latest_only:
-                self.save_checkpoint(
-                    os.path.join(
-                        self.output_folder,
-                        "model_ep_" + str(self.epoch) + "_fold" + fold_str + ".model",
-                    )
-                )
-
-                if self.epoch >= 150:
-                    self.save_every = 50
-                if self.epoch >= 250:
-                    self.save_every = 100
+                ckpt_save_pth = os.path.join(self.output_folder, "model_ep_" +
+                                             str(self.epoch) + "_fold" + fold_str + ".model")
+                self.save_checkpoint(ckpt_save_pth)
+                self.logger.info("saved checkpoint at %s", ckpt_save_pth)
             self.save_checkpoint(
                 os.path.join(
                     self.output_folder, "model_latest_fold" + (fold_str) + ".model"

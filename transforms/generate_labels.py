@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patchesplt
 import torch.nn.functional as F
 import cv2
+from scipy.stats import multivariate_normal
 
 
 class LabelGenerator(ABC):
@@ -127,17 +128,10 @@ class GPLabelGenerator(LabelGenerator):
         """
         pass
 
-    def debug_sample(self, sample_dict, untrans_image, untrans_coords):
+    def debug_sample(self, sample_dict, image, coordinates):
         """Visually debug a sample. Provide logging and visualisation of the sample."""
 
-        # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
         pass
-        # visualize_image_trans_coords(
-        #     untrans_image[0],
-        #     untrans_coords,
-        #     sample_dict["image"][0],
-        #     sample_dict["target_coords"],
-        # )
 
     def debug_crop(
         self, original_im, cropped_im, original_lms, normalized_lms, lms_indicators
@@ -161,6 +155,7 @@ class GPLabelGenerator(LabelGenerator):
         input_size_pred_coords,
         logged_vars,
         extra_info,
+        min_error=0,
     ):
         """Visually debug a prediction and compare to the target. Provide logging and visualisation of the sample."""
         coordinate_label = input_dict["label"]["landmarks"]
@@ -169,132 +164,76 @@ class GPLabelGenerator(LabelGenerator):
         full_res_coords = np.array(input_dict["full_res_coords"])
         transformed_input_image = input_dict["image"]
 
-        model_output_coords = [x.cpu().detach().numpy() for x in prediction_output]
+        model_output_coords = [x.cpu().detach().numpy() for x in prediction_output.mean]
 
         predicted_coords = [x.cpu().detach().numpy() for x in predicted_coords]
-        input_size_pred_coords = extra_info["coords_og_size"]
+        # input_size_pred_coords = extra_info["coords_og_size"]
 
         for sample_idx, ind_sample in enumerate(logged_vars):
-            print(
-                "\n uid: %s. Mean Error: %s "
-                % (ind_sample["uid"], ind_sample["Error All Mean"])
+            f, ax = plt.subplots(1, 2, figsize=(8, 3))
+            # extra_info = {"lower": lower, "upper": upper, "cov_matr": cov_matr}
+
+            # extra_info = ind_sample["extra_info"]
+            # create  kernel
+            m1 = model_output_coords[sample_idx][0]
+            s1 = extra_info["cov_matr"][sample_idx]
+            k1 = multivariate_normal(mean=m1, cov=s1)
+
+            # create a grid of (x,y) coordinates at which to evaluate the kernels
+            xlim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
+            ylim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
+            xres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
+            yres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
+
+            x = np.linspace(xlim[0], xlim[1], xres)
+            y = np.linspace(ylim[0], ylim[1], yres)
+            xx, yy = np.meshgrid(x, y)
+
+            # evaluate kernels at grid points
+            xxyy = np.c_[xx.ravel(), yy.ravel()]
+            zz = k1.pdf(xxyy)
+
+            # reshape and plot image
+            img = zz.reshape((xres, yres))
+            ax[1].imshow(img)
+
+            # show image with label
+            image_label = coordinate_label[sample_idx][0]
+            image_ex = transformed_input_image[sample_idx][0].cpu().detach().numpy()
+
+            ax[0].imshow(image_ex.reshape((xres, yres)))
+
+            rect1 = patchesplt.Rectangle(
+                (int(image_label[0]), int(image_label[1])),
+                3,
+                3,
+                linewidth=2,
+                edgecolor="g",
+                facecolor="none",
             )
+            ax[0].add_patch(rect1)
 
-            # Only show debug if any landmark error is >10 pixels!
-            if (
-                len(
-                    [
-                        x
-                        for x in range(len(predicted_coords[sample_idx]))
-                        if (
-                            ind_sample["L" + str(x)] is not None and ind_sample["L" + str(x)] > 10
-                        )
-                    ]
-                )
-                > 0
-            ):
-                fig, ax = plt.subplots(1, ncols=1, squeeze=False)
+            rect2 = patchesplt.Rectangle(
+                (int(image_label[0]), int(image_label[1])),
+                3,
+                3,
+                linewidth=2,
+                edgecolor="g",
+                facecolor="none",
+            )
+            ax[1].add_patch(rect2)
+            rect3 = patchesplt.Rectangle(
+                (int(m1[0]), int(m1[1])),
+                3,
+                3,
+                linewidth=2,
+                edgecolor="r",
+                facecolor="none",
+            )
+            ax[1].add_patch(rect3)
 
-                for coord_idx, pred_coord in enumerate(predicted_coords[sample_idx]):
-                    print(
-                        "L%s: Full Res Prediction: %s, Full Res Target: %s, Error: %s. Input Res targ %s, input res pred %s."
-                        % (
-                            coord_idx,
-                            pred_coord,
-                            full_res_coords[sample_idx][coord_idx],
-                            ind_sample["L" + str(coord_idx)],
-                            transformed_targ_coords[sample_idx][coord_idx],
-                            input_size_pred_coords[sample_idx][coord_idx],
-                        )
-                    )
-
-                    # difference between these is removing the padding (so -128, or whatever the patch padding was)
-                    print(
-                        "predicted (red) vs  target coords (green): ",
-                        input_size_pred_coords[sample_idx][coord_idx],
-                        transformed_targ_coords[sample_idx][coord_idx],
-                    )
-
-                    # 1) show input image with target lm and predicted lm
-                    # 2) show predicted heatmap
-                    # 3 show target heatmap
-
-                    # 1)
-                    ax[0, 0].imshow(transformed_input_image[sample_idx][0])
-                    rect1 = patchesplt.Rectangle(
-                        (
-                            transformed_targ_coords[sample_idx][coord_idx][0],
-                            transformed_targ_coords[sample_idx][coord_idx][1],
-                        ),
-                        6,
-                        6,
-                        linewidth=2,
-                        edgecolor="g",
-                        facecolor="none",
-                    )
-                    ax[0, 0].add_patch(rect1)
-                    rect2 = patchesplt.Rectangle(
-                        (
-                            input_size_pred_coords[sample_idx][coord_idx][0]
-                            .detach()
-                            .numpy(),
-                            input_size_pred_coords[sample_idx][coord_idx][1]
-                            .detach()
-                            .cpu()
-                            .numpy(),
-                        ),
-                        6,
-                        6,
-                        linewidth=2,
-                        edgecolor="pink",
-                        facecolor="none",
-                    )
-                    ax[0, 0].add_patch(rect2)
-
-                    ax[0, 0].text(
-                        transformed_targ_coords[sample_idx][coord_idx][0],
-                        transformed_targ_coords[sample_idx][coord_idx][1]
-                        + 10,  # Position
-                        "L" + str(coord_idx),  # Text
-                        verticalalignment="bottom",  # Centered bottom with line
-                        horizontalalignment="center",  # Centered with horizontal line
-                        fontsize=12,  # Font size
-                        color="g",  # Color
-                    )
-                    if ind_sample["L" + str(coord_idx)] > 10:
-                        pred_text = "r"
-                    else:
-                        pred_text = "pink"
-                    ax[0, 0].text(
-                        input_size_pred_coords[sample_idx][coord_idx][0]
-                        .detach()
-                        .cpu()
-                        .numpy(),
-                        input_size_pred_coords[sample_idx][coord_idx][1]
-                        .detach()
-                        .cpu()
-                        .numpy()
-                        + 10,  # Position
-                        "L"
-                        + str(coord_idx)
-                        + " E="
-                        + str(np.round(ind_sample["L" + str(coord_idx)], 2)),  # Text
-                        verticalalignment="bottom",  # Centered bottom with line
-                        horizontalalignment="center",  # Centered with horizontal line
-                        fontsize=12,  # Font size
-                        color=pred_text,  # Color
-                    )
-                    ax[0, 0].set_title(
-                        "uid: %s. Mean Error: %s +/- %s"
-                        % (
-                            ind_sample["uid"],
-                            np.round(ind_sample["Error All Mean"], 2),
-                            np.round(ind_sample["Error All Std"]),
-                        )
-                    )
-
-                plt.show()
-                plt.close()
+            plt.show()
+            plt.close()
 
 
 class UNetLabelGenerator(LabelGenerator):
