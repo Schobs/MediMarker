@@ -1,4 +1,5 @@
 import copy
+import logging
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -98,6 +99,7 @@ class GPLabelGenerator(LabelGenerator):
 
     def __init__(self):
         super(LabelGenerator, self).__init__()
+        self.logger = logging.getLogger()
 
     def generate_labels(
         self,
@@ -131,16 +133,18 @@ class GPLabelGenerator(LabelGenerator):
     def debug_sample(self, sample_dict, image, coordinates):
         """Visually debug a sample. Provide logging and visualisation of the sample."""
 
-        pass
+        # Should debug the sample here. Need to turn it back into a patch........
+
+        self.logger.info("Sample Dict: %s", sample_dict)
 
     def debug_crop(
         self, original_im, cropped_im, original_lms, normalized_lms, lms_indicators
     ):
         """Visually debug a cropped sample. Provide logging and visualisation of the sample."""
 
-        print("before coords: ", original_lms)
-        print("normalized lms: ", normalized_lms)
-        print("landmark indicators", lms_indicators)
+        self.logger.info("before coords %s: ", original_lms)
+        self.logger.info("normalized lms %s: ", normalized_lms)
+        self.logger.info("landmark indicators %s", lms_indicators)
 
         # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
         visualize_imageNcoords_cropped_imgNnormcoords(
@@ -241,6 +245,7 @@ class UNetLabelGenerator(LabelGenerator):
 
     def __init__(self):
         super(LabelGenerator, self).__init__()
+        self.logger = logging.getLogger()
 
     def generate_labels(
         self,
@@ -324,9 +329,9 @@ class UNetLabelGenerator(LabelGenerator):
     ):
         """Visually debug a cropped sample. Provide logging and visualisation of the sample."""
 
-        print("before coords: ", original_lms)
-        print("normalized lms: ", normalized_lms)
-        print("landmark indicators", lms_indicators)
+        self.logger.info("before coords: %s ", original_lms)
+        self.logger.info("normalized lms:  %s", normalized_lms)
+        self.logger.info("landmark indicators  %s", lms_indicators)
 
         # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
         visualize_imageNcoords_cropped_imgNnormcoords(
@@ -359,10 +364,8 @@ class UNetLabelGenerator(LabelGenerator):
         input_size_pred_coords = extra_info["coords_og_size"]
 
         for sample_idx, ind_sample in enumerate(logged_vars):
-            print(
-                "\n uid: %s. Mean Error: %s "
-                % (ind_sample["uid"], ind_sample["Error All Mean"])
-            )
+            self.logger.info(
+                "\n uid: %s. Mean Error: %s ", ind_sample["uid"], ind_sample["Error All Mean"])
             colours = np.arange(len(predicted_coords[sample_idx]))
 
             # Only show debug if any landmark error is >10 pixels!
@@ -382,7 +385,7 @@ class UNetLabelGenerator(LabelGenerator):
                 fig, ax = plt.subplots(1, ncols=1, squeeze=False)
 
                 for coord_idx, pred_coord in enumerate(predicted_coords[sample_idx]):
-                    print(
+                    self.logger.info(
                         "L%s: Full Res Prediction: %s, Full Res Target: %s, Error: %s. Input Res targ %s, input res pred %s."
                         % (
                             coord_idx,
@@ -395,8 +398,8 @@ class UNetLabelGenerator(LabelGenerator):
                     )
 
                     # difference between these is removing the padding (so -128, or whatever the patch padding was)
-                    print(
-                        "predicted (red) vs  target coords (green): ",
+                    self.logger.info(
+                        "predicted (red) %s vs  target coords (green) %s ",
                         input_size_pred_coords[sample_idx][coord_idx],
                         transformed_targ_coords[sample_idx][coord_idx],
                     )

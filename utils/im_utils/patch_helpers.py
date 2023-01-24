@@ -1,6 +1,6 @@
 import json
 import numpy as np
-from utils.im_utils.visualisation import visualize_patch
+from utils.im_utils.visualisation import visualize_centre_patch, visualize_patch
 import logging
 
 
@@ -178,11 +178,31 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
     logger = logging.getLogger()
 
     assert len(coords_to_centre_around) == 1, "Only one landmark to centre sampled patch around is supported"
+    assert 0 <= centre_patch_jitter <= 1.0, "centre_patch_jitter must be between 0 and 1 (A proportion of the patch)."
     if groundtruth_lms is not None:
         assert len(groundtruth_lms) == len(
             coords_to_centre_around), "Number of landmarks must match number of landmarks to centre around (i.e. 1)"
 
     centre_coord = coords_to_centre_around[0]
+
+    # Do the jitter around the centre landmark
+    # TODO: jitter should be a float between 0-1. This will be the percentage of the patch size to jitter by.
+    # Is % of image better than exact pixel # to jitter by? For now, it will be %
+    # Pick a random direction in x and y, and move centre by that much.
+    # Then the image edge code will handle if centre is off the image.
+    if centre_patch_jitter > 0:
+        # Jitter needs to ensure centre_coord is still in the patch. Add some pixels for safety of image edges.
+        max_x_jitter = max(0, ((sample_patch_size[0]/2)*centre_patch_jitter) - 5)
+        max_y_jitter = max(0, ((sample_patch_size[1]/2)*centre_patch_jitter) - 5)
+
+        x_dir = np.random.choice([-1, 1])
+        y_dir = np.random.choice([-1, 1])
+        x_jitter = x_dir * np.random.randint(0, max_x_jitter)
+        y_jitter = y_dir * np.random.randint(0, max_y_jitter)
+
+        centre_coord = [centre_coord[0] + x_jitter, centre_coord[1] + y_jitter]
+
+        # raise NotImplementedError("Jitter not implemented for centre patch sampling")
 
     # Need to cover case where the landmark is near the edge of the image.
     if centre_coord[0] > (load_im_size[0]-(sample_patch_size[0]/2)):
@@ -195,9 +215,9 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
     else:
         y_min = centre_coord[1] - (sample_patch_size[1]/2)
 
-    # Do the jitter around the centre landmark
-    if centre_patch_jitter > 0:
-        raise NotImplementedError("Jitter not implemented for centre patch sampling")
+    # Cover the case where the landmark is near the close edge of the image.
+    x_min = max(0, x_min)
+    y_min = max(0, y_min)
 
     # check if the GT landmark is in the patch
     if groundtruth_lms is not None:
@@ -206,32 +226,13 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
         else:
             landmarks_in_indicator = 1
 
-    # Add the safe padding size
-    y_rand_safe = y_min + safe_padding
-    x_rand_safe = x_min + safe_padding
-
-    # First pad image
-    padded_image = np.expand_dims(
-        np.pad(image[0], (safe_padding, safe_padding)), axis=0
-    )
-    padded_patch_size = [x + (2 * safe_padding) for x in sample_patch_size]
-
-    # We pad before and after the slice.
-    y_rand_pad = int(y_rand_safe - safe_padding)
-    x_rand_pad = int(x_rand_safe - safe_padding)
-
-    cropped_padded_sample = padded_image[
-        :,
-        y_rand_pad: y_rand_pad + padded_patch_size[1],
-        x_rand_pad: x_rand_pad + padded_patch_size[0],
-    ]
-
+    patch_image = image[:, int(y_min):int(y_min+sample_patch_size[1]), int(x_min):int(x_min+sample_patch_size[0])]
     if groundtruth_lms is not None:
         # Calculate the new origin: 2*safe_padding bc we padded image & then added pad to the patch.
         normalized_landmarks = [
             [
-                (groundtruth_lms[0][0] + 2*safe_padding) - (x_rand_safe),
-                (groundtruth_lms[0][1] + 2*safe_padding) - (y_rand_safe),
+                groundtruth_lms[0][0] - (x_min),
+                groundtruth_lms[0][1] - (y_min),
             ]
         ]
     # If not provided, just return 0,0
@@ -240,43 +241,44 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
 
     normalized_centre_coords = [
         [
-            (coords_to_centre_around[0][0] + safe_padding) - (x_min),
-            (coords_to_centre_around[0][1] + safe_padding) - (y_min),
+            centre_coord[0] - (x_min),
+            centre_coord[1] - (y_min),
         ]
     ]
 
     if debug:
-        padded_lm = [groundtruth_lms[0][0] + safe_padding, groundtruth_lms[0][1] + safe_padding]
 
-        logger.info(
-            "\n \n \n the min xy is [%s,%s].  the min xy safe is [%s,%s]. padded is [%s, %s] full centre coord landmark is %s, full Gt is %s, padded lm is %s \
-            and the normalized landmark is %s  and normalized centre coords is %s. Is GT in patch? %s: ",
-            x_min,
-            y_min,
-            x_rand_safe,
-            y_rand_safe,
-            x_rand_pad,
-            y_rand_pad,
-            centre_coord,
-            groundtruth_lms,
-            padded_lm,
-            normalized_landmarks,
-            normalized_centre_coords,
-            landmarks_in_indicator
-        )
+        if centre_patch_jitter > 0:
 
-        visualize_patch(
-            image[0],
-            centre_coord,
-            padded_image[0],
-            padded_lm,
-            cropped_padded_sample[0],
-            normalized_landmarks[0],
-            [x_rand_pad, y_rand_pad],
+            logger.info("The original center coord passed is: %s,", coords_to_centre_around[0])
+            logger.info("The jitter level %s, and x_jitter and y_jitter is: %s, %s.",
+                        centre_patch_jitter, x_jitter, y_jitter)
+            logger.info("The new centre coord is: %s ", centre_coord)
+            logger.info("The sample patch size is: %s, so the x_min and y_min is: %s, %s ",
+                        sample_patch_size, x_min, y_min)
+            logger.info("The target lm is %s so the landmark_in indicator is: %s ",
+                        groundtruth_lms[0], landmarks_in_indicator,)
+            # logger.info("After we pad the image, the new x_rand_safe and y_rand_safe is: %s, %s  ",
+            #             x_rand_safe, y_rand_safe)
+            # logger.info("the new x_rand_pad and y_rand_pad is: %s, %s ", x_rand_pad, y_rand_pad)
+
+            logger.info("The normalized centre coords are: % s ", normalized_centre_coords)
+            logger.info("The normalized landmark is : % s", normalized_landmarks)
+
+        # full_landmarks include: original center, jittered center, full groundtruth
+        # padded_landmarks include : padded original center,, full groundtruth, jittered padded center
+        # patch_landmarks include : original_norm_center, jittered_normalized center coords, normalized GT
+        visualize_centre_patch(
+            full_im=image[0],
+            full_landmarks=[coords_to_centre_around[0],  groundtruth_lms[0], centre_coord],
+            patch_landmarks=[coords_to_centre_around[0] - [x_min, y_min],
+                             normalized_landmarks[0], normalized_centre_coords[0]],
+            image_patch=patch_image[0],
+
         )
 
     return (
-        cropped_padded_sample,
+        patch_image,
         normalized_landmarks,
         landmarks_in_indicator,
         [x_min, y_min],

@@ -29,7 +29,7 @@ class GPTrainer(NetworkTrainer):
         super(GPTrainer, self).__init__(**kwargs)
 
         # global config variable
-        self.early_stop_patience = 250
+        # self.early_stop_patience = 250
 
         # Label generator
         self.train_label_generator = self.eval_label_generator = GPLabelGenerator()
@@ -116,7 +116,6 @@ class GPTrainer(NetworkTrainer):
             self.initialize(True)
 
         continue_training = True
-        step = 0
         while self.epoch < self.max_num_epochs and continue_training:
 
             self.epoch_start_time = time()
@@ -138,11 +137,11 @@ class GPTrainer(NetworkTrainer):
             )
 
             if self.comet_logger:
-                self.comet_logger.log_metric("training loss iteration", l, step)
-            step += 1
+                self.comet_logger.log_metric("training loss", l, self.epoch)
+                self.comet_logger.log_metric("noise", self.network.likelihood.noise.item(), self.epoch)
 
             # We validate every 200 epochs
-            if self.epoch % 200 == 0:
+            if self.epoch % self.validate_every == 0:
                 self.logger.info("validation, %s", self.epoch)
 
                 with torch.no_grad():
@@ -159,14 +158,14 @@ class GPTrainer(NetworkTrainer):
                             restart_dataloader=False
                         )
 
-                self.epoch_end_time = time()
+            self.epoch_end_time = time()
 
-                continue_training = self.on_epoch_end(per_epoch_logs)
+            continue_training = self.on_epoch_end(per_epoch_logs)
 
-                if not continue_training:
-                    if self.profiler:
-                        self.profiler.stop()
-                    break
+            if not continue_training:
+                if self.profiler:
+                    self.profiler.stop()
+                break
 
             self.epoch += 1
 

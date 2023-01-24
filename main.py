@@ -27,7 +27,8 @@ def main():
     print("==> Using device " + device)
 
     seed = cfg.SOLVER.SEED
-    seed_everything(seed)
+    if seed is not None:
+        seed_everything(seed)
 
     os.makedirs(cfg.OUTPUT.OUTPUT_DIR, exist_ok=True)
     time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")

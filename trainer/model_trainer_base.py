@@ -124,13 +124,12 @@ class NetworkTrainer(ABC):
         self.resize_first = self.trainer_config.INFERRED_ARGS.RESIZE_FIRST
 
         # Checkpointing params
-        self.save_every = 25
+        self.save_every = self.trainer_config.TRAINER.SAVE_EVERY
         self.validate_every = self.trainer_config.TRAINER.VALIDATE_EVERY
 
         self.save_latest_only = (
             self.trainer_config.TRAINER.SAVE_LATEST_ONLY
         )  # if false it will not store/overwrite _latest but separate files each
-
 
         # Loss function
 
@@ -149,7 +148,7 @@ class NetworkTrainer(ABC):
         self.loss = types.SimpleNamespace()  # empty object
 
         # Can be changed in extended class (child)
-        self.early_stop_patience = 150
+        self.early_stop_patience = self.trainer_config.SOLVER.EARLY_STOPPING_PATIENCE
         self.initial_lr = self.trainer_config.SOLVER.BASE_LR
 
         # Inference params
@@ -529,7 +528,8 @@ class NetworkTrainer(ABC):
                 self.comet_logger, per_epoch_logs, self.epoch
             )
 
-        self.logger.info("Epoch %s logs: %s", self.epoch, per_epoch_logs)
+        if self.verbose_logging:
+            self.logger.info("Epoch %s logs: %s", self.epoch, per_epoch_logs)
 
         # Checks for it this epoch was best in validation loss or validation coord error!
         if per_epoch_logs["validation_all_loss_all"] < self.best_valid_loss:
