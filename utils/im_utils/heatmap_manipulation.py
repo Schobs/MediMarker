@@ -6,6 +6,8 @@ import time
 import scipy.optimize as opt
 
 # from inference.fit
+
+
 def twoD_Gaussian(xdata_tuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
     (x, y) = xdata_tuple
     xo = float(xo)
@@ -169,7 +171,6 @@ def get_coords_fit_gauss(images, predicted_coords_all, visualize=False):
 
 
 def get_coords(images):
-
     """get predictions from score maps in torch Tensor
     return type: torch.LongTensor
     """
@@ -251,7 +252,7 @@ def candidate_smoothing(
                 # y_disp = np.sign(predicted_disps[lm,1, x_idx,y_idx]) * (2**(abs(predicted_disps[lm,1,x_idx,y_idx]))-1)
                 # loc = [center_xy[0]+x_disp, center_xy[1]+y_disp]
 
-                center_xy = [x + (step_size // 2), y + (step_size // 2)]
+                center_xy = [x + (step_size // 2), y + (step_size // 2)]  # Different in phdnet_bugfixes
                 # REMEMBER TO MINUS 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
                 if log_displacement_bool:
                     x_disp = np.sign(predicted_disps[lm, 0, x_idx, y_idx]) * (

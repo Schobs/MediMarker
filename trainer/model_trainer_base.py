@@ -150,6 +150,7 @@ class NetworkTrainer(ABC):
         # Can be changed in extended class (child)
         self.early_stop_patience = self.trainer_config.SOLVER.EARLY_STOPPING_PATIENCE
         self.initial_lr = self.trainer_config.SOLVER.BASE_LR
+        self.lr_policy = self.trainer_config.SOLVER.DECAY_POLICY
 
         # Inference params
         self.fit_gauss_inference = self.trainer_config.INFERENCE.FIT_GAUSS
@@ -553,7 +554,8 @@ class NetworkTrainer(ABC):
 
         self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
 
-        self.maybe_update_lr(epoch=self.epoch)
+        if self.lr_policy == "poly":
+            self.maybe_update_lr(epoch=self.epoch)
 
         return continue_training
 

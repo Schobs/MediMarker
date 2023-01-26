@@ -43,6 +43,7 @@ class GPTrainer(NetworkTrainer):
         # "Loss" for GPs - the marginal log likelihood
         self.loss_func = gpytorch.mlls.ExactMarginalLogLikelihood
 
+# likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks=2)
         ################# Settings for saving checkpoints ##################################
         # self.save_every = 25
 
@@ -68,7 +69,7 @@ class GPTrainer(NetworkTrainer):
 
         self.likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(
             num_tasks=2, rank=2
-        )
+        )  # TODO: add noise_Constraint here
 
         # Must initialize model with all training input and labels.
         # We have made sure the batch_size is the dataset.len() for GP so one next() gets the whole dataset.

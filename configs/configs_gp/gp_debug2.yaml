@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/isbiTEST2"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/256_patch_matern_l8"
 
  
   USE_COMETML_LOGGING: True
@@ -20,7 +20,7 @@ SOLVER:
   BASE_LR: 0.01
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 2500
-
+  DECAY_POLICY: None
 
 
 
@@ -32,7 +32,7 @@ DATASET:
   SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
-  LANDMARKS : [0]
+  LANDMARKS : [8]
   TRAINSET_SIZE: -1 # -1 for full trainset size or int <= len(training_set)
 
  
@@ -40,7 +40,7 @@ TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
   CACHE_DATA: True
-  INFERENCE_ONLY: False
+  INFERENCE_ONLY: True
   SAVE_EVERY: 1000
   VALIDATE_EVERY: 200
 
