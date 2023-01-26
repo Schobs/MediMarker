@@ -45,8 +45,6 @@ class DictLogger():
     def ensemble_inference_log_template(self):
 
 
-       
-
         # print("standard_info_keys", standard_info_keys)
         return {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)], 
         "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
@@ -257,5 +255,6 @@ class DictLogger():
 
     def log_dict_to_comet(self, comet_logger, dict_to_log, time_step):
         for key, value in dict_to_log.items():
-            comet_logger.log_metric(key, value, time_step)
+            if not np.isnan(value):
+                comet_logger.log_metric(key, value, time_step)
     

@@ -40,7 +40,7 @@ class UnetTrainer(NetworkTrainer):
         self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
         self.input_size = (
             self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE
-            if self.sampler_mode == "patch"
+            if self.sampler_mode in ["patch_bias", "patch_centred"]
             else self.trainer_config.SAMPLER.INPUT_SIZE
         )
 
@@ -90,7 +90,7 @@ class UnetTrainer(NetworkTrainer):
             self.individual_hm_loss = HeatmapLoss()
         elif loss_str == "awl":
             self.individual_hm_loss = AdaptiveWingLoss(
-                hm_lambda_scale=self.trainer_config.MODEL.HM_LAMBDA_SCALE
+                hm_lambda_scale=self.label_generator_args["hm_lambda_scale"]
             )
         else:
             raise ValueError(
@@ -98,7 +98,7 @@ class UnetTrainer(NetworkTrainer):
             )
 
         ################# Settings for saving checkpoints ##################################
-        self.save_every = 25
+        # self.save_every = 25
 
     def initialize_network(self):
         """Initialise the network."""
@@ -257,8 +257,8 @@ class UnetTrainer(NetworkTrainer):
 
         for idx, patch in enumerate(patch_predictions):
             full_heatmap[
-                stitching_info[idx][1] : stitching_info[idx][1] + patch_size_y,
-                stitching_info[idx][0] : stitching_info[idx][0] + patch_size_x,
+                stitching_info[idx][1]: stitching_info[idx][1] + patch_size_y,
+                stitching_info[idx][0]: stitching_info[idx][0] + patch_size_x,
             ] += patch.detach.cpu().numpy()
 
         plt.imshow(full_heatmap)

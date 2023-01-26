@@ -6,7 +6,7 @@ import numpy as np
 from time import time
 
 # import multiprocessing as mp
-from utils.local_logging.dict_logger import DictLogger
+from utils.logging.dict_logger import DictLogger
 from torch.cuda.amp import GradScaler, autocast
 from evaluation.localization_evaluation import (
     success_detection_rate,
@@ -17,6 +17,9 @@ from torch.utils.data import DataLoader
 from abc import ABC, abstractmethod
 import imgaug
 import pandas as pd
+
+import logging
+from utils.setup.argument_utils import checkpoint_loading_checking
 
 
 class NetworkTrainer(ABC):
@@ -42,18 +45,54 @@ class NetworkTrainer(ABC):
         # Dataset class to use
         self.dataset_class = dataset_class
         # Dataloader info
-        self.data_loader_batch_size = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE
+        self.data_loader_batch_size_train = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN
+        self.data_loader_batch_size_eval = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_EVAL
+
         self.num_batches_per_epoch = self.trainer_config.SOLVER.MINI_BATCH_SIZE
-        self.gen_hms_in_mainthread = (
-            self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
-        )
+        self.gen_hms_in_mainthread = self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
+
         self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
-        self.landmarks = self.trainer_config.DATASET.LANDMARKS
-        self.training_resolution = (
-            self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
-            if self.sampler_mode == "patch"
-            else self.trainer_config.SAMPLER.INPUT_SIZE
-        )
+
+        # Patch centering args
+
+        patch_sampler_generic_args = {"sample_patch_size": self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
+                                      "sample_patch_from_resolution": self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM}
+
+        patch_sampler_bias_args = {"sampling_bias": self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS}
+
+        patch_sampler_centring_args = {"xlsx_path": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH,
+                                       "xlsx_sheet": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET,
+                                       "center_patch_jitter": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_JITTER}
+
+        self.dataset_patch_sampling_args = {"generic": patch_sampler_generic_args,
+                                            "biased": patch_sampler_bias_args,
+                                            "centred": patch_sampler_centring_args}
+
+        self.generic_dataset_args = {"landmarks": self.trainer_config.DATASET.LANDMARKS,
+                                     "annotation_path": self.trainer_config.DATASET.SRC_TARGETS,
+                                     "image_modality": self.trainer_config.DATASET.IMAGE_MODALITY,
+                                     "root_path": self.trainer_config.DATASET.ROOT,
+                                     "fold": self.trainer_config.TRAINER.FOLD,
+                                     "dataset_split_size": self.trainer_config.DATASET.TRAINSET_SIZE}
+
+        self.data_aug_args_training = {"data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
+                                       "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
+                                       }
+        self.data_aug_args_evaluation = {"data_augmentation_strategy": None,
+                                         "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
+                                         }
+        self.label_generator_args = {
+            "generate_heatmaps_here": not self.gen_hms_in_mainthread,
+            "hm_lambda_scale": self.trainer_config.MODEL.HM_LAMBDA_SCALE
+        }
+
+        self.train_label_generator = self.eval_label_generator = None
+        self.num_res_supervision = 1
+
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
+            self.training_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
+        else:
+            self.training_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
 
         # Set up logger & profiler
         self.profiler = profiler
@@ -65,19 +104,18 @@ class NetworkTrainer(ABC):
 
         # Trainer variables
         self.perform_validation = self.trainer_config.TRAINER.PERFORM_VALIDATION
-        self.fold = self.trainer_config.TRAINER.FOLD
         self.continue_checkpoint = self.trainer_config.MODEL.CHECKPOINT
 
         self.auto_mixed_precision = self.trainer_config.SOLVER.AUTO_MIXED_PRECISION
 
-        # Training params
         self.max_num_epochs = self.trainer_config.SOLVER.MAX_EPOCHS
         # Regressing sigma parameters for heatmaps
         self.regress_sigma = self.trainer_config.SOLVER.REGRESS_SIGMA
+
         self.sigmas = [
             torch.tensor(x, dtype=float, device=self.device, requires_grad=True)
             for x in np.repeat(
-                self.trainer_config.MODEL.GAUSS_SIGMA, len(self.landmarks)
+                self.trainer_config.MODEL.GAUSS_SIGMA, len(self.generic_dataset_args["landmarks"])
             )
         ]
 
@@ -86,13 +124,12 @@ class NetworkTrainer(ABC):
         self.resize_first = self.trainer_config.INFERRED_ARGS.RESIZE_FIRST
 
         # Checkpointing params
-        self.save_every = 25
+        self.save_every = self.trainer_config.TRAINER.SAVE_EVERY
+        self.validate_every = self.trainer_config.TRAINER.VALIDATE_EVERY
+
         self.save_latest_only = (
             self.trainer_config.TRAINER.SAVE_LATEST_ONLY
         )  # if false it will not store/overwrite _latest but separate files each
-        self.save_intermediate_checkpoints = (
-            True  # whether or not to save checkpoint_latest
-        )
 
         # Loss function
 
@@ -103,16 +140,17 @@ class NetworkTrainer(ABC):
         self.dict_logger = None
         self.learnable_params = None
 
+        self.logger = logging.getLogger()
+
         # Set up in init of extended class (child)
         self.network = types.SimpleNamespace()  # empty object
-        self.train_label_generator = self.eval_label_generator = None
         self.optimizer = None
         self.loss = types.SimpleNamespace()  # empty object
-        self.num_res_supervision = 1
 
         # Can be changed in extended class (child)
-        self.early_stop_patience = 150
+        self.early_stop_patience = self.trainer_config.SOLVER.EARLY_STOPPING_PATIENCE
         self.initial_lr = self.trainer_config.SOLVER.BASE_LR
+        self.lr_policy = self.trainer_config.SOLVER.DECAY_POLICY
 
         # Inference params
         self.fit_gauss_inference = self.trainer_config.INFERENCE.FIT_GAUSS
@@ -121,6 +159,7 @@ class NetworkTrainer(ABC):
         self.epoch = 0
         self.best_valid_loss = 999999999999999999999999999
         self.best_valid_coord_error = 999999999999999999999999999
+        self.best_valid_coords_epoch = 0
         self.best_valid_loss_epoch = 0
         self.epochs_wo_val_improv = 0
         self.print_initiaization_info = True
@@ -129,14 +168,13 @@ class NetworkTrainer(ABC):
 
     def initialize(self, training_bool=True):
         """
-        Initialize profiler, comet logger, training/val dataloaders, network, optimizer, loss, automixed precision
-        and maybe load a checkpoint.
-
+        Initialize profiler, comet logger, training/val dataloaders, network, optimizer,
+        loss, automixed precision
         """
         # torch.backends.cudnn.benchmark = True
 
         if self.profiler:
-            print("Initialized profiler")
+            self.logger.info("Initialized profiler")
             self.profiler.start()
 
         self.initialize_dataloader_settings()
@@ -151,9 +189,10 @@ class NetworkTrainer(ABC):
         if self.comet_logger:
             self.comet_logger.log_parameters(self.trainer_config)
 
-        # This is the logger that will save epoch results to log & log variables at inference, extend this for any extra stuff you want to log/save at evaluation!
+        # This is the logger that will save epoch results to log & log variables at inference, extend this for any extra
+        # stuff you want to log/save at evaluation!
         self.dict_logger = DictLogger(
-            len(self.landmarks),
+            len(self.generic_dataset_args["landmarks"]),
             self.regress_sigma,
             self.loss.loss_seperated_keys,
             self.dataset_class.additional_sample_attribute_keys,
@@ -174,7 +213,6 @@ class NetworkTrainer(ABC):
 
     @abstractmethod
     def initialize_optimizer_and_scheduler(self):
-
         """
         Initialize the optimizer and LR scheduler here!
 
@@ -212,19 +250,18 @@ class NetworkTrainer(ABC):
             msg = "Not initialized auto mixed precision."
 
         if self.print_initiaization_info:
-            print(msg)
+            self.logger.info(msg)
 
     @abstractmethod
     def get_coords_from_heatmap(self, model_output, original_image_size):
-
         """
         Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
         """
 
     def train(self):
         """
-        The main training loop. For every epoch we train and validate. Each training epoch covers a number of minibatches of a certain batch size,
-        defined in the config file.
+        The main training loop. For every epoch we train and validate. Each training epoch covers a number of minibatches
+        of a certain batch size, defined in the config file.
         """
         if not self.was_initialized:
             self.initialize(True)
@@ -241,7 +278,7 @@ class NetworkTrainer(ABC):
             # We will log the training and validation info here. The keys we set describe all the info we are logging.
             per_epoch_logs = self.dict_logger.get_epoch_logger()
 
-            print("training")
+            self.logger.info("training, %s", self.epoch)
             # Train for X number of batches per epoch e.g. 250
             for _ in range(self.num_batches_per_epoch):
                 l, generator = self.run_iteration(
@@ -251,25 +288,29 @@ class NetworkTrainer(ABC):
                     split="training",
                     log_coords=False,
                     logged_vars=per_epoch_logs,
+                    restart_dataloader=True
                 )
                 if self.comet_logger:
                     self.comet_logger.log_metric("training loss iteration", l, step)
                 step += 1
-            # del generator
-            print("validation")
 
-            with torch.no_grad():
-                self.network.eval()
-                generator = iter(self.valid_dataloader)
-                while generator != None:
-                    l, generator = self.run_iteration(
-                        generator,
-                        self.valid_dataloader,
-                        backprop=False,
-                        split="validation",
-                        log_coords=True,
-                        logged_vars=per_epoch_logs,
-                    )
+            if self.epoch % self.validate_every == 0:
+                # del generator
+                self.logger.info("validation, %s", self.epoch)
+
+                with torch.no_grad():
+                    self.network.eval()
+                    generator = iter(self.valid_dataloader)
+                    while generator != None:
+                        l, generator = self.run_iteration(
+                            generator,
+                            self.valid_dataloader,
+                            backprop=False,
+                            split="validation",
+                            log_coords=True,
+                            logged_vars=per_epoch_logs,
+                            restart_dataloader=False
+                        )
 
             self.epoch_end_time = time()
 
@@ -284,7 +325,7 @@ class NetworkTrainer(ABC):
 
         # Save the final weights
         if self.comet_logger:
-            print("Logging weights as histogram...")
+            self.logger.info("Logging weights as histogram...")
             weights = []
             for name in self.network.named_parameters():
                 if "weight" in name[0]:
@@ -301,6 +342,7 @@ class NetworkTrainer(ABC):
         logged_vars=None,
         debug=False,
         direct_data_dict=None,
+        restart_dataloader=True,
     ):
         """Runs a single iteration of a forward pass. It can perform back-propagation (training) or not (validation, testing), indicated w/ bool backprop.
             It can also retrieve coordindates from predicted heatmap and log variables using DictLogger, dictated by the keys in the logged_vars dict.
@@ -321,15 +363,13 @@ class NetworkTrainer(ABC):
             generator: The generator, which is now one iteration ahead from the input generator, or may have been reinitialized if it ran out of samples (if training).
         """
 
-        so = time()
-
         # We can either give the generator to be iterated or a data_dict directly
         if direct_data_dict is None:
             try:
                 data_dict = next(generator)
 
             except StopIteration:
-                if split != "training":
+                if not restart_dataloader:
                     return 0, None
                 else:
                     generator = iter(dataloader)
@@ -397,7 +437,6 @@ class NetworkTrainer(ABC):
                 loss_dict = {}
 
         # Log info from this iteration.
-        s = time()
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
 
@@ -433,7 +472,6 @@ class NetworkTrainer(ABC):
                         extra_info,
                     )
 
-        e = time()
         if self.profiler:
             self.profiler.step()
 
@@ -491,7 +529,8 @@ class NetworkTrainer(ABC):
                 self.comet_logger, per_epoch_logs, self.epoch
             )
 
-        print("Epoch %s logs: %s" % (self.epoch, per_epoch_logs))
+        if self.verbose_logging:
+            self.logger.info("Epoch %s logs: %s", self.epoch, per_epoch_logs)
 
         # Checks for it this epoch was best in validation loss or validation coord error!
         if per_epoch_logs["validation_all_loss_all"] < self.best_valid_loss:
@@ -509,14 +548,14 @@ class NetworkTrainer(ABC):
 
         if self.epochs_wo_val_improv == self.early_stop_patience:
             continue_training = False
-            print(
-                "EARLY STOPPING. Validation Coord Error did not reduce for %s epochs. "
-                % self.early_stop_patience
+            self.logger.info(
+                "EARLY STOPPING. Validation Coord Error did not reduce for %s epochs. ", self.early_stop_patience
             )
 
         self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
 
-        self.maybe_update_lr(epoch=self.epoch)
+        if self.lr_policy == "poly":
+            self.maybe_update_lr(epoch=self.epoch)
 
         return continue_training
 
@@ -526,32 +565,22 @@ class NetworkTrainer(ABC):
         :return:
         """
 
-        fold_str = str(self.fold)
-        if (
-            self.save_intermediate_checkpoints
-            and (self.epoch % self.save_every == (self.save_every - 1))
-        ) or self.epoch == self.max_num_epochs - 1:
-            print("saving scheduled checkpoint file...")
+        fold_str = str(self.generic_dataset_args["fold"])
+        if (self.epoch % self.save_every == 0) or (self.epoch == self.max_num_epochs - 1):
+            self.logger.info("saving scheduled checkpoint file...")
             if not self.save_latest_only:
-                self.save_checkpoint(
-                    os.path.join(
-                        self.output_folder,
-                        "model_ep_" + str(self.epoch) + "_fold" + fold_str + ".model",
-                    )
-                )
-
-                if self.epoch >= 150:
-                    self.save_every = 50
-                if self.epoch >= 250:
-                    self.save_every = 100
+                ckpt_save_pth = os.path.join(self.output_folder, "model_ep_" +
+                                             str(self.epoch) + "_fold" + fold_str + ".model")
+                self.save_checkpoint(ckpt_save_pth)
+                self.logger.info("saved checkpoint at %s", ckpt_save_pth)
             self.save_checkpoint(
                 os.path.join(
                     self.output_folder, "model_latest_fold" + (fold_str) + ".model"
                 )
             )
-            print("done")
+            self.logger.info("saved latest checkpoint")
         if new_best_valid_bool:
-            print(
+            self.logger.info(
                 "saving scheduled checkpoint file as it's new best on validation set..."
             )
             self.save_checkpoint(
@@ -561,12 +590,9 @@ class NetworkTrainer(ABC):
                 )
             )
 
-            print("done")
+            self.logger.info("saved checkpoint at new best valid loss: %s", self.best_valid_loss)
 
         if new_best_valid_coord_bool:
-            print(
-                "saving scheduled checkpoint file as it's new best on validation set for coord error..."
-            )
             self.save_checkpoint(
                 os.path.join(
                     self.output_folder,
@@ -574,7 +600,7 @@ class NetworkTrainer(ABC):
                 )
             )
 
-            print("done")
+            self.logger.info("saved checkpoint at new best valid coord error: %s", self.best_valid_coord_error)
 
     def maybe_rescale_coords(self, pred_coords, data_dict):
         """Maybe rescale coordinates based on evaluation parameters, and decide which target coords to evaluate against.
@@ -599,7 +625,7 @@ class NetworkTrainer(ABC):
                 self.device
             )  # C3 (and C1 if input size == full res size so full & target the same)
 
-        # C2
+        # C3
         if self.use_full_res_coords and not self.resize_first:
             upscale_factor = torch.tensor(
                 [data_dict["resizing_factor"][0], data_dict["resizing_factor"][1]]
@@ -615,11 +641,11 @@ class NetworkTrainer(ABC):
     def patchify_and_predict(self, single_sample, logged_vars):
         """Function that takens in a large input image, patchifies it and runs each patch through the model & stitches heatmap together
 
-        #1) should split up into patches of given patch-size.
-        #2) should run patches through in batches using run_iteration, NOT LOGGING ANYTHING but needs to return the OUTPUTS somehow.
+        # 1) should split up into patches of given patch-size.
+        # 2) should run patches through in batches using run_iteration, NOT LOGGING ANYTHING but needs to return the OUTPUTS somehow.
             MUST ADD OPTION TO RETURN OUTPUTS in run_iteration?
-        #3) Need to use method to stitch patches together (future, phdnet will use patch size 512 512 for now).
-        #4) call log_key_variables function now with the final big heatmap as the "output". The logging should work as usual from that.
+        # 3) Need to use method to stitch patches together (future, phdnet will use patch size 512 512 for now).
+        # 4) call log_key_variables function now with the final big heatmap as the "output". The logging should work as usual from that.
 
         Returns:
             _type_: _description_
@@ -629,20 +655,20 @@ class NetworkTrainer(ABC):
     def run_inference(self, split, debug=False):
         """Function to run inference on a full sized input
 
-        #0) instantitate test dataset and dataloader
-        #1A) if FULL:
+        # 0) instantitate test dataset and dataloader
+        # 1A) if FULL:
             i) iterate dataloader and run_iteration each time to go through and save results.
             ii) should run using run_iteration with logged_vars to log
         1B) if PATCHIFYING full_res_output  <- this can be fututre addition
             i) use patchify_and_predict to stitch hm together with logged_vars to log
 
-        #2) need a way to deal with the key dictionary & combine all samples
-        #3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
-        #4) return individual results & do summary results.
+        # 2) need a way to deal with the key dictionary & combine all samples
+        # 3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
+        # 4) return individual results & do summary results.
         """
 
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
-        if self.sampler_mode == "patch":
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
             if (
                 self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
                 == "patchify_and_stitch"
@@ -658,9 +684,11 @@ class NetworkTrainer(ABC):
         inference_resolution = self.training_resolution
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
-        self.test_dataloader = DataLoader(
+        test_batch_size = self.maybe_alter_batch_size(test_dataset, self.data_loader_batch_size_eval)
+
+        test_dataloader = DataLoader(
             test_dataset,
-            batch_size=self.data_loader_batch_size,
+            batch_size=test_batch_size,
             shuffle=False,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
@@ -675,18 +703,19 @@ class NetworkTrainer(ABC):
         self.network.eval()
 
         # then iterate through dataloader and save to log
-        generator = iter(self.test_dataloader)
+        generator = iter(test_dataloader)
         if inference_full_image:
             while generator != None:
                 print("-", end="")
                 l, generator = self.run_iteration(
                     generator,
-                    self.test_dataloader,
+                    test_dataloader,
                     backprop=False,
                     split=split,
                     log_coords=True,
                     logged_vars=evaluation_logs,
                     debug=debug,
+                    restart_dataloader=False
                 )
             del generator
             print()
@@ -756,7 +785,7 @@ class NetworkTrainer(ABC):
         """
 
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
-        if self.sampler_mode == "patch":
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
             if (
                 self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
                 == "patchify_and_stitch"
@@ -772,9 +801,11 @@ class NetworkTrainer(ABC):
         inference_resolution = self.training_resolution
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
-        self.test_dataloader = DataLoader(
+        test_batch_size = self.maybe_alter_batch_size(test_dataset, self.data_loader_batch_size_eval)
+
+        test_dataloader = DataLoader(
             test_dataset,
-            batch_size=self.data_loader_batch_size,
+            batch_size=test_batch_size,
             shuffle=False,
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
@@ -786,8 +817,8 @@ class NetworkTrainer(ABC):
         )
         smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX
 
-        self.ensemble_handler = EnsembleUncertainties(
-            uncertainty_estimation_keys, smha_model_idx, self.landmarks
+        ensemble_handler = EnsembleUncertainties(
+            uncertainty_estimation_keys, smha_model_idx, self.generic_dataset_args["landmarks"]
         )
 
         # network evaluation mode
@@ -795,15 +826,15 @@ class NetworkTrainer(ABC):
 
         # Initialise esenmble results dictionaries
         ensemble_result_dicts = {
-            uncert_key: [] for uncert_key in self.ensemble_handler.uncertainty_keys
+            uncert_key: [] for uncert_key in ensemble_handler.uncertainty_keys
         }
         all_ind_errors = {
-            uncert_key: [[] for x in range(len(self.landmarks))]
-            for uncert_key in self.ensemble_handler.uncertainty_keys
+            uncert_key: [[] for x in range(len(self.generic_dataset_args["landmarks"]))]
+            for uncert_key in ensemble_handler.uncertainty_keys
         }
 
         # Iterate through dataloader and save to log
-        generator = iter(self.test_dataloader)
+        generator = iter(test_dataloader)
         if inference_full_image:
             # Need to load and get results from each checkpoint. Load checkpoint for each batch because of memory issues running through entire dataloader
             # and saving multiple outputs for every checkpoint. In future can improve this by going through X (e.g.200 samples/10 batches) before changing checkpoint.
@@ -816,20 +847,22 @@ class NetworkTrainer(ABC):
                         # Directly pass the next data_dict to run_iteration rather than iterate it within.
                         l, _ = self.run_iteration(
                             generator,
-                            self.test_dataloader,
+                            test_dataloader,
                             backprop=False,
                             split=split,
                             log_coords=True,
                             logged_vars=evaluation_logs,
                             debug=debug,
                             direct_data_dict=direct_data_dict,
+                            restart_dataloader=False
+
                         )
 
                     # Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)
                     (
                         ensembles_analyzed,
                         ind_landmark_errors,
-                    ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
+                    ) = ensemble_handler.ensemble_inference_with_uncertainties(
                         evaluation_logs
                     )
 
@@ -912,7 +945,7 @@ class NetworkTrainer(ABC):
         else:
             self.training_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
 
-        self.checkpoint_loading_checking()
+        checkpoint_loading_checking(self.trainer_config, self.sampler_mode, self.training_resolution)
 
         if self.auto_mixed_precision:
             self._maybe_init_amp()
@@ -921,42 +954,7 @@ class NetworkTrainer(ABC):
                 self.amp_grad_scaler.load_state_dict(checkpoint_info["amp_grad_scaler"])
 
         if self.print_initiaization_info:
-            print("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch))
-
-    def checkpoint_loading_checking(self):
-        """Checks that the loaded checkpoint is compatible with the current model and training settings.
-
-        Raises:
-            ValueError: _description_
-            ValueError: _description_
-        """
-
-        # Check the sampler in config is the same as the one in the checkpoint.
-        if self.sampler_mode != self.trainer_config.SAMPLER.SAMPLE_MODE:
-            raise ValueError(
-                "model was trained using SAMPLER.SAMPLE_MODE %s but attempting to load with SAMPLER.SAMPLE_MODE %s. \
-                Please amend this in config file."
-                % (self.sampler_mode, self.trainer_config.SAMPLER.SAMPLE_MODE)
-            )
-
-        # check if the training resolution from config is the same as the one in the checkpoint.
-        if self.sampler_mode == "patch":
-            if (
-                self.training_resolution
-                != self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
-            ):
-                raise ValueError(
-                    "model was trained using SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM %s but attempting to load with self.training_resolution %s. \
-                    Please amend this in config file."
-                    % (self.training_resolution, self.training_resolution)
-                )
-        else:
-            if self.training_resolution != self.trainer_config.SAMPLER.INPUT_SIZE:
-                raise ValueError(
-                    "model was trained using SAMPLER.INPUT_SIZE %s but attempting to load with self.training_resolution %s. \
-                    Please amend this in config file."
-                    % (self.training_resolution, self.trainer_config.SAMPLER.INPUT_SIZE)
-                )
+            self.logger.info("Loaded checkpoint %s. Epoch: %s, ", model_path, self.epoch)
 
     def initialize_dataloader_settings(self):
         """Initializes dataloader settings. If debug use only main thread to load data bc we only
@@ -981,66 +979,52 @@ class NetworkTrainer(ABC):
 
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
 
+        #### Training dataset ####
         train_dataset = self.dataset_class(
-            annotation_path=self.trainer_config.DATASET.SRC_TARGETS,
-            landmarks=self.landmarks,
             LabelGenerator=self.train_label_generator,
             split="training",
             sample_mode=self.sampler_mode,
-            sample_patch_size=self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
-            sample_patch_bias=self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS,
-            sample_patch_from_resolution=self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
-            root_path=self.trainer_config.DATASET.ROOT,
+            patch_sampler_args=self.dataset_patch_sampling_args,
+            dataset_args=self.generic_dataset_args,
+            data_aug_args=self.data_aug_args_training,
+            label_generator_args=self.label_generator_args,
             sigmas=np_sigmas,
-            generate_hms_here=not self.gen_hms_in_mainthread,
-            cv=self.fold,
             cache_data=self.trainer_config.TRAINER.CACHE_DATA,
             num_res_supervisions=self.num_res_supervision,
             debug=self.trainer_config.SAMPLER.DEBUG,
             input_size=self.trainer_config.SAMPLER.INPUT_SIZE,
-            hm_lambda_scale=self.trainer_config.MODEL.HM_LAMBDA_SCALE,
-            data_augmentation_strategy=self.trainer_config.SAMPLER.DATA_AUG,
-            data_augmentation_package=self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
-            dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE,
         )
 
+        #### Validation dataset ####
+
+        # If not performing validation, just use the training set for validation.
         if self.perform_validation:
-            # if patchify, we want to return the full image
-            if self.sampler_mode == "patch":
-                valid_dataset = self.get_evaluation_dataset(
-                    "validation",
-                    self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
-                )
-            else:
-                valid_dataset = self.get_evaluation_dataset(
-                    "validation", self.trainer_config.SAMPLER.INPUT_SIZE
-                )
-
+            validation_split = "validation"
         else:
-            if self.sampler_mode == "patch":
-                valid_dataset = self.get_evaluation_dataset(
-                    "training",
-                    self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
-                    dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE,
-                )
-            else:
-                valid_dataset = self.get_evaluation_dataset(
-                    "training",
-                    self.trainer_config.SAMPLER.INPUT_SIZE,
-                    dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE,
-                )
-            print(
-                'WARNING: NOT performing validation. Instead performing "validation" on training set for coord error metrics.'
-            )
+            validation_split = "training"
+            self.logger.warning(
+                'WARNING: NOT performing validation. Instead performing "validation" on training set for coord error metrics.')
 
-        print(
-            "Using %s Dataloader workers and persist workers bool : %s "
-            % (self.num_workers_cfg, self.persist_workers)
-        )
+        # Image loading size different for patch vs. full image sampling
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
+            img_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
+        else:
+            img_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
+
+        valid_dataset = self.get_evaluation_dataset(validation_split, img_resolution)
+
+        #### Create DataLoaders ####
+
+        self.logger.info("Using %s Dataloader workers and persist workers bool : %s ",
+                         self.num_workers_cfg, self.persist_workers)
+
+        train_batch_size = self.maybe_alter_batch_size(train_dataset, self.data_loader_batch_size_train)
+        valid_batch_size = self.maybe_alter_batch_size(valid_dataset, self.data_loader_batch_size_eval)
+
         self.train_dataloader = DataLoader(
             train_dataset,
-            batch_size=self.data_loader_batch_size,
-            shuffle=True,
+            batch_size=train_batch_size,
+            shuffle=False,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
             worker_init_fn=NetworkTrainer.worker_init_fn,
@@ -1048,7 +1032,7 @@ class NetworkTrainer(ABC):
         )
         self.valid_dataloader = DataLoader(
             valid_dataset,
-            batch_size=self.data_loader_batch_size,
+            batch_size=valid_batch_size,
             shuffle=False,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
@@ -1056,7 +1040,7 @@ class NetworkTrainer(ABC):
             pin_memory=True,
         )
 
-    def get_evaluation_dataset(self, split, load_im_size, dataset_split_size=-1):
+    def get_evaluation_dataset(self, split, load_im_size):
         """Gets an evaluation dataset based on split given (must be "validation" or "testing").
             We do not perform patch sampling on evaluation dataset, always returning the full image (sample_mode = "full").
             Patchifying the evaluation image is too large memory constraint to do in batches here.
@@ -1071,25 +1055,18 @@ class NetworkTrainer(ABC):
         # assert split in ["validation", "testing"]
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
         dataset = self.dataset_class(
-            annotation_path=self.trainer_config.DATASET.SRC_TARGETS,
-            landmarks=self.landmarks,
             LabelGenerator=self.eval_label_generator,
             split=split,
             sample_mode=self.trainer_config.SAMPLER.EVALUATION_SAMPLE_MODE,
-            sample_patch_size=self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
-            sample_patch_bias=self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS,
-            sample_patch_from_resolution=self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
-            root_path=self.trainer_config.DATASET.ROOT,
+            patch_sampler_args=self.dataset_patch_sampling_args,
+            dataset_args=self.generic_dataset_args,
+            data_aug_args=self.data_aug_args_evaluation,
+            label_generator_args=self.label_generator_args,
             sigmas=np_sigmas,
-            generate_hms_here=not self.gen_hms_in_mainthread,
-            cv=self.fold,
             cache_data=self.trainer_config.TRAINER.CACHE_DATA,
             num_res_supervisions=self.num_res_supervision,
             debug=self.trainer_config.SAMPLER.DEBUG,
-            data_augmentation_strategy=None,
             input_size=load_im_size,
-            hm_lambda_scale=self.trainer_config.MODEL.HM_LAMBDA_SCALE,
-            dataset_split_size=dataset_split_size,
         )
         return dataset
 
@@ -1129,3 +1106,13 @@ class NetworkTrainer(ABC):
             worker_id (int): dataloader worker id
         """
         imgaug.seed(np.random.get_state()[1][0] + worker_id)
+
+    def maybe_alter_batch_size(self, dataset, batch_size):
+        """If the batch size is set to -1, then we use the entire dataset as the batch size.
+            This is used when using GPs since we cannot mini-batch the GP training.
+        """
+
+        if batch_size == -1:
+            return dataset.__len__()
+        else:
+            return batch_size

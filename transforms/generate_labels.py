@@ -1,4 +1,5 @@
 import copy
+import logging
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -13,6 +14,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patchesplt
 import torch.nn.functional as F
 import cv2
+from scipy.stats import multivariate_normal
 
 
 class LabelGenerator(ABC):
@@ -76,12 +78,174 @@ class LabelGenerator(ABC):
 
         """
 
+    @abstractmethod
+    def debug_prediction(
+        self,
+        input_dict,
+        prediction_output,
+        predicted_coords,
+        input_size_pred_coords,
+        logged_vars,
+        extra_info,
+    ):
+        """
+        Debug prediction from the model.
+
+        """
+
+
+class GPLabelGenerator(LabelGenerator):
+    """Label generator for Gaussian process. the label is literally just the coordinates."""
+
+    def __init__(self):
+        super(LabelGenerator, self).__init__()
+        self.logger = logging.getLogger()
+
+    def generate_labels(
+        self,
+        landmarks,
+        x_y_corner_patch,
+        landmarks_in_indicator,
+        input_size,
+        hm_sigmas,
+        num_res_supervisions,
+        hm_lambda_scale=100,
+        dtype=np.float32,
+        to_tensor=True,
+    ):
+        """Simply returns the coordinates of the landmarks as the label."""
+
+        if to_tensor:
+            return_dict = {"landmarks": torch.from_numpy(landmarks)}
+        else:
+            return_dict = {"landmarks": landmarks}
+
+        return return_dict
+
+    def stitch_heatmap(self, patch_predictions, stitching_info):
+        """
+        Use model outputs from a patchified image to stitch together a full resolution heatmap.
+        Irrelevent for this label generator.
+
+        """
+        pass
+
+    def debug_sample(self, sample_dict, image, coordinates):
+        """Visually debug a sample. Provide logging and visualisation of the sample."""
+
+        # Should debug the sample here. Need to turn it back into a patch........
+
+        self.logger.info("Sample Dict: %s", sample_dict)
+
+    def debug_crop(
+        self, original_im, cropped_im, original_lms, normalized_lms, lms_indicators
+    ):
+        """Visually debug a cropped sample. Provide logging and visualisation of the sample."""
+
+        self.logger.info("before coords %s: ", original_lms)
+        self.logger.info("normalized lms %s: ", normalized_lms)
+        self.logger.info("landmark indicators %s", lms_indicators)
+
+        # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
+        visualize_imageNcoords_cropped_imgNnormcoords(
+            original_im[0], cropped_im[0], original_lms, normalized_lms, lms_indicators
+        )
+
+    def debug_prediction(
+        self,
+        input_dict,
+        prediction_output,
+        predicted_coords,
+        input_size_pred_coords,
+        logged_vars,
+        extra_info,
+        min_error=0,
+    ):
+        """Visually debug a prediction and compare to the target. Provide logging and visualisation of the sample."""
+        coordinate_label = input_dict["label"]["landmarks"]
+
+        transformed_targ_coords = np.array(input_dict["target_coords"])
+        full_res_coords = np.array(input_dict["full_res_coords"])
+        transformed_input_image = input_dict["image"]
+
+        model_output_coords = [x.cpu().detach().numpy() for x in prediction_output.mean]
+
+        predicted_coords = [x.cpu().detach().numpy() for x in predicted_coords]
+        # input_size_pred_coords = extra_info["coords_og_size"]
+
+        for sample_idx, ind_sample in enumerate(logged_vars):
+            f, ax = plt.subplots(1, 2, figsize=(8, 3))
+            # extra_info = {"lower": lower, "upper": upper, "cov_matr": cov_matr}
+
+            # extra_info = ind_sample["extra_info"]
+            # create  kernel
+            m1 = model_output_coords[sample_idx][0]
+            s1 = extra_info["cov_matr"][sample_idx]
+            k1 = multivariate_normal(mean=m1, cov=s1)
+
+            # create a grid of (x,y) coordinates at which to evaluate the kernels
+            xlim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
+            ylim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
+            xres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
+            yres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
+
+            x = np.linspace(xlim[0], xlim[1], xres)
+            y = np.linspace(ylim[0], ylim[1], yres)
+            xx, yy = np.meshgrid(x, y)
+
+            # evaluate kernels at grid points
+            xxyy = np.c_[xx.ravel(), yy.ravel()]
+            zz = k1.pdf(xxyy)
+
+            # reshape and plot image
+            img = zz.reshape((xres, yres))
+            ax[1].imshow(img)
+
+            # show image with label
+            image_label = coordinate_label[sample_idx][0]
+            image_ex = transformed_input_image[sample_idx][0].cpu().detach().numpy()
+
+            ax[0].imshow(image_ex.reshape((xres, yres)))
+
+            rect1 = patchesplt.Rectangle(
+                (int(image_label[0]), int(image_label[1])),
+                3,
+                3,
+                linewidth=2,
+                edgecolor="g",
+                facecolor="none",
+            )
+            ax[0].add_patch(rect1)
+
+            rect2 = patchesplt.Rectangle(
+                (int(image_label[0]), int(image_label[1])),
+                3,
+                3,
+                linewidth=2,
+                edgecolor="g",
+                facecolor="none",
+            )
+            ax[1].add_patch(rect2)
+            rect3 = patchesplt.Rectangle(
+                (int(m1[0]), int(m1[1])),
+                3,
+                3,
+                linewidth=2,
+                edgecolor="r",
+                facecolor="none",
+            )
+            ax[1].add_patch(rect3)
+
+            plt.show()
+            plt.close()
+
 
 class UNetLabelGenerator(LabelGenerator):
     """Generates target heatmaps for the U-Net network training scheme"""
 
     def __init__(self):
         super(LabelGenerator, self).__init__()
+        self.logger = logging.getLogger()
 
     def generate_labels(
         self,
@@ -165,9 +329,9 @@ class UNetLabelGenerator(LabelGenerator):
     ):
         """Visually debug a cropped sample. Provide logging and visualisation of the sample."""
 
-        print("before coords: ", original_lms)
-        print("normalized lms: ", normalized_lms)
-        print("landmark indicators", lms_indicators)
+        self.logger.info("before coords: %s ", original_lms)
+        self.logger.info("normalized lms:  %s", normalized_lms)
+        self.logger.info("landmark indicators  %s", lms_indicators)
 
         # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
         visualize_imageNcoords_cropped_imgNnormcoords(
@@ -200,10 +364,8 @@ class UNetLabelGenerator(LabelGenerator):
         input_size_pred_coords = extra_info["coords_og_size"]
 
         for sample_idx, ind_sample in enumerate(logged_vars):
-            print(
-                "\n uid: %s. Mean Error: %s "
-                % (ind_sample["uid"], ind_sample["Error All Mean"])
-            )
+            self.logger.info(
+                "\n uid: %s. Mean Error: %s ", ind_sample["uid"], ind_sample["Error All Mean"])
             colours = np.arange(len(predicted_coords[sample_idx]))
 
             # Only show debug if any landmark error is >10 pixels!
@@ -223,7 +385,7 @@ class UNetLabelGenerator(LabelGenerator):
                 fig, ax = plt.subplots(1, ncols=1, squeeze=False)
 
                 for coord_idx, pred_coord in enumerate(predicted_coords[sample_idx]):
-                    print(
+                    self.logger.info(
                         "L%s: Full Res Prediction: %s, Full Res Target: %s, Error: %s. Input Res targ %s, input res pred %s."
                         % (
                             coord_idx,
@@ -236,8 +398,8 @@ class UNetLabelGenerator(LabelGenerator):
                     )
 
                     # difference between these is removing the padding (so -128, or whatever the patch padding was)
-                    print(
-                        "predicted (red) vs  target coords (green): ",
+                    self.logger.info(
+                        "predicted (red) %s vs  target coords (green) %s ",
                         input_size_pred_coords[sample_idx][coord_idx],
                         transformed_targ_coords[sample_idx][coord_idx],
                     )
@@ -1131,8 +1293,8 @@ def gen_patch_displacements_heatmap(
         downscaled_padded_lm, hm_res, 1, sigma, lambda_scale=lambda_scale
     )
     gaussian_weights = gaussian_weights_full[
-        (safe_padding // step_size) : (safe_padding + grid_size[0]) // step_size,
-        safe_padding // step_size : (safe_padding + grid_size[1]) // step_size,
+        (safe_padding // step_size): (safe_padding + grid_size[0]) // step_size,
+        safe_padding // step_size: (safe_padding + grid_size[1]) // step_size,
     ]
     displacement_weights = gaussian_weights / lambda_scale
 

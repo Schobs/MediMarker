@@ -1,10 +1,18 @@
+import logging
 import os
 import json
+import time
 from typing import Optional
 import nibabel as nib
 from PIL import Image
 import pydicom as dicom
 import numpy as np
+from transforms.transformations import (
+    normalize_cmr,
+)
+
+import pandas as pd
+import ast
 
 
 def get_datatype_load(im_path):
@@ -94,3 +102,99 @@ def load_aspire_datalist(
         base_dir = os.path.dirname(data_list_file_path)
 
     return _append_paths(base_dir, expected_data)
+
+
+def resize_coordinates(coords,  resizing_factor):
+    """Resize the coordinates by a resizing factor.
+    Args:
+        coords ([ints]): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    return np.round(coords * [1 / resizing_factor[0], 1 / resizing_factor[1]])
+
+
+def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
+    """Load image and resize it to the specified size. Also resize the coordinates to match the new image size.
+
+    Args:
+        image_path (str): _description_
+        coords ([ints]): _description_
+
+    Returns:
+        _type_: _description_
+    """
+
+    logger = logging.getLogger()
+    s = time.time()
+
+    original_image = data_type_load(image_path)
+    # logger.info("time im load: %s", time.time()-s)
+    s = time.time()
+
+    original_size = np.expand_dims(np.array(list(original_image.size)), 1)
+    if list(original_image.size) != load_im_size:
+        resizing_factor = [
+            list(original_image.size)[0] / load_im_size[0],
+            list(original_image.size)[1] / load_im_size[1],
+        ]
+        resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
+    else:
+        resizing_factor = [1, 1]
+        resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
+
+    # potentially resize the coords
+    coords = resize_coordinates(coords,  resizing_factor)
+    image = np.expand_dims(
+        normalize_cmr(original_image.resize(load_im_size)), axis=0
+    )
+
+    # logger.info("time im resize: %s", time.time()-s)
+
+    return resized_factor, original_size, image, coords
+
+
+def maybe_get_coordinates_from_xlsx(datapath, uids, landmarks_to_return, sheet_name=None):
+    """
+        Read csv file of data, returns samples whesplitre the value of the "split" column
+        is contained in the "fold" variable. The columns cols_to_return are returned.
+
+    Args:
+        datapath (str): Path to csv file of uncertainty results,
+        split (str): column name for split e.g. Validation, testing,
+        fold (int or [int]]): fold/s contained in the split column to return,
+        cols_to_return ([str]): Which columns to return (default="All").
+
+
+    Returns:
+        [pandas dataframe, pandas dataframe]: dataframe selected
+    """
+    if datapath is None:
+        return None
+
+    if sheet_name is None:
+        sheet_name = 0
+
+    datafame = pd.read_excel(datapath, sheet_name=sheet_name,  dtype={"uid": 'string'})
+
+    # if isinstance(landmarks_to_return, int):
+    #     cols_to_return = ["L"+str(landmarks_to_return)]
+    # elif isinstance(landmarks_to_return, (list, pd.core.series.Series, np.ndarray)):
+    #     cols_to_return = ["L"+str(i) for i in landmarks_to_return]
+    # else:
+    #     return ValueError("landmarks_to_return must be int or list of ints")
+
+    filtered_df = datafame[datafame['uid'].isin(uids)]
+    assert filtered_df.shape[0] == len(uids), "Not all uids found in csv file"
+
+    return_data = filtered_df.loc[:, ["uid", "predicted_coords"]]
+
+    # Parse the string to remove newlines and convert to numpy array. Only return columns requested. Create dict:
+    # {'uid1': [landmark1, landmark2, ...], 'uid2': [landmark1, landmark2, ...]}
+    return_dict = dict(zip(return_data.uid, np.array([ast.literal_eval(
+        x.replace(".", ",").replace("\n", ",")) for x in return_data.predicted_coords.tolist()])[:, landmarks_to_return]))
+#
+
+    return return_dict

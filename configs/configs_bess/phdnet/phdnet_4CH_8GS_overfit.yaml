@@ -5,7 +5,7 @@ OUTPUT:
 
 SOLVER:
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE: 150
+  DATA_LOADER_BATCH_SIZE_TRAIN: 150
   MAX_EPOCHS: 500
   # REGRESS_SIGMA: True
   REGRESS_SIGMA_LOSS_WEIGHT: 0.005
@@ -40,7 +40,7 @@ SAMPLER:
   # DATA_AUG: 'AffineComplex'
   # DATA_AUG: None
   INPUT_SIZE : [128,128]
-  SAMPLE_MODE: 'patch' # ['patch', 'full']
+  SAMPLE_MODE: 'patch_bias' # ['patch', 'full']
   NUM_WORKERS: 8
   DEBUG: False
   PATCH:

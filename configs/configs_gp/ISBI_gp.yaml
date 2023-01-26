@@ -1,7 +1,8 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp_test"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/isbiTEST"
+
  
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
@@ -11,8 +12,9 @@ SOLVER:
   DEEP_SUPERVISION: False
   NUM_RES_SUPERVISIONS: 1
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE: 12
+  DATA_LOADER_BATCH_SIZE_TRAIN: -1
   MAX_EPOCHS: 15000 
+  MINI_BATCH_SIZE: 1
   # REGRESS_SIGMA: True
 
   AUTO_MIXED_PRECISION: False
@@ -32,22 +34,28 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: False
-  INFERENCE_ONLY: True
+  CACHE_DATA: True
+  INFERENCE_ONLY: False
   
 
 SAMPLER:
-  DATA_AUG: None
+  DATA_AUG: "Flatten"
   INPUT_SIZE : [512,512]
-  SAMPLE_MODE: 'patch' # ['patch', 'full']
-  NUM_WORKERS: 8
+  SAMPLE_MODE: 'patch_centred' # ['patch', 'full', "patch_centred"]
+  NUM_WORKERS: 0
   DEBUG: False
   PATCH:
     SAMPLER_BIAS: 1.0
     RESOLUTION_TO_SAMPLE_FROM:  "input_size"
     SAMPLE_PATCH_SIZE: [64,64]
+    CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAS_DS5/individual_results_allfolds.xlsx"
+    CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error"
+    CENTRED_PATCH_JITTER: 0.0
 
 MODEL:
   GAUSS_SIGMA: 2
   ARCHITECTURE: "GP"  # ["U-Net" , "PHD-Net"]
   # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gp_test1/GPmodel_fold0.model"
+
+SSH: 
+  AUTO_AMEND_PATHS: True
