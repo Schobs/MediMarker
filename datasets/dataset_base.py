@@ -215,7 +215,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         with alive_bar(len(datalist), force_tty=True) as loading_bar:
             loading_bar.text('Loading Data...')
             for idx, data in enumerate(datalist):
-                self.logger.info("idx: %s", idx)
+                # self.logger.info("idx: %s", idx)
                 # Add coordinate labels as sample attribute, if annotations available
                 if (not isinstance(data["coordinates"], list)) or (
                     "has_annotation" in data.keys() and data["has_annotation"] == False
@@ -382,7 +382,12 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             # list where [0] is image and [1] are coords.
             transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
 
-            input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
+            # TODO: try and not renormalize if we're patch sampling, maybe?
+            if "patch" not in self.sample_mode:
+                input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
+            else:
+                input_image = torch.from_numpy(np.expand_dims(transformed_sample[0], axis=0)).float()
+
             input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
 
             # Recalculate indicators incase transform pushed out/in coords.

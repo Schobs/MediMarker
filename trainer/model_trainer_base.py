@@ -301,6 +301,12 @@ class NetworkTrainer(ABC):
                 with torch.no_grad():
                     self.network.eval()
                     generator = iter(self.valid_dataloader)
+
+                    # If debugging, need to log some extra info than
+                    if self.trainer_config.INFERENCE.DEBUG:
+                        valid_logs = self.dict_logger.get_evaluation_logger()
+                    else:
+                        valid_logs = per_epoch_logs
                     while generator != None:
                         l, generator = self.run_iteration(
                             generator,
@@ -308,8 +314,9 @@ class NetworkTrainer(ABC):
                             backprop=False,
                             split="validation",
                             log_coords=True,
-                            logged_vars=per_epoch_logs,
-                            restart_dataloader=False
+                            logged_vars=valid_logs,
+                            restart_dataloader=False,
+                            debug=self.trainer_config.INFERENCE.DEBUG
                         )
 
             self.epoch_end_time = time()
@@ -378,6 +385,8 @@ class NetworkTrainer(ABC):
             data_dict = direct_data_dict
 
         data = (data_dict["image"]).to(self.device)
+        # if "PHD_715" not in data_dict["uid"]:
+        #     return 0, generator
 
         # This happens when we regress sigma with >0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
@@ -1007,7 +1016,7 @@ class NetworkTrainer(ABC):
 
         # Image loading size different for patch vs. full image sampling
         if self.sampler_mode in ["patch_bias", "patch_centred"]:
-            img_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
+            img_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
         else:
             img_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
 
@@ -1024,7 +1033,7 @@ class NetworkTrainer(ABC):
         self.train_dataloader = DataLoader(
             train_dataset,
             batch_size=train_batch_size,
-            shuffle=False,
+            shuffle=True,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
             worker_init_fn=NetworkTrainer.worker_init_fn,
@@ -1033,7 +1042,7 @@ class NetworkTrainer(ABC):
         self.valid_dataloader = DataLoader(
             valid_dataset,
             batch_size=valid_batch_size,
-            shuffle=False,
+            shuffle=True,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
             worker_init_fn=NetworkTrainer.worker_init_fn,

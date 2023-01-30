@@ -1,3 +1,4 @@
+import logging
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -218,6 +219,7 @@ def candidate_smoothing(
     save_fig=False,
 ):
     import transforms.generate_labels as gl
+    logger = logging.getLogger()
 
     # print("output and input andshape, ", output[0].shape, output[1].shape, input.shape)
     # print("fr, ", full_resolution)
@@ -256,10 +258,10 @@ def candidate_smoothing(
                 # REMEMBER TO MINUS 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
                 if log_displacement_bool:
                     x_disp = np.sign(predicted_disps[lm, 0, x_idx, y_idx]) * (
-                        2 ** (abs(predicted_disps[lm, 0, x_idx, y_idx])) - 1
+                        2 ** (abs(predicted_disps[lm, 0, x_idx, y_idx]))
                     )
                     y_disp = np.sign(predicted_disps[lm, 1, x_idx, y_idx]) * (
-                        2 ** (abs(predicted_disps[lm, 1, x_idx, y_idx])) - 1
+                        2 ** (abs(predicted_disps[lm, 1, x_idx, y_idx]))
                     )
                 else:
                     x_disp = predicted_disps[lm, 0, x_idx, y_idx]
@@ -277,14 +279,6 @@ def candidate_smoothing(
 
         s = time.time()
         vote_heatmap = gl.gaussian_gen_fast(all_locs, full_resolution, sigma=1)
-
-        # vote_heatmap = gl.gaussian_gen_alternate(all_locs, full_resolution, sigma=1)
-        # vote_heatmap = np.zeros(full_resolution)
-        # for vote in all_locs:
-        #     vote_heatmap += gl.gaussian_gen(vote,full_resolution, 1, 1, lambda_scale=1)
-
-        # print("time to gen all candidate points: ", time.time()-s)
-        # print("vote heatmap shape max: ", vote_heatmap.shape, vote_heatmap.max())
 
         smoothed_heatmap = vote_heatmap * upscaled_hm
         smoothed_heatmaps.append(torch.tensor(smoothed_heatmap))
@@ -306,8 +300,6 @@ def candidate_smoothing(
             )
             coords_from_uhm = coords_from_uhm.detach().cpu().numpy()[0, 0]
 
-            print("get_coords from upscaled_hm: ", coords_from_uhm)
-
             ax[0, 0].imshow(upscaled_hm)
             rect4 = patchesplt.Rectangle(
                 ((coords_from_uhm[0]), (coords_from_uhm[1])),
@@ -318,6 +310,7 @@ def candidate_smoothing(
                 facecolor="none",
             )
             ax[0, 0].add_patch(rect4)
+            logger.info("[0,0]: get_coords from upscaled_hm: %s ", coords_from_uhm)
 
             # 2
             ax[0, 1].imshow(upscaled_hm)
@@ -325,20 +318,21 @@ def candidate_smoothing(
                 for y_idx, y in enumerate(range(0, full_resolution[1], step_size)):
 
                     center_xy = [x + (step_size // 2), y + (step_size // 2)]
-                    # REMEMBER TO ADD 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
                     if log_displacement_bool:
                         x_disp = np.sign(predicted_disps[lm, 0, x_idx, y_idx]) * (
-                            2 ** (abs(predicted_disps[lm, 0, x_idx, y_idx])) - 1
+                            2 ** (abs(predicted_disps[lm, 0, x_idx, y_idx]))
                         )
                         y_disp = np.sign(predicted_disps[lm, 1, x_idx, y_idx]) * (
-                            2 ** (abs(predicted_disps[lm, 1, x_idx, y_idx])) - 1
+                            2 ** (abs(predicted_disps[lm, 1, x_idx, y_idx]))
                         )
                     else:
                         x_disp = predicted_disps[lm, 0, x_idx, y_idx]
                         y_disp = predicted_disps[lm, 1, x_idx, y_idx]
 
-                    ax[0, 1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
-            print("average location: ", np.mean(all_locs, axis=0))
+                    loc = [center_xy[0] + x_disp, center_xy[1] + y_disp]
+                    if 0 <= loc[0] <= full_resolution[0] and 0 <= loc[1] <= full_resolution[1]:
+                        ax[0, 1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
+            logger.info("[0,1] average location: %s",  np.mean(all_locs, axis=0))
 
             ax[1, 0].imshow(vote_heatmap)
 
@@ -348,7 +342,7 @@ def candidate_smoothing(
                 ).contiguous()
             )
             coords_from_cm = coords_from_cm.detach().cpu().numpy()[0, 0]
-            print("get_coords from vote_heatmap: ", coords_from_cm, "max: ", arg_max_cm)
+            logger.info("[1,0] get_coords from vote_heatmap %s and max pixel %s ", coords_from_cm, arg_max_cm)
 
             ax[1, 1].imshow(smoothed_heatmap)
 
@@ -358,12 +352,7 @@ def candidate_smoothing(
                 )
             )
             coords_from_sm = coords_from_sm.detach().cpu().numpy()[0, 0]
-            print(
-                "get_coords from smoothed_heatmap: ",
-                coords_from_sm,
-                "max: ",
-                arg_max_vm,
-            )
+            logger.info("[1, 1] get_coords from smoothed_heatmap %s and arg max %s: ", coords_from_sm, arg_max_vm)
 
             plt.show()
 

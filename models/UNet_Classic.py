@@ -11,7 +11,6 @@ from copy import deepcopy
 
 import torch.nn as nn
 from torch import cat as torch_concat
-from torch import device, cuda
 
 
 class ConvNormNonlin(nn.Module):

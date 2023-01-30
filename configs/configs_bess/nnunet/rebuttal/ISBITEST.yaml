@@ -41,3 +41,5 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 3
   # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing/model_best_valid_coord_error_fold0.model"
+SSH:
+  AUTO_AMEND_PATHS: True

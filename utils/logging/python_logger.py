@@ -24,7 +24,7 @@ def get_logger(save_log_path, name=None):
         logger = logging.getLogger()
     else:
         logger = logging.getLogger(name)
-        
+
     logger.setLevel(logging.DEBUG)  # <<< Added Line
     # create console handler and set level to info
     stream_handler = logging.StreamHandler()
@@ -35,7 +35,8 @@ def get_logger(save_log_path, name=None):
     file_handler.setLevel(logging.DEBUG)
 
     # create formatter
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s -  %(module)s - %(message)s')
+    formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s -%(module)s-%(funcName)20s():%(lineno)s - %(message)s')
 
     # add formatters to our handlers
     stream_handler.setFormatter(formatter)

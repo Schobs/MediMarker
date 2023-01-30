@@ -1,0 +1,66 @@
+
+OUTPUT: 
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/phdnet/phdnet_bug_128_noval_12GS"
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
+  COMET_WORKSPACE: "schobs"
+  COMET_TAGS : ["phdnet_debug", "linalg"]
+
+SOLVER:
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE_TRAIN: 32
+  MAX_EPOCHS: 1000
+  # REGRESS_SIGMA: True
+  REGRESS_SIGMA_LOSS_WEIGHT: 0.005
+  AUTO_MIXED_PRECISION: True
+  MINI_BATCH_SIZE:  150
+
+  DEEP_SUPERVISION: False
+  NUM_RES_SUPERVISIONS: 1  
+  BASE_LR: 0.001  # Initial learning rate
+  SEED: 1
+  DECAY_POLICY: None
+
+  
+MODEL:
+  GAUSS_SIGMA: 12
+  ARCHITECTURE: "PHD-Net"
+  #model_best_valid_coord_error_fold0 
+  HM_LAMBDA_SCALE: 1.0
+
+DATASET:
+  ROOT: '/shared/tale2/Shared/data/CMRI/ASPIRE/'
+  SRC_TARGETS: '/shared/tale2/Shared/data/CMRI/ASPIRE/cardiacSA_labels_VPnC_CV'
+  NAME:  "ASPIRE_SA"
+  IMAGE_MODALITY: 'CMRI'
+  # LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+  LANDMARKS : [0]
+  TRAINSET_SIZE: 20
+
+
+
+SAMPLER:
+  # DATA_AUG: 'AffineComplex'
+  DATA_AUG: None
+
+  INPUT_SIZE : [512,512]
+  SAMPLE_MODE: 'patch_bias' # ['patch', 'full']
+  NUM_WORKERS: 0
+  # DEBUG: True
+  PATCH:
+    SAMPLER_BIAS: 0.66
+    RESOLUTION_TO_SAMPLE_FROM:  "input_size"
+    SAMPLE_PATCH_SIZE: [128,128]
+
+
+TRAINER:
+  PERFORM_VALIDATION: False
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: True
+  VALIDATE_EVERY: 1
+  INFERENCE_ONLY: False
+
+INFERENCE:
+  EVALUATION_MODE: "use_input_size" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: False
+
