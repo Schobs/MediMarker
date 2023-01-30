@@ -383,7 +383,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
 
             # TODO: try and not renormalize if we're patch sampling, maybe?
-            if self.sample_mode not "patch_bias":
+            if self.sample_mode != "patch_bias":
                 input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
             else:
                 input_image = torch.from_numpy(np.expand_dims(transformed_sample[0], axis=0)).float()
