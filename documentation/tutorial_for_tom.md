@@ -5,13 +5,14 @@
 1) Follow normal instructions to clone the repo.
 2) Then do ```git checkout gaussian_process```
 3) Make a conda environment using ```requirements/gp_environment.yml``` **NOT** ```requirements/environment.yml```
-
+**UPDATE: For GPFlow, please do requirements/gpflow_environment.yml**
 
 ## 2. Data
 Put your data somewhere (the stuff I shared with you on Google Drive)
 
 ## 3. Configure
 Check out ```configs/configs_gp/configs_for_tom.yaml``` for your config file. The config is documented so hopefully you know what each one is doing. You will need to change your paths to the data, and the output.
+**UPDATE: For GPFlow, please do configs/configs_gp/gpflow.yaml**
 
 ## 4. Comet.ML
 Make a Comet.ml account so you can track the experiments. You can add your keys to your config file.

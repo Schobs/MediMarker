@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/isbiTEST2" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow" #Change this to where you want to save model checkpoints/results
 
  
   USE_COMETML_LOGGING: True
@@ -31,7 +31,7 @@ DATASET:
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0] #Choose landmark (between 0-17)
-  TRAINSET_SIZE: 10  # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
+  TRAINSET_SIZE: -1  # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
 
  
 TRAINER:
