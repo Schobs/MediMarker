@@ -27,11 +27,6 @@ _C.DATASET.LANDMARKS = []
 # _C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512] #legacy, can ignore.
 _C.DATASET.TRAINSET_SIZE = -1  # -1 for full trainset size or int <= len(training_set)
 
-# _C.DATASET.DEBUG = False
-# _C.DATASET.DATA_AUG = None
-# _C.DATASET.DATA_AUG_PACKAGE = 'imgaug' #['imgaug', 'albumentations']
-# _C.DATASET.NUM_WORKERS = 8
-
 
 _C.SAMPLER = CN()
 _C.SAMPLER.SAMPLE_MODE = "full"  # ['full', "patch_bias", 'patch_centred']

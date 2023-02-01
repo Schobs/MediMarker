@@ -397,7 +397,6 @@ class NetworkTrainer(ABC):
         self.optimizer.zero_grad()
 
         # Run the forward pass, using auto mixed precision if enabled
-        so = time()
         if self.auto_mixed_precision:
             with autocast():
                 output = self.network(data)
@@ -480,8 +479,10 @@ class NetworkTrainer(ABC):
         return l.detach().cpu().numpy(), generator
 
     def maybe_get_coords(self, output, log_coords, data_dict):
-        """From output gets coordinates and extra info for logging. If log_coords is false, returns None for all.
-            It also decides whether to resize heatmap, rescale coords depending on config settings.
+        """ 
+        From output gets coordinates and extra info for logging. If log_coords is false, 
+        returns None for all. It also decides whether to resize heatmap, rescale coords 
+        depending on config settings.
 
         Args:
             output (_type_): _description_

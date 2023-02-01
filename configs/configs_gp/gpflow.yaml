@@ -31,13 +31,13 @@ DATASET:
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0] #Choose landmark (between 0-17)
-  TRAINSET_SIZE: -1  # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
+  TRAINSET_SIZE: 10  # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
 
  
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: True # Kind of irrelevant for ExactGP
+  CACHE_DATA: False # Kind of irrelevant for ExactGP
   INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
   SAVE_EVERY: 500 # Saves checkpoint every X epochs
   VALIDATE_EVERY: 200 #validation every X epochs
@@ -61,7 +61,7 @@ SAMPLER:
 
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
-  ARCHITECTURE: "GP"  # ["U-Net" , "PHD-Net"]
+  ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
   # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gp_test1/GPmodel_fold0.model" #Put your checkpoint for Inference here.
 
 INFERENCE:

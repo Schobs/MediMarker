@@ -198,7 +198,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 self.annotation_path, data_list_key=self.split, base_dir=self.root_path
             )
 
-            print("done")
+            self.logger.info("done")
 
         # datalist = datalist[:20]
         if self.dataset_split_size != -1:
@@ -215,7 +215,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         with alive_bar(len(datalist), force_tty=True) as loading_bar:
             loading_bar.text('Loading Data...')
             for idx, data in enumerate(datalist):
-                self.logger.info("idx: %s", idx)
                 # Add coordinate labels as sample attribute, if annotations available
                 if (not isinstance(data["coordinates"], list)) or (
                     "has_annotation" in data.keys() and data["has_annotation"] == False
