@@ -1,6 +1,6 @@
 
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/phdnet/phdnet_bug_512_val_d"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/phdnet/phdnet_bug_512_val_1gs_l2"
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
   COMET_WORKSPACE: "schobs"
@@ -13,7 +13,7 @@ SOLVER:
   # REGRESS_SIGMA: True
   REGRESS_SIGMA_LOSS_WEIGHT: 0.005
   AUTO_MIXED_PRECISION: True
-  MINI_BATCH_SIZE:  150
+  MINI_BATCH_SIZE:  10
 
   DEEP_SUPERVISION: False
   NUM_RES_SUPERVISIONS: 1  
@@ -22,11 +22,11 @@ SOLVER:
   DECAY_POLICY: None
   
 MODEL:
-  GAUSS_SIGMA: 4
+  GAUSS_SIGMA: 2
   ARCHITECTURE: "PHD-Net"
   #model_best_valid_coord_error_fold0 
   HM_LAMBDA_SCALE: 1.0
-  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/phdnet/phdnet_bug_512_val_d/model_latest_fold0.model"
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/phdnet/phdnet_bug_512_val_d/model_latest_fold0.model"
 
 
 DATASET:
@@ -35,7 +35,7 @@ DATASET:
   NAME:  "ASPIRE_SA"
   IMAGE_MODALITY: 'CMRI'
   # LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
-  LANDMARKS : [0]
+  LANDMARKS : [2]
   TRAINSET_SIZE: -1
 
 
@@ -60,6 +60,7 @@ TRAINER:
   CACHE_DATA: True
   VALIDATE_EVERY: 10
   INFERENCE_ONLY: False
+  FOLD: 1
 
 INFERENCE:
   EVALUATION_MODE: "use_input_size" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]

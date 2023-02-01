@@ -198,7 +198,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 self.annotation_path, data_list_key=self.split, base_dir=self.root_path
             )
 
-            print("done")
+            self.logger.info("done")
 
         # datalist = datalist[:20]
         if self.dataset_split_size != -1:
