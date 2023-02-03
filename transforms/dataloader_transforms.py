@@ -1,8 +1,5 @@
 import imgaug.augmenters as iaa
 import imgaug
-import albumentations as A
-import albumentations.augmentations.functional as F
-from albumentations.pytorch import ToTensorV2
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -43,13 +40,10 @@ def get_aug_package_loader(aug_package):
 
     if aug_package == "imgaug":
         return get_imgaug_transforms
-    elif aug_package == "albumentations":
-        return get_albumentation_transforms
     else:
-        raise ValueError(
-            'aug package %s not supported. Try "imgaug" or  "albumentations" '
-            % (aug_package)
-        )
+        raise ValueError('aug package % s not supported. Try "imgaug" '
+                         % (aug_package)
+                         )
 
 
 def get_imgaug_transforms(data_augmentation, final_im_size):
@@ -255,120 +249,5 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
 
     else:
         raise ValueError("transformations mode for dataaugmentation not recognised.")
-
-    return transform
-
-
-def get_albumentation_transforms(data_augmentation):
-    """Returns a data augmentation sequence from the albumentation package
-
-    Args:
-        data_augmentation (str): name of the data augmentation strategy
-
-    Raises:
-        ValueError: error if data_augmentation has not been defined as a strategy
-
-    Returns:
-        transform: sequence of transforms
-    """
-    if data_augmentation == "V1":
-        transform = A.Compose(
-            [
-                # A.AdvancedBlur(),
-                # A.CLAHE(),
-                # A.HueSaturationValue(),
-                # A.RandomBrightnessContrast(),
-                # A.RandomGamma(),
-                # A.GaussNoise(),
-                # A.CoarseDropout(),
-                # A.Downscale(),
-                # A.ElasticTransform(),
-                A.Flip(),
-                A.SafeRotate(),
-                # A.ShiftScaleRotate(scale_limit=[-0.25,0.25], rotate_limit=90),
-                # A.Perspective(),
-                # NormalizeZScore(p=1),
-                ToTensorV2(),
-            ],
-            keypoint_params=A.KeypointParams(format="xy"),
-        )
-    elif data_augmentation == "VAFFINE":
-        transform = A.Compose(
-            [
-                A.SafeRotate(),
-                A.Affine(scale=(0.9, 1.1), translate_percent=(0, 0.1), p=0.75),
-                # A.Flip(),
-                # A.ShiftScaleRotate(scale_limit=[-0.25,0.25], rotate_limit=90),
-                # A.Perspective(),
-                # NormalizeZScore(),
-                ToTensorV2(),
-            ],
-            keypoint_params=A.KeypointParams(format="xy"),
-        )
-    elif data_augmentation == "V2":
-        transform = A.Compose(
-            [
-                A.Downscale(),
-                A.Flip(),
-                A.ShiftScaleRotate(scale_limit=[-0.25, 0.25], rotate_limit=90),
-                # A.Perspective(),
-                # NormalizeZScore(),
-                ToTensorV2(),
-            ],
-            keypoint_params=A.KeypointParams(format="xy"),
-        )
-    elif data_augmentation == "V3":
-        transform = A.Compose(
-            [
-                # A.GaussNoise(var_limit=15.0),
-                A.Downscale(),
-                A.Flip(),
-                # A.Rotate(),
-                A.ShiftScaleRotate(scale_limit=[-0.25, 0.25], rotate_limit=90),
-                A.Perspective(fit_output=True),
-                # NormalizeZScore(),
-                ToTensorV2(),
-            ],
-            keypoint_params=A.KeypointParams(format="xy"),
-        )
-
-    elif data_augmentation == "V4":
-        transform = A.Compose(
-            [
-                # A.RandomBrightnessContrast(),
-                # A.RandomGamma(gamma_limit=(80,100)),
-                A.GaussNoise(var_limit=0.5),
-                # A.CoarseDropout(),
-                A.Downscale(),
-                A.Flip(),
-                A.ShiftScaleRotate(scale_limit=[-0.25, 0.25], rotate_limit=90),
-                A.Perspective(fit_output=True),
-                # NormalizeZScore(),
-                ToTensorV2(),
-            ],
-            keypoint_params=A.KeypointParams(format="xy"),
-        )
-    elif data_augmentation == "V5":
-        transform = A.Compose(
-            [
-                A.Emboss(),
-                # A.RandomGamma(gamma_limit=(80,100)),
-                A.GaussNoise(var_limit=0.5),
-                # A.CoarseDropout(),
-                # A.RandomResizedCrop(input_size[0], input_size[1], p=0.25),
-                A.ShiftScaleRotate(),
-                A.Downscale(),
-                A.Flip(),
-                # A.SafeRotate(),
-                A.Perspective(fit_output=True),
-                # NormalizeZScore(),
-                ToTensorV2(),
-            ],
-            keypoint_params=A.KeypointParams(format="xy"),
-        )
-    else:
-        raise ValueError(
-            "transformations mode for dataaugmentation not recognised, try None, V1, V2, V3 or V4"
-        )
 
     return transform
