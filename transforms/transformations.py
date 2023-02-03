@@ -25,6 +25,8 @@ def normalize_cmr(image, to_tensor=False):
 
         if to_tensor:
             norm_image = torch.from_numpy(np.expand_dims(norm_image, axis=0)).float()
+        else:
+            norm_image = np.expand_dims(norm_image, axis=0)
 
     return norm_image
 

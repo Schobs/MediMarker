@@ -44,6 +44,7 @@ class NetworkTrainer(ABC):
 
         # Dataset class to use
         self.dataset_class = dataset_class
+        self.to_pytorch_tensor = self.trainer_config.DATASET.TO_PYTORCH_TENSOR
         # Dataloader info
         self.data_loader_batch_size_train = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN
         self.data_loader_batch_size_eval = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_EVAL
@@ -994,6 +995,7 @@ class NetworkTrainer(ABC):
             num_res_supervisions=self.num_res_supervision,
             debug=self.trainer_config.SAMPLER.DEBUG,
             input_size=self.trainer_config.SAMPLER.INPUT_SIZE,
+            to_pytorch=self.to_pytorch_tensor
         )
 
         #### Validation dataset ####
@@ -1068,6 +1070,8 @@ class NetworkTrainer(ABC):
             num_res_supervisions=self.num_res_supervision,
             debug=self.trainer_config.SAMPLER.DEBUG,
             input_size=load_im_size,
+            to_pytorch=self.to_pytorch_tensor
+
         )
         return dataset
 

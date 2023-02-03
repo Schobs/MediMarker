@@ -26,6 +26,7 @@ _C.DATASET.IMAGE_MODALITY = "CMRI"
 _C.DATASET.LANDMARKS = []
 # _C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512] #legacy, can ignore.
 _C.DATASET.TRAINSET_SIZE = -1  # -1 for full trainset size or int <= len(training_set)
+_C.DATASET.TO_PYTORCH_TENSOR = True  # True if using pytorch, False if using tensorflow
 
 
 _C.SAMPLER = CN()

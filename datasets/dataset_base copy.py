@@ -28,7 +28,7 @@ class DatasetMeta(ABCMeta, type(data.Dataset)):
     pass
 
 
-class DatasetBase(ABC, metaclass=DatasetMeta):
+class DatasetBaseTensorFlo(ABC, metaclass=DatasetMeta):
     """
     A custom dataset superclass for loading landmark localization data
 
@@ -60,7 +60,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         input_size=[512, 512],
         num_res_supervisions: int = 5,
         additional_sample_attribute_keys=None,
-        to_pytorch=True,
     ):
         """Initialize the dataset. This is the base class for all datasets.
 
@@ -116,7 +115,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.additional_sample_attributes = {
             k: [] for k in self.additional_sample_attribute_keys
         }
-        self.to_pytorch = to_pytorch
+
         ############# Set Sample Mode #############
 
         self.sample_mode = sample_mode
@@ -382,7 +381,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             # list where [0] is image and [1] are coords.
             transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
 
-            input_image = normalize_cmr(transformed_sample[0], to_tensor=self.to_pytorch)
+            input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
             input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
 
             # Recalculate indicators incase transform pushed out/in coords.
@@ -400,11 +399,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         else:
 
             input_coords = coords
-            if self.to_pytorch:
-                input_image = torch.from_numpy(image).float()
-            else:
-                input_image = image
-                
+            input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
 
         if self.generate_hms_here:

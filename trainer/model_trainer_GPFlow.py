@@ -44,7 +44,7 @@ class GPFlowTrainer(NetworkTrainer):
         # get model config parameters
 
         # scheduler, initialiser and optimiser params
-        self.optimizer = tf.keras.optimizers.Adam()
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
 
         # "Loss" for GPs - the marginal log likelihood
         self.loss_func = gpytorch.mlls.ExactMarginalLogLikelihood
@@ -79,19 +79,29 @@ class GPFlowTrainer(NetworkTrainer):
         self.logger.info("Loading training data for the GP...")
         self.training_data = next(iter(self.train_dataloader))
 
-        self.training_data["image"] = (self.training_data["image"])
+        self.training_data["image"] = np.squeeze(np.array(self.training_data["image"], dtype=np.float64), axis=1)
         self.training_data["label"]["landmarks"] = np.squeeze(
-            self.training_data["label"]["landmarks"])
+            np.array(self.training_data["label"]["landmarks"], dtype=np.float64))
 
-        self.all_training_input = np.squeeze(np.array(self.training_data["image"], dtype=np.float64), axis=1)
-        self.all_training_labels = np.squeeze(np.array(self.training_data["label"]["landmarks"], dtype=np.float64))
+        # self.all_training_input = np.squeeze(np.array(self.training_data["image"], dtype=np.float64), axis=1)
+
+        self.all_training_input = self.training_data["image"]
+        self.all_training_labels = self.training_data["label"]["landmarks"]
 
         self.logger.info("Initializing GP model with training data...")
 
         # create multi-output kernel
-        kernel = gpf.kernels.SharedIndependent(
-            gpf.kernels.SquaredExponential() + gpf.kernels.Linear(), output_dim=2
-        )
+        kern_list = [
+            gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)
+        ]
+        # Create multi-output kernel from kernel list
+        kernel = gpf.kernels.LinearCoregionalization(
+            kern_list, W=np.random.randn(2, 2)
+        )  # Notice that we initialise the mixing matrix W
+
+        # kernel = gpf.kernels.SharedIndependent(
+        #     gpf.kernels.SquaredExponential() + gpf.kernels.Linear(), output_dim=2
+        # )
         # initialization of inducing input locations (M random points from the training inputs)
         flattened_sample_size = self.all_training_input.shape[1]
         num_inducing_points = 500
@@ -126,20 +136,61 @@ class GPFlowTrainer(NetworkTrainer):
 
         continue_training = True
         while self.epoch < self.max_num_epochs and continue_training:
+            self.epoch_start_time = time()
 
-            loss = self.network.training_loss_closure((self.all_training_input,
-                                                      self.all_training_labels))
+            per_epoch_logs = self.dict_logger.get_epoch_logger()
 
-            self.logger.info("L: %s", np.array([loss()])[0])
-            self.optimizer.minimize(loss,  self.network.trainable_variables)
+            # We pass in the entire self.training_data, and we tell it not to restart the dataloader.
+            # These will do one iteration over the entire dataset.
+            l, _ = self.run_iteration(
+                None,
+                None,
+                backprop=True,
+                split="training",
+                log_coords=False,
+                logged_vars=per_epoch_logs,
+                direct_data_dict=self.training_data,
+                restart_dataloader=False
+            )
 
-            self.epoch += 1
+            self.logger.info("Training Loss, %s", l)
+
+            if self.comet_logger:
+                self.comet_logger.log_metric("training loss",  l, self.epoch)
+
             # We validate every 200 epochs
             if self.epoch % self.validate_every == 0:
-
-                val_generator = iter(self.valid_dataloader)
-                self.validate(val_generator)
                 self.logger.info("validation, %s", self.epoch)
+
+                generator = iter(self.valid_dataloader)
+                while generator != None:
+                    l, generator = self.run_iteration(
+                        generator,
+                        self.valid_dataloader,
+                        backprop=False,
+                        split="validation",
+                        log_coords=True,
+                        logged_vars=per_epoch_logs,
+                        restart_dataloader=False
+                    )
+
+            self.epoch_end_time = time()
+            continue_training = self.on_epoch_end(per_epoch_logs)
+
+            self.epoch += 1
+            # loss = self.network.training_loss_closure((self.all_training_input,
+            #                                           self.all_training_labels))
+
+            # self.logger.info("L: %s", np.array([loss()])[0])
+            # self.optimizer.minimize(loss,  self.network.trainable_variables)
+
+            # self.epoch += 1
+            # # We validate every 200 epochs
+            # if self.epoch % self.validate_every == 0:
+
+            #     val_generator = iter(self.valid_dataloader)
+            #     self.validate(val_generator)
+            #     self.logger.info("validation, %s", self.epoch)
 
             # continue_training = self.on_epoch_end(per_epoch_logs)
 
@@ -150,7 +201,9 @@ class GPFlowTrainer(NetworkTrainer):
             images = np.squeeze(np.array(data_dict["image"], dtype=np.float64), axis=1)
             labels = np.squeeze(np.array(data_dict["label"]["landmarks"], dtype=np.float64))
 
-            y_mean, y_covar = self.network.predict_y(images, full_cov=True)
+            y_mean, y_covar = self.network.predict_f(images, full_cov=True, full_output_cov=True)
+
+            # self.logger.info("y_covar: %s", y_covar.numpy())
             x = 1
           # Log info from this iteration.
             # if list(logged_vars.keys()) != []:
@@ -272,19 +325,19 @@ class GPFlowTrainer(NetworkTrainer):
         else:
             data_dict = direct_data_dict
 
-        data = (data_dict["image"])
+        data_dict["image"] = np.float64(data_dict["image"])
+        data_dict["label"]["landmarks"] = np.float64(data_dict["label"]["landmarks"])
 
-        output = self.network(data)
-        del data
+        data = data_dict["image"]
+        target = data_dict["label"]["landmarks"]
 
         # Only attempts loss if annotations avaliable for entire batch
         if all(data_dict["annotation_available"]):
-            loss = self.network.training_loss_closure((self.all_training_input,
-                                                      self.all_training_labels))
+            l = self.network.training_loss_closure((data, target))
 
-            loss_dict = {"all_loss_all": loss.numpy(), }
+            loss_dict = {"all_loss_all": np.array([l()])[0]}
             if backprop:
-                self.optimizer.minimize(loss,  self.network.trainable_variables)
+                self.optimizer.minimize(l,  self.network.trainable_variables)
 
         else:
             l = torch.tensor(0).to(self.device)
@@ -299,8 +352,12 @@ class GPFlowTrainer(NetworkTrainer):
                     pred_coords_input_size,
                     extra_info,
                     target_coords,
-                ) = self.maybe_get_coords(output, log_coords, data_dict)
+                ) = self.maybe_get_coords(log_coords, data_dict)
 
+                if pred_coords is not None:
+                    pred_coords = torch.tensor(pred_coords)
+                if target_coords is not None:
+                    target_coords = torch.tensor(target_coords)
                 logged_vars = self.dict_logger.log_key_variables(
                     logged_vars,
                     pred_coords,
@@ -317,9 +374,8 @@ class GPFlowTrainer(NetworkTrainer):
                         for x in logged_vars["individual_results"]
                         if x["uid"] in data_dict["uid"]
                     ]
-                    self.eval_label_generator.debug_prediction(
+                    self.eval_label_generator.debug_prediction_gpflow(
                         data_dict,
-                        output,
                         pred_coords,
                         pred_coords_input_size,
                         debug_vars,
@@ -329,11 +385,9 @@ class GPFlowTrainer(NetworkTrainer):
         if self.profiler:
             self.profiler.step()
 
-        del output
-        del target
-        return l.detach().cpu().numpy(), generator
+        return np.array([l()])[0], generator
 
-    def maybe_get_coords(self, output, log_coords, data_dict):
+    def maybe_get_coords(self, log_coords, data_dict):
         """ 
         From output gets coordinates and extra info for logging. If log_coords is false, 
         returns None for all. It also decides whether to resize heatmap, rescale coords 
@@ -352,6 +406,7 @@ class GPFlowTrainer(NetworkTrainer):
             pred_coords, target_coords = self.maybe_rescale_coords(
                 pred_coords_input_size, data_dict
             )
+            target_coords = target_coords.cpu().detach().numpy()
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
 
@@ -368,13 +423,12 @@ class GPFlowTrainer(NetworkTrainer):
             [int, int]: predicted coordinates
         """
 
-        y_mean, y_var = self.network.predict_y(data_dict["images"], full_cov=True)
+        y_mean, cov_matr = self.network.predict_f(data_dict["image"][:, 0, :], full_cov=True, full_output_cov=True)
 
-        prediction = torch.round(y_mean.mean)
-        lower = y_mean - 1.96 * np.sqrt(y_var)
-        upper = y_mean + 1.96 * np.sqrt(y_var)
+        prediction = np.expand_dims(np.round(y_mean), axis=0)
+        lower = y_mean - 1.96 * np.sqrt(cov_matr[0, 0, 0, 0])
+        upper = y_mean + 1.96 * np.sqrt(cov_matr[0, 1, 0, 1])
 
-        cov_matr = model_output.covariance_matrix.cpu().detach().numpy()
         extra_info = {"lower": lower, "upper": upper, "cov_matr": cov_matr}
         return prediction,  extra_info
 
@@ -387,3 +441,81 @@ class GPFlowTrainer(NetworkTrainer):
         raise NotImplementedError(
             "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
         )
+
+    def on_epoch_end(self, per_epoch_logs):
+        """
+         Always run to 1000 epochs
+        :return:
+        """
+
+        new_best_valid = False
+        new_best_coord_valid = False
+
+        continue_training = self.epoch < self.max_num_epochs
+
+        #######Logging some end of epoch info #############
+        time_taken = self.epoch_end_time - self.epoch_start_time
+        per_epoch_logs = self.dict_logger.log_epoch_end_variables(
+            per_epoch_logs,
+            time_taken,
+            self.sigmas,
+            0,
+        )
+
+        # log them else they are lost!
+        if self.comet_logger:
+            self.dict_logger.log_dict_to_comet(
+                self.comet_logger, per_epoch_logs, self.epoch
+            )
+
+        if self.verbose_logging:
+            self.logger.info("Epoch %s logs: %s", self.epoch, per_epoch_logs)
+
+        # Checks for it this epoch was best in validation loss or validation coord error!
+        if per_epoch_logs["validation_all_loss_all"] < self.best_valid_loss:
+            self.best_valid_loss = per_epoch_logs["validation_all_loss_all"]
+            self.best_valid_loss_epoch = self.epoch
+            new_best_valid = True
+
+        if per_epoch_logs["valid_coord_error_mean"] < self.best_valid_coord_error:
+            self.best_valid_coord_error = per_epoch_logs["valid_coord_error_mean"]
+            self.best_valid_coords_epoch = self.epoch
+            new_best_coord_valid = True
+            self.epochs_wo_val_improv = 0
+        else:
+            self.epochs_wo_val_improv += 1
+
+        if self.epochs_wo_val_improv == self.early_stop_patience:
+            continue_training = False
+            self.logger.info(
+                "EARLY STOPPING. Validation Coord Error did not reduce for %s epochs. ", self.early_stop_patience
+            )
+
+        self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
+
+        return continue_training
+
+    def save_checkpoint(self, path):
+        """Save model checkpoint to path
+
+        Args:
+            path (str): Path to save model checkpoint to.
+        """
+        # state = {
+        #     "epoch": self.epoch + 1,
+        #     "state_dict": self.network.state_dict(),
+        #     "optimizer": self.optimizer.state_dict(),
+        #     "best_valid_loss": self.best_valid_loss,
+        #     "best_valid_coord_error": self.best_valid_coord_error,
+        #     "best_valid_loss_epoch": self.best_valid_loss_epoch,
+        #     "best_valid_coords_epoch": self.best_valid_coords_epoch,
+        #     "epochs_wo_improvement": self.epochs_wo_val_improv,
+        #     "sigmas": self.sigmas,
+        #     "training_sampler": self.sampler_mode,
+        #     "training_resolution": self.training_resolution,
+        # }
+
+        log_dir = path
+        ckpt = tf.train.Checkpoint(model=self.network)
+        manager = tf.train.CheckpointManager(ckpt, log_dir, max_to_keep=3)
+        manager.save()

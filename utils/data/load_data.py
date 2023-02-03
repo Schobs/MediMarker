@@ -147,9 +147,7 @@ def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
 
     # potentially resize the coords
     coords = resize_coordinates(coords,  resizing_factor)
-    image = np.expand_dims(
-        normalize_cmr(original_image.resize(load_im_size)), axis=0
-    )
+    image = normalize_cmr(original_image.resize(load_im_size))
 
     # logger.info("time im resize: %s", time.time()-s)
 

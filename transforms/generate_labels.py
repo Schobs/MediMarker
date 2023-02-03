@@ -240,7 +240,6 @@ class GPLabelGenerator(LabelGenerator):
             plt.close()
 
 
-
 class GPFlowLabelGenerator(LabelGenerator):
     """Label generator for Gaussian process. the label is literally just the coordinates."""
 
@@ -263,7 +262,7 @@ class GPFlowLabelGenerator(LabelGenerator):
         """Simply returns the coordinates of the landmarks as the label."""
 
         if to_tensor:
-            return_dict = {"landmarks": torch.from_numpy(landmarks)}
+            return_dict = {"landmarks": (landmarks)}
         else:
             return_dict = {"landmarks": landmarks}
 
@@ -386,6 +385,92 @@ class GPFlowLabelGenerator(LabelGenerator):
             plt.show()
             plt.close()
 
+    def debug_prediction_gpflow(
+        self,
+        input_dict,
+        predicted_coords,
+        input_size_pred_coords,
+        logged_vars,
+        extra_info,
+        min_error=0,
+    ):
+        """Visually debug a prediction and compare to the target. Provide logging and visualisation of the sample."""
+        coordinate_label = input_dict["label"]["landmarks"]
+
+        transformed_targ_coords = np.array(input_dict["target_coords"])
+        full_res_coords = np.array(input_dict["full_res_coords"])
+        transformed_input_image = input_dict["image"]
+
+        model_output_coords = input_size_pred_coords
+
+        predicted_coords = predicted_coords
+        # input_size_pred_coords = extra_info["coords_og_size"]
+
+        for sample_idx, ind_sample in enumerate(logged_vars):
+            f, ax = plt.subplots(1, 2, figsize=(8, 3))
+            # extra_info = {"lower": lower, "upper": upper, "cov_matr": cov_matr}
+
+            # extra_info = ind_sample["extra_info"]
+            # create  kernel
+            m1 = model_output_coords[sample_idx][0]
+            s1 = extra_info["cov_matr"][sample_idx]
+            k1 = multivariate_normal(mean=m1, cov=s1)
+
+            # create a grid of (x,y) coordinates at which to evaluate the kernels
+            xlim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
+            ylim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
+            xres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
+            yres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
+
+            x = np.linspace(xlim[0], xlim[1], xres)
+            y = np.linspace(ylim[0], ylim[1], yres)
+            xx, yy = np.meshgrid(x, y)
+
+            # evaluate kernels at grid points
+            xxyy = np.c_[xx.ravel(), yy.ravel()]
+            zz = k1.pdf(xxyy)
+
+            # reshape and plot image
+            img = zz.reshape((xres, yres))
+            ax[1].imshow(img)
+
+            # show image with label
+            image_label = coordinate_label[sample_idx][0]
+            image_ex = transformed_input_image[sample_idx][0].cpu().detach().numpy()
+
+            ax[0].imshow(image_ex.reshape((xres, yres)))
+
+            rect1 = patchesplt.Rectangle(
+                (int(image_label[0]), int(image_label[1])),
+                3,
+                3,
+                linewidth=2,
+                edgecolor="g",
+                facecolor="none",
+            )
+            ax[0].add_patch(rect1)
+
+            rect2 = patchesplt.Rectangle(
+                (int(image_label[0]), int(image_label[1])),
+                3,
+                3,
+                linewidth=2,
+                edgecolor="g",
+                facecolor="none",
+            )
+            ax[1].add_patch(rect2)
+            rect3 = patchesplt.Rectangle(
+                (int(m1[0]), int(m1[1])),
+                3,
+                3,
+                linewidth=2,
+                edgecolor="r",
+                facecolor="none",
+            )
+            ax[1].add_patch(rect3)
+
+            plt.show()
+            plt.close()
 
 
 class UNetLabelGenerator(LabelGenerator):

@@ -90,10 +90,15 @@ class DictLogger():
             # print("after extra info filter", extra_info.keys())
 
             if log_coords:
+
                 
 
                 #Get coord error of the input resolution to network
-                coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
+                if torch.is_tensor(pred_coords):
+                    coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
+                else:
+                    coord_error = np.linalg.norm((pred_coords- target_coords), axis=2)
+
 
                 # #Get coord error of the original image resolution
                 # pred_coords_original_resolution = ((pred_coords.detach().cpu())) * data_dict["resizing_factor"]
