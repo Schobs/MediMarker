@@ -1,4 +1,5 @@
 from ast import Tuple
+import pickle
 from losses.GPLosses import GPFlowLoss
 from transforms.generate_labels import GPFlowLabelGenerator
 from trainer.model_trainer_base import NetworkTrainer
@@ -22,6 +23,8 @@ from scipy.stats import multivariate_normal
 import gpflow as gpf
 from gpflow.ci_utils import reduce_in_tests
 from gpflow.utilities import print_summary
+from torch.utils.data import DataLoader
+from utils.setup.argument_utils import checkpoint_loading_checking
 
 gpf.config.set_default_float(np.float64)
 gpf.config.set_default_summary_fmt("notebook")
@@ -118,7 +121,7 @@ class GPFlowTrainer(NetworkTrainer):
         # )
         # initialization of inducing input locations (M random points from the training inputs)
         flattened_sample_size = next(iter(self.train_dataloader))["image"].shape[-1]
-        num_inducing_points = 500
+        num_inducing_points = 1000
         Zinit = np.tile(np.linspace(0, flattened_sample_size, num_inducing_points)[:, None], flattened_sample_size)
         Z = Zinit.copy()
         # create multi-output inducing variables from Z
@@ -126,9 +129,13 @@ class GPFlowTrainer(NetworkTrainer):
             gpf.inducing_variables.InducingPoints(Z)
         )
 
+        # initialize mean of variational posterior to be of shape MxL
+        q_mu = np.zeros((num_inducing_points, 2))
+        # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
+        q_sqrt = np.repeat(np.eye(num_inducing_points)[None, ...], 2, axis=0) * 1.0
         # create SVGP model as usual and optimize
         self.network = gpf.models.SVGP(
-            kernel, gpf.likelihoods.Gaussian(), inducing_variable=iv, num_latent_gps=2
+            kernel, gpf.likelihoods.Gaussian(), inducing_variable=iv, num_latent_gps=2, q_mu=q_mu, q_sqrt=q_sqrt,
         )
         # self.logger.info(self.network.parameters)
 
@@ -147,38 +154,44 @@ class GPFlowTrainer(NetworkTrainer):
     def train(self):
         if not self.was_initialized:
             self.initialize(True)
-
+        step = 0
         continue_training = True
         while self.epoch < self.max_num_epochs and continue_training:
             self.epoch_start_time = time()
-
+            epoch_loss = 0
+            mb_step = 0
             per_epoch_logs = self.dict_logger.get_epoch_logger()
 
             # We pass in the entire self.training_data, and we tell it not to restart the dataloader.
             # These will do one iteration over the entire dataset.
             generator = iter(self.train_dataloader)
-            l, _ = self.run_iteration(
-                generator,
-                self.train_dataloader,
-                backprop=True,
-                split="training",
-                log_coords=False,
-                logged_vars=per_epoch_logs,
-                # direct_data_dict=self.training_data,
-                restart_dataloader=False
-            )
+            while generator is not None:
 
-            self.logger.info("Training Loss, %s", l)
+                l, generator = self.run_iteration(
+                    generator,
+                    self.train_dataloader,
+                    backprop=True,
+                    split="training",
+                    log_coords=False,
+                    logged_vars=per_epoch_logs,
+                    # direct_data_dict=self.training_data,
+                    restart_dataloader=False
+                )
+                epoch_loss += l
+                self.logger.info("Training Step %s, Loss, %s", step, l)
+                step += 1
+                mb_step += 1
+                if self.comet_logger:
+                    self.comet_logger.log_metric("training loss",  l, step)
 
             if self.comet_logger:
-                self.comet_logger.log_metric("training loss",  l, self.epoch)
-
+                self.comet_logger.log_metric("training loss",  epoch_loss/mb_step, self.epoch)
             # We validate every 200 epochs
             if self.epoch % self.validate_every == 0:
                 self.logger.info("validation, %s", self.epoch)
 
                 generator = iter(self.valid_dataloader)
-                while generator != None:
+                while generator is not None:
                     l, generator = self.run_iteration(
                         generator,
                         self.valid_dataloader,
@@ -219,7 +232,7 @@ class GPFlowTrainer(NetworkTrainer):
     #         y_mean, y_covar = self.network.predict_f(images, full_cov=True, full_output_cov=True)
 
             # self.logger.info("y_covar: %s", y_covar.numpy())
-            x = 1
+            # x = 1
           # Log info from this iteration.
             # if list(logged_vars.keys()) != []:
             #     with torch.no_grad():
@@ -352,7 +365,7 @@ class GPFlowTrainer(NetworkTrainer):
             l = self.optimization_step((data, target), backprop)
             # l = self.network.training_loss_closure((data, target))
 
-            loss_dict = {"all_loss_all":l.numpy()}
+            loss_dict = {"all_loss_all": l.numpy()}
             # if backprop:
             #     self.optimizer.minimize(l,  self.network.trainable_variables)
 
@@ -416,9 +429,9 @@ class GPFlowTrainer(NetworkTrainer):
         return loss
 
     def maybe_get_coords(self, log_coords, data_dict):
-        """ 
-        From output gets coordinates and extra info for logging. If log_coords is false, 
-        returns None for all. It also decides whether to resize heatmap, rescale coords 
+        """
+        From output gets coordinates and extra info for logging. If log_coords is false,
+        returns None for all. It also decides whether to resize heatmap, rescale coords
         depending on config settings.
 
         Args:
@@ -454,10 +467,10 @@ class GPFlowTrainer(NetworkTrainer):
         y_mean, cov_matr = self.network.predict_f(data_dict["image"], full_cov=True, full_output_cov=True)
 
         prediction = np.expand_dims(np.round(y_mean), axis=0)
-        lower = y_mean - 1.96 * np.sqrt(cov_matr[0, 0, 0, 0])
-        upper = y_mean + 1.96 * np.sqrt(cov_matr[0, 1, 0, 1])
+        # lower = y_mean - 1.96 * np.array([np.sqrt(cov_matr[x, 0, x, 0]) for x in range(y_mean.shape[0])])
+        # upper = y_mean - 1.96 * [np.sqrt(cov_matr[x, 1, x, 1]) for x in range(y_mean.shape[0])]
 
-        extra_info = {"lower": lower, "upper": upper, "cov_matr": cov_matr}
+        extra_info = {"cov_matr": cov_matr}
         return prediction,  extra_info
 
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
@@ -529,82 +542,153 @@ class GPFlowTrainer(NetworkTrainer):
         Args:
             path (str): Path to save model checkpoint to.
         """
-        # state = {
-        #     "epoch": self.epoch + 1,
-        #     "state_dict": self.network.state_dict(),
-        #     "optimizer": self.optimizer.state_dict(),
-        #     "best_valid_loss": self.best_valid_loss,
-        #     "best_valid_coord_error": self.best_valid_coord_error,
-        #     "best_valid_loss_epoch": self.best_valid_loss_epoch,
-        #     "best_valid_coords_epoch": self.best_valid_coords_epoch,
-        #     "epochs_wo_improvement": self.epochs_wo_val_improv,
-        #     "sigmas": self.sigmas,
-        #     "training_sampler": self.sampler_mode,
-        #     "training_resolution": self.training_resolution,
-        # }
+        state = {
+            "epoch": self.epoch + 1,
+            "best_valid_loss": self.best_valid_loss,
+            "best_valid_coord_error": self.best_valid_coord_error,
+            "best_valid_loss_epoch": self.best_valid_loss_epoch,
+            "best_valid_coords_epoch": self.best_valid_coords_epoch,
+            "epochs_wo_improvement": self.epochs_wo_val_improv,
+            "sigmas": self.sigmas,
+            "training_sampler": self.sampler_mode,
+            "training_resolution": self.training_resolution,
+        }
+        with open(path+'meta_state.pkl', 'wb') as f:
+            pickle.dump(state, f)
 
         log_dir = path
-        ckpt = tf.train.Checkpoint(model=self.network)
-        manager = tf.train.CheckpointManager(ckpt, log_dir, max_to_keep=3)
+        ckpt = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer)
+        manager = tf.train.CheckpointManager(ckpt, log_dir, max_to_keep=5)
         manager.save()
 
-    # def set_training_dataloaders(self):
-    #     """
-    #     set train_dataset, valid_dataset and train_dataloader and valid_dataloader here.
-    #     """
+    def load_checkpoint(self, model_path, training_bool):
+        """Load checkpoint from path.
 
-    #     np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
+        Args:
+            model_path (str): path to checjpoint
+            training_bool (bool): If training or not.
+        """
+        if not self.was_initialized:
+            self.initialize(training_bool)
 
-    #     #### Training dataset ####
-    #     train_dataset = self.dataset_class(
-    #         LabelGenerator=self.train_label_generator,
-    #         split="training",
-    #         sample_mode=self.sampler_mode,
-    #         patch_sampler_args=self.dataset_patch_sampling_args,
-    #         dataset_args=self.generic_dataset_args,
-    #         data_aug_args=self.data_aug_args_training,
-    #         label_generator_args=self.label_generator_args,
-    #         sigmas=np_sigmas,
-    #         cache_data=self.trainer_config.TRAINER.CACHE_DATA,
-    #         num_res_supervisions=self.num_res_supervision,
-    #         debug=self.trainer_config.SAMPLER.DEBUG,
-    #         input_size=self.trainer_config.SAMPLER.INPUT_SIZE,
-    #         to_pytorch=self.to_pytorch_tensor
-    #     )
+        checkpoint = tf.train.Checkpoint(optimizer=self.optimizer, model=self.network)
+        manager = tf.train.CheckpointManager(
+            checkpoint, model_path, max_to_keep=5)
+        status = checkpoint.restore(manager.latest_checkpoint)
 
-    #     #### Validation dataset ####
+        with open(model_path+'meta_state.pkl', 'rb') as f:   
+            checkpoint_info = pickle.load(f)
+        # checkpoint_info = torch.load(model_path, map_location=self.device)
+        # self.epoch = checkpoint_info["epoch"]
+        # self.network.load_state_dict(checkpoint_info["state_dict"])
+        # self.optimizer.load_state_dict(checkpoint_info["optimizer"])
 
-    #     # If not performing validation, just use the training set for validation.
-    #     if self.perform_validation:
-    #         validation_split = "validation"
-    #     else:
-    #         validation_split = "training"
-    #         self.logger.warning(
-    #             'WARNING: NOT performing validation. Instead performing "validation" on training set for coord error metrics.')
+        if training_bool:
+            self.best_valid_loss = checkpoint_info["best_valid_loss"]
+            self.best_valid_loss_epoch = checkpoint_info["best_valid_loss_epoch"]
+            self.best_valid_coord_error = checkpoint_info["best_valid_coord_error"]
+            self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
+            self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
 
-    #     # Image loading size different for patch vs. full image sampling
-    #     if self.sampler_mode in ["patch_bias", "patch_centred"]:
-    #         img_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
-    #     else:
-    #         img_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
+        # Allow legacy models to be loaded (they didn't use to save sigmas)
+        if "sigmas" in checkpoint_info:
+            self.sigmas = checkpoint_info["sigmas"]
 
-    #     valid_dataset = self.get_evaluation_dataset(validation_split, img_resolution)
+        # if not saved, default to full since this was the only option for legacy models
+        if "training_sampler" in checkpoint_info:
+            self.sampler_mode = checkpoint_info["training_sampler"]
+        else:
+            self.sampler_mode = "full"
 
-    #     #### Create DataLoaders ####
+        # if not saved, default to input_size since this was the only option for legacy models
+        if "training_resolution" in checkpoint_info:
+            self.training_resolution = checkpoint_info["training_resolution"]
+        else:
+            self.training_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
 
-    #     self.logger.info("Using %s Dataloader workers and persist workers bool : %s ",
-    #                      self.num_workers_cfg, self.persist_workers)
+        checkpoint_loading_checking(self.trainer_config, self.sampler_mode, self.training_resolution)
 
-    #     train_batch_size = self.maybe_alter_batch_size(train_dataset, self.data_loader_batch_size_train)
-    #     valid_batch_size = self.maybe_alter_batch_size(valid_dataset, self.data_loader_batch_size_eval)
+        if self.auto_mixed_precision:
+            self._maybe_init_amp()
 
-    #     all_train_input = np.array([(x["image"][0]) for x in train_dataset], dtype=np.float64)
-    #     all_train_labels = np.array([(x["label"]["landmarks"][0]) for x in train_dataset], dtype=np.float64)
+            if "amp_grad_scaler" in checkpoint_info.keys():
+                self.amp_grad_scaler.load_state_dict(checkpoint_info["amp_grad_scaler"])
 
-    #     self.train_dataloader = tf.data.Dataset.from_tensor_slices((all_train_input,  all_train_labels))
-    #     self.train_dataloader = self.train_dataloader.batch(train_batch_size)
+        if self.print_initiaization_info:
+            self.logger.info("Loaded checkpoint %s. Epoch: %s, ", model_path, self.epoch)
 
-    #     all_valid_input = np.array([(x["image"][0]) for x in valid_dataset], dtype=np.float64)
-    #     all_valid_labels = np.array([(x["label"]["landmarks"][0]) for x in valid_dataset], dtype=np.float64)
-    #     self.valid_dataloader = tf.data.Dataset.from_tensor_slices((all_valid_input, all_valid_labels))
-    #     self.valid_dataloader = self.valid_dataloader.batch(valid_batch_size)
+    # @abstractmethod
+
+    def run_inference(self, split, debug=False):
+        """Function to run inference on a full sized input
+
+        # 0) instantitate test dataset and dataloader
+        # 1A) if FULL:
+            i) iterate dataloader and run_iteration each time to go through and save results.
+            ii) should run using run_iteration with logged_vars to log
+        1B) if PATCHIFYING full_res_output  <- this can be fututre addition
+            i) use patchify_and_predict to stitch hm together with logged_vars to log
+
+        # 2) need a way to deal with the key dictionary & combine all samples
+        # 3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
+        # 4) return individual results & do summary results.
+        """
+
+        # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
+            if (
+                self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
+                == "patchify_and_stitch"
+            ):
+                # In this case we are patchifying the image
+                inference_full_image = False
+            else:
+                # else we are doing it fully_convolutional
+                inference_full_image = True
+        else:
+            # This case is the full sampler
+            inference_full_image = True
+        inference_resolution = self.training_resolution
+        # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
+        test_dataset = self.get_evaluation_dataset(split, inference_resolution)
+        test_batch_size = self.maybe_alter_batch_size(test_dataset, self.data_loader_batch_size_eval)
+
+        test_dataloader = DataLoader(
+            test_dataset,
+            batch_size=test_batch_size,
+            shuffle=False,
+            num_workers=self.num_workers_cfg,
+            persistent_workers=self.persist_workers,
+            worker_init_fn=NetworkTrainer.worker_init_fn,
+            pin_memory=True,
+        )
+
+        # instantiate interested variables log!
+        evaluation_logs = self.dict_logger.get_evaluation_logger()
+
+        # then iterate through dataloader and save to log
+        generator = iter(test_dataloader)
+        if inference_full_image:
+            while generator != None:
+                print("-", end="")
+                l, generator = self.run_iteration(
+                    generator,
+                    test_dataloader,
+                    backprop=False,
+                    split=split,
+                    log_coords=True,
+                    logged_vars=evaluation_logs,
+                    debug=debug,
+                    restart_dataloader=False
+                )
+            del generator
+            print()
+        else:
+            # this is where we patchify and stitch the input image
+            raise NotImplementedError()
+
+        summary_results, ind_results = self.evaluation_metrics(
+            evaluation_logs["individual_results"], evaluation_logs["landmark_errors"]
+        )
+
+        return summary_results, ind_results

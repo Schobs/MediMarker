@@ -413,14 +413,15 @@ class GPFlowLabelGenerator(LabelGenerator):
             # extra_info = ind_sample["extra_info"]
             # create  kernel
             m1 = model_output_coords[sample_idx][0]
-            s1 = extra_info["cov_matr"][sample_idx]
+            s1 = extra_info["cov_matr"][sample_idx, :, sample_idx, :]
+            # s1 = np.array([s1[0][0], s1[1][0]])
             k1 = multivariate_normal(mean=m1, cov=s1)
 
             # create a grid of (x,y) coordinates at which to evaluate the kernels
-            xlim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
-            ylim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
-            xres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
-            yres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
+            xlim = (0, np.sqrt(len(transformed_input_image[sample_idx])))
+            ylim = (0, np.sqrt(len(transformed_input_image[sample_idx])))
+            xres = int(np.sqrt(len(transformed_input_image[sample_idx])))
+            yres = int(np.sqrt(len(transformed_input_image[sample_idx])))
 
             x = np.linspace(xlim[0], xlim[1], xres)
             y = np.linspace(ylim[0], ylim[1], yres)
@@ -435,8 +436,8 @@ class GPFlowLabelGenerator(LabelGenerator):
             ax[1].imshow(img)
 
             # show image with label
-            image_label = coordinate_label[sample_idx][0]
-            image_ex = transformed_input_image[sample_idx][0].cpu().detach().numpy()
+            image_label = coordinate_label[sample_idx].numpy()
+            image_ex = transformed_input_image[sample_idx].numpy()
 
             ax[0].imshow(image_ex.reshape((xres, yres)))
 
