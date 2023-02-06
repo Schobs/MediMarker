@@ -1027,7 +1027,7 @@ class NetworkTrainer(ABC):
         self.train_dataloader = DataLoader(
             train_dataset,
             batch_size=train_batch_size,
-            shuffle=False,
+            shuffle=True,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
             worker_init_fn=NetworkTrainer.worker_init_fn,

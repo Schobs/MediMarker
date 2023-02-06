@@ -1,3 +1,4 @@
+from ast import Tuple
 from losses.GPLosses import GPFlowLoss
 from transforms.generate_labels import GPFlowLabelGenerator
 from trainer.model_trainer_base import NetworkTrainer
@@ -76,17 +77,30 @@ class GPFlowTrainer(NetworkTrainer):
         # self.logger.info(print_summary(self.network))
         # Must initialize model with all training input and labels.
         # We have made sure the batch_size is the dataset.len() for GP so one next() gets the whole dataset.
-        self.logger.info("Loading training data for the GP...")
-        self.training_data = next(iter(self.train_dataloader))
+        # self.logger.info("Loading training data for the GP...")
+        # self.training_data = self.train_dataloader.dataset
+        # self.valid_dataset = self.valid_dataloader.dataset
 
-        self.training_data["image"] = np.squeeze(np.array(self.training_data["image"], dtype=np.float64), axis=1)
-        self.training_data["label"]["landmarks"] = np.squeeze(
-            np.array(self.training_data["label"]["landmarks"], dtype=np.float64))
+        # # get batch sizes
+        # train_batch_size = self.maybe_alter_batch_size(self.train_dataloader, self.data_loader_batch_size_train)
+        # valid_batch_size = self.maybe_alter_batch_size(self.valid_dataloader, self.data_loader_batch_size_eval)
+
+        # self.training_data["image"] = np.squeeze(np.array(self.training_data["image"], dtype=np.float64), axis=1)
+        # self.training_data["label"]["landmarks"] = np.squeeze(
+        #     np.array(self.training_data["label"]["landmarks"], dtype=np.float64))
+        # self.tf_training_data = tf.data.Dataset.from_tensor_slices(
+        #     (self.training_data["image"],  self.training_data["label"]["landmarks"]))
+        # self.tf_training_data = self.tf_training_data.batch()
+
+        # self.all_valid_input = np.array([(x["image"][0]) for x in self.valid_dataloader.dataset], dtype=np.float64)
+        # self.all_valid_labels = np.array([(x["label"]["landmarks"][0])
+        #                                  for x in self.valid_dataloader.dataset], dtype=np.float64)
+        # self.tf_validation_data = tf.data.Dataset.from_tensor_slices((self.all_valid_input, self.tf_validation_data))
 
         # self.all_training_input = np.squeeze(np.array(self.training_data["image"], dtype=np.float64), axis=1)
 
-        self.all_training_input = self.training_data["image"]
-        self.all_training_labels = self.training_data["label"]["landmarks"]
+        # self.all_training_input = self.training_data["image"]
+        # self.all_training_labels = self.training_data["label"]["landmarks"]
 
         self.logger.info("Initializing GP model with training data...")
 
@@ -103,7 +117,7 @@ class GPFlowTrainer(NetworkTrainer):
         #     gpf.kernels.SquaredExponential() + gpf.kernels.Linear(), output_dim=2
         # )
         # initialization of inducing input locations (M random points from the training inputs)
-        flattened_sample_size = self.all_training_input.shape[1]
+        flattened_sample_size = next(iter(self.train_dataloader))[0].shape[1]
         num_inducing_points = 500
         Zinit = np.tile(np.linspace(0, flattened_sample_size, num_inducing_points)[:, None], flattened_sample_size)
         Z = Zinit.copy()
@@ -142,14 +156,15 @@ class GPFlowTrainer(NetworkTrainer):
 
             # We pass in the entire self.training_data, and we tell it not to restart the dataloader.
             # These will do one iteration over the entire dataset.
+            generator = iter(self.train_dataloader)
             l, _ = self.run_iteration(
-                None,
-                None,
+                generator,
+                self.train_dataloader,
                 backprop=True,
                 split="training",
                 log_coords=False,
                 logged_vars=per_epoch_logs,
-                direct_data_dict=self.training_data,
+                # direct_data_dict=self.training_data,
                 restart_dataloader=False
             )
 
@@ -194,14 +209,14 @@ class GPFlowTrainer(NetworkTrainer):
 
             # continue_training = self.on_epoch_end(per_epoch_logs)
 
-    def validate(self, dataloader):
+    # def validate(self, dataloader):
 
-        for s_idx, data_dict in enumerate(dataloader):
+    #     for s_idx, data_dict in enumerate(dataloader):
 
-            images = np.squeeze(np.array(data_dict["image"], dtype=np.float64), axis=1)
-            labels = np.squeeze(np.array(data_dict["label"]["landmarks"], dtype=np.float64))
+    #         images = np.squeeze(np.array(data_dict["image"], dtype=np.float64), axis=1)
+    #         labels = np.squeeze(np.array(data_dict["label"]["landmarks"], dtype=np.float64))
 
-            y_mean, y_covar = self.network.predict_f(images, full_cov=True, full_output_cov=True)
+    #         y_mean, y_covar = self.network.predict_f(images, full_cov=True, full_output_cov=True)
 
             # self.logger.info("y_covar: %s", y_covar.numpy())
             x = 1
@@ -325,8 +340,8 @@ class GPFlowTrainer(NetworkTrainer):
         else:
             data_dict = direct_data_dict
 
-        data_dict["image"] = np.float64(data_dict["image"])
-        data_dict["label"]["landmarks"] = np.float64(data_dict["label"]["landmarks"])
+        data_dict["image"] = tf.convert_to_tensor((data_dict["image"]), dtype=tf.float64)
+        data_dict["label"]["landmarks"] = tf.convert_to_tensor((data_dict["label"]["landmarks"]), dtype=tf.float64)
 
         data = data_dict["image"]
         target = data_dict["label"]["landmarks"]
@@ -340,7 +355,7 @@ class GPFlowTrainer(NetworkTrainer):
                 self.optimizer.minimize(l,  self.network.trainable_variables)
 
         else:
-            l = torch.tensor(0).to(self.device)
+            l = tf.tensor(0)
             loss_dict = {}
 
         # Log info from this iteration.
@@ -386,6 +401,16 @@ class GPFlowTrainer(NetworkTrainer):
             self.profiler.step()
 
         return np.array([l()])[0], generator
+
+    def optimization_step(
+        self, batch
+    ):
+        with tf.GradientTape(watch_accessed_variables=False) as tape:
+            tape.watch(self.network.trainable_variables)
+            loss = self.network.training_loss(batch)
+        grads = tape.gradient(loss, self.network.trainable_variables)
+        self.optimizer.apply_gradients(zip(grads, self.network.trainable_variables))
+        return loss
 
     def maybe_get_coords(self, log_coords, data_dict):
         """ 
@@ -519,3 +544,64 @@ class GPFlowTrainer(NetworkTrainer):
         ckpt = tf.train.Checkpoint(model=self.network)
         manager = tf.train.CheckpointManager(ckpt, log_dir, max_to_keep=3)
         manager.save()
+
+    def set_training_dataloaders(self):
+        """
+        set train_dataset, valid_dataset and train_dataloader and valid_dataloader here.
+        """
+
+        np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
+
+        #### Training dataset ####
+        train_dataset = self.dataset_class(
+            LabelGenerator=self.train_label_generator,
+            split="training",
+            sample_mode=self.sampler_mode,
+            patch_sampler_args=self.dataset_patch_sampling_args,
+            dataset_args=self.generic_dataset_args,
+            data_aug_args=self.data_aug_args_training,
+            label_generator_args=self.label_generator_args,
+            sigmas=np_sigmas,
+            cache_data=self.trainer_config.TRAINER.CACHE_DATA,
+            num_res_supervisions=self.num_res_supervision,
+            debug=self.trainer_config.SAMPLER.DEBUG,
+            input_size=self.trainer_config.SAMPLER.INPUT_SIZE,
+            to_pytorch=self.to_pytorch_tensor
+        )
+
+        #### Validation dataset ####
+
+        # If not performing validation, just use the training set for validation.
+        if self.perform_validation:
+            validation_split = "validation"
+        else:
+            validation_split = "training"
+            self.logger.warning(
+                'WARNING: NOT performing validation. Instead performing "validation" on training set for coord error metrics.')
+
+        # Image loading size different for patch vs. full image sampling
+        if self.sampler_mode in ["patch_bias", "patch_centred"]:
+            img_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
+        else:
+            img_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
+
+        valid_dataset = self.get_evaluation_dataset(validation_split, img_resolution)
+
+        #### Create DataLoaders ####
+
+        self.logger.info("Using %s Dataloader workers and persist workers bool : %s ",
+                         self.num_workers_cfg, self.persist_workers)
+
+        train_batch_size = self.maybe_alter_batch_size(train_dataset, self.data_loader_batch_size_train)
+        valid_batch_size = self.maybe_alter_batch_size(valid_dataset, self.data_loader_batch_size_eval)
+
+        all_train_input = np.array([(x["image"][0]) for x in train_dataset], dtype=np.float64)
+        all_train_labels = np.array([(x["label"]["landmarks"][0]) for x in train_dataset], dtype=np.float64)
+
+        self.train_dataloader = tf.data.Dataset.from_tensor_slices((all_train_input,  all_train_labels))
+        self.train_dataloader = self.train_dataloader.batch(train_batch_size)
+
+        all_valid_input = np.array([(x["image"][0]) for x in valid_dataset], dtype=np.float64)
+        all_valid_labels = np.array([(x["label"]["landmarks"][0]) for x in valid_dataset], dtype=np.float64)
+        self.valid_dataloader = tf.data.Dataset.from_tensor_slices((all_valid_input, all_valid_labels))
+        self.valid_dataloader = self.valid_dataloader.batch(valid_batch_size)
