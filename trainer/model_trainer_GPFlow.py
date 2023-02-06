@@ -77,35 +77,7 @@ class GPFlowTrainer(NetworkTrainer):
         if self.trainer_config.TRAINER.INFERENCE_ONLY:
             self.set_training_dataloaders()
 
-        # self.logger.info(print_summary(self.network))
-        # Must initialize model with all training input and labels.
-        # We have made sure the batch_size is the dataset.len() for GP so one next() gets the whole dataset.
-        # self.logger.info("Loading training data for the GP...")
-        # self.training_data = self.train_dataloader.dataset
-        # self.valid_dataset = self.valid_dataloader.dataset
-
-        # # get batch sizes
-        # train_batch_size = self.maybe_alter_batch_size(self.train_dataloader, self.data_loader_batch_size_train)
-        # valid_batch_size = self.maybe_alter_batch_size(self.valid_dataloader, self.data_loader_batch_size_eval)
-
-        # self.training_data["image"] = np.squeeze(np.array(self.training_data["image"], dtype=np.float64), axis=1)
-        # self.training_data["label"]["landmarks"] = np.squeeze(
-        #     np.array(self.training_data["label"]["landmarks"], dtype=np.float64))
-        # self.tf_training_data = tf.data.Dataset.from_tensor_slices(
-        #     (self.training_data["image"],  self.training_data["label"]["landmarks"]))
-        # self.tf_training_data = self.tf_training_data.batch()
-
-        # self.all_valid_input = np.array([(x["image"][0]) for x in self.valid_dataloader.dataset], dtype=np.float64)
-        # self.all_valid_labels = np.array([(x["label"]["landmarks"][0])
-        #                                  for x in self.valid_dataloader.dataset], dtype=np.float64)
-        # self.tf_validation_data = tf.data.Dataset.from_tensor_slices((self.all_valid_input, self.tf_validation_data))
-
-        # self.all_training_input = np.squeeze(np.array(self.training_data["image"], dtype=np.float64), axis=1)
-
-        # self.all_training_input = self.training_data["image"]
-        # self.all_training_labels = self.training_data["label"]["landmarks"]
-
-        self.logger.info("Initializing GP model with training data...")
+        self.logger.info("Initializing GP model...")
 
         # create multi-output kernel
         kern_list = [
@@ -116,10 +88,6 @@ class GPFlowTrainer(NetworkTrainer):
             kern_list, W=np.random.randn(2, 2)
         )  # Notice that we initialise the mixing matrix W
 
-        # kernel = gpf.kernels.SharedIndependent(
-        #     gpf.kernels.SquaredExponential() + gpf.kernels.Linear(), output_dim=2
-        # )
-        # initialization of inducing input locations (M random points from the training inputs)
         flattened_sample_size = next(iter(self.train_dataloader))["image"].shape[-1]
         num_inducing_points = 1000
         Zinit = np.tile(np.linspace(0, flattened_sample_size, num_inducing_points)[:, None], flattened_sample_size)
@@ -165,7 +133,7 @@ class GPFlowTrainer(NetworkTrainer):
             # We pass in the entire self.training_data, and we tell it not to restart the dataloader.
             # These will do one iteration over the entire dataset.
             generator = iter(self.train_dataloader)
-            while generator is not None:
+            for data_dict in iter(generator):
 
                 l, generator = self.run_iteration(
                     generator,
@@ -174,21 +142,21 @@ class GPFlowTrainer(NetworkTrainer):
                     split="training",
                     log_coords=False,
                     logged_vars=per_epoch_logs,
-                    # direct_data_dict=self.training_data,
+                    direct_data_dict=data_dict,
                     restart_dataloader=False
                 )
                 epoch_loss += l
-                self.logger.info("Training Step %s, Loss, %s", step, l)
+                # self.logger.info("Training Step %s, Loss, %s", step, l)
                 step += 1
                 mb_step += 1
                 if self.comet_logger:
-                    self.comet_logger.log_metric("training loss",  l, step)
+                    self.comet_logger.log_metric("training loss step",  l, step)
 
             if self.comet_logger:
-                self.comet_logger.log_metric("training loss",  epoch_loss/mb_step, self.epoch)
+                self.comet_logger.log_metric("training loss epoch",  epoch_loss/mb_step, self.epoch)
             # We validate every 200 epochs
             if self.epoch % self.validate_every == 0:
-                self.logger.info("validation, %s", self.epoch)
+                # self.logger.info("validation, %s", self.epoch)
 
                 generator = iter(self.valid_dataloader)
                 while generator is not None:
@@ -203,110 +171,10 @@ class GPFlowTrainer(NetworkTrainer):
                     )
 
             self.epoch_end_time = time()
+
             continue_training = self.on_epoch_end(per_epoch_logs)
 
             self.epoch += 1
-            # loss = self.network.training_loss_closure((self.all_training_input,
-            #                                           self.all_training_labels))
-
-            # self.logger.info("L: %s", np.array([loss()])[0])
-            # self.optimizer.minimize(loss,  self.network.trainable_variables)
-
-            # self.epoch += 1
-            # # We validate every 200 epochs
-            # if self.epoch % self.validate_every == 0:
-
-            #     val_generator = iter(self.valid_dataloader)
-            #     self.validate(val_generator)
-            #     self.logger.info("validation, %s", self.epoch)
-
-            # continue_training = self.on_epoch_end(per_epoch_logs)
-
-    # def validate(self, dataloader):
-
-    #     for s_idx, data_dict in enumerate(dataloader):
-
-    #         images = np.squeeze(np.array(data_dict["image"], dtype=np.float64), axis=1)
-    #         labels = np.squeeze(np.array(data_dict["label"]["landmarks"], dtype=np.float64))
-
-    #         y_mean, y_covar = self.network.predict_f(images, full_cov=True, full_output_cov=True)
-
-            # self.logger.info("y_covar: %s", y_covar.numpy())
-            # x = 1
-          # Log info from this iteration.
-            # if list(logged_vars.keys()) != []:
-            #     with torch.no_grad():
-
-            #         (
-            #             pred_coords,
-            #             pred_coords_input_size,
-            #             extra_info,
-            #             target_coords,
-            #         ) = self.maybe_get_coords(output, log_coords, data_dict)
-
-            #         logged_vars = self.dict_logger.log_key_variables(
-            #             logged_vars,
-            #             pred_coords,
-            #             extra_info,
-            #             target_coords,
-            #             loss_dict,
-            #             data_dict,
-            #             log_coords,
-            #             split,
-            #         )
-            #         if debug:
-            #             debug_vars = [
-            #                 x
-            #                 for x in logged_vars["individual_results"]
-            #                 if x["uid"] in data_dict["uid"]
-            #             ]
-            #             self.eval_label_generator.debug_prediction(
-            #                 data_dict,
-            #                 output,
-            #                 pred_coords,
-            #                 pred_coords_input_size,
-            #                 debug_vars,
-            #                 extra_info,
-
-        # optimizer.minimize(
-        #     self.network.training_loss_closure((self.all_training_input, self.all_training_labels)),
-        #     variables=self.network.trainable_variables,
-        #     method="l-bfgs-b",
-        #     options={"disp": 50, "maxiter": 10000},
-        # )
-        # self.logger.info(self.network)
-        # print_summary(self.network)
-        # continue_training = True
-        # while self.epoch < self.max_num_epochs and continue_training:
-
-        #     self.epoch_start_time = time()
-        #     self.network.train()
-
-        #     per_epoch_logs = self.dict_logger.get_epoch_logger()
-
-        #     # We pass in the entire self.training_data, and we tell it not to restart the dataloader.
-        #     # These will do one iteration over the entire dataset.
-        #     l, _ = self.run_iteration(
-        #         None,
-        #         None,
-        #         backprop=True,
-        #         split="training",
-        #         log_coords=False,
-        #         logged_vars=per_epoch_logs,
-        #         direct_data_dict=self.training_data,
-        #         restart_dataloader=False
-        #     )
-
-        #     if self.comet_logger:
-        #         self.comet_logger.log_metric("training loss", l, self.epoch)
-        #         self.comet_logger.log_metric("noise", self.network.likelihood.noise.item(), self.epoch)
-
-        #     if not continue_training:
-        #         if self.profiler:
-        #             self.profiler.stop()
-        #         break
-
-        #     self.epoch += 1
 
     def run_iteration(
         self,
@@ -363,12 +231,7 @@ class GPFlowTrainer(NetworkTrainer):
         # Only attempts loss if annotations avaliable for entire batch
         if all(data_dict["annotation_available"]):
             l = self.optimization_step((data, target), backprop)
-            # l = self.network.training_loss_closure((data, target))
-
             loss_dict = {"all_loss_all": l.numpy()}
-            # if backprop:
-            #     self.optimizer.minimize(l,  self.network.trainable_variables)
-
         else:
             l = 0
             loss_dict = {}
@@ -576,13 +439,10 @@ class GPFlowTrainer(NetworkTrainer):
             checkpoint, model_path, max_to_keep=5)
         status = checkpoint.restore(manager.latest_checkpoint)
 
-        with open(model_path+'meta_state.pkl', 'rb') as f:   
+        with open(model_path+'meta_state.pkl', 'rb') as f:
             checkpoint_info = pickle.load(f)
-        # checkpoint_info = torch.load(model_path, map_location=self.device)
-        # self.epoch = checkpoint_info["epoch"]
-        # self.network.load_state_dict(checkpoint_info["state_dict"])
-        # self.optimizer.load_state_dict(checkpoint_info["optimizer"])
 
+        self.epoch = checkpoint_info["epoch"]
         if training_bool:
             self.best_valid_loss = checkpoint_info["best_valid_loss"]
             self.best_valid_loss_epoch = checkpoint_info["best_valid_loss_epoch"]

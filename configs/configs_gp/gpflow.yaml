@@ -8,7 +8,7 @@ OUTPUT:
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
-  VERBOSE: False #whether to print results every epoch
+  VERBOSE: True #whether to print results every epoch
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
@@ -64,7 +64,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_196/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
+  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_196/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
 
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
