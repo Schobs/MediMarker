@@ -308,6 +308,7 @@ class GPFlowLabelGenerator(LabelGenerator):
         min_error=0,
     ):
         """Visually debug a prediction and compare to the target. Provide logging and visualisation of the sample."""
+
         coordinate_label = input_dict["label"]["landmarks"]
 
         transformed_targ_coords = np.array(input_dict["target_coords"])

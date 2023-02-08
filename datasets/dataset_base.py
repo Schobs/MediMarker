@@ -487,3 +487,4 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             self.num_res_supervisions,
             self.hm_lambda_scale,
         )
+

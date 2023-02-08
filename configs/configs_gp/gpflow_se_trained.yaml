@@ -3,7 +3,7 @@
 OUTPUT: 
   # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_matern' #change this to where you have the data
+  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_196' #change this to where you have the data
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
@@ -32,12 +32,12 @@ DATASET:
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0] #Choose landmark (between 0-17)
-  TRAINSET_SIZE: 10 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
+  TRAINSET_SIZE: -1 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
   TO_PYTORCH_TENSOR: False  # True if using pytorch, False if using tensorflow
 
  
 TRAINER:
-  PERFORM_VALIDATION: False
+  PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
   CACHE_DATA: False # Kind of irrelevant for ExactGP
   INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
@@ -64,9 +64,9 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_196/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
+  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_196/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
 
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
-  DEBUG: False #Set True for plot of predictions with covariances plotted.
+  DEBUG: True #Set True for plot of predictions with covariances plotted.
    
