@@ -103,6 +103,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.center_patch_on_coords_path = patch_sampler_args["centred"]["xlsx_path"]
         self.center_patch_sheet = patch_sampler_args["centred"]["xlsx_sheet"]
         self.center_patch_jitter = patch_sampler_args["centred"]["center_patch_jitter"]
+        self.center_patch_deterministic = patch_sampler_args["centred"]["deterministic"]
 
         self.root_path = Path(dataset_args["root_path"])
         self.annotation_path = Path(dataset_args["annotation_path"])
@@ -372,7 +373,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     untransformed_coords,
                     landmarks_in_indicator,
                     x_y_corner,
-                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords, deterministic=True)
+                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords, deterministic=self.center_patch_deterministic)
 
             kps = KeypointsOnImage(
                 [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
@@ -404,7 +405,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 input_image = torch.from_numpy(image).float()
             else:
                 input_image = image
-                
+
             landmarks_in_indicator = [1 for xy in input_coords]
 
         if self.generate_hms_here:
@@ -487,4 +488,3 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             self.num_res_supervisions,
             self.hm_lambda_scale,
         )
-

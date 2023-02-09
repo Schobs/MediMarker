@@ -63,7 +63,8 @@ class NetworkTrainer(ABC):
 
         patch_sampler_centring_args = {"xlsx_path": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH,
                                        "xlsx_sheet": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET,
-                                       "center_patch_jitter": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_JITTER}
+                                       "center_patch_jitter": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_JITTER,
+                                       "deterministic": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC}
 
         self.dataset_patch_sampling_args = {"generic": patch_sampler_generic_args,
                                             "biased": patch_sampler_bias_args,

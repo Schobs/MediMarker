@@ -54,6 +54,8 @@ _C.SAMPLER.PATCH.SAMPLER_BIAS = 0.66
 _C.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH = None
 _C.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET = None
 _C.SAMPLER.PATCH.CENTRED_PATCH_JITTER = 0.0
+# Whether the jitter is the same each time the image is sampled. Set true for deterministic using GP.
+_C.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC = True
 
 # U:\tale2\Shared\data\CMRI\ASPIRE\4CH_labels
 # ---------------------------------------------------------------------------- #
@@ -122,9 +124,11 @@ _C.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS = True
 # [None, 48, 10] (none or any int. TODO: WRITE TEST FOR THIS)
 _C.MODEL.PHDNET.CLAMP_DIST = None
 
-#GPFLOW config
+# GPFLOW config
 _C.MODEL.GPFLOW = CN()
-_C.MODEL.GPFLOW.NUM_INDUCING_POINTS = 1000
+_C.MODEL.GPFLOW.NUM_INDUCING_POINTS = 100
+_C.MODEL.GPFLOW.KERN = "conv"  # possible values: ["conv", "rbf", "matern52"]
+_C.MODEL.GPFLOW.CONV_KERN_SIZE = [3, 3]  # Size of kernel for convolutional kernel gaussian process
 
 
 _C.INFERENCE = CN()

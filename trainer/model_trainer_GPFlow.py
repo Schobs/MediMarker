@@ -29,7 +29,7 @@ from models.gp_models.tf_gpmodels import get_SVGP_model, get_conv_SVGP
 
 gpf.config.set_default_float(np.float64)
 gpf.config.set_default_summary_fmt("notebook")
-
+gpf.config.set_default_jitter(1e-4)
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
 
 
@@ -69,42 +69,51 @@ class GPFlowTrainer(NetworkTrainer):
                                          "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
                                          }
 
+        self.kern = self.trainer_config.MODEL.GPFLOW.KERN
+
         self.training_data = None
         self.all_training_input = None
         self.all_training_labels = None
 
     def initialize_network(self):
 
-        # if not self.trainer_config.TRAINER.INFERENCE_ONLY:
-        #     self.set_training_dataloaders()
+        if self.trainer_config.TRAINER.INFERENCE_ONLY:
+            self.set_training_dataloaders()
 
         self.logger.info("Initializing GP model...")
 
-        # Matern
-        kern_list = [
-            gpf.kernels.Matern52() + gpf.kernels.Linear() for _ in range(2)
-        ]
+        if self.kern == "conv":
+            all_train_image = [tf.squeeze(tf.convert_to_tensor((x["image"]), dtype=tf.float64), axis=0)
+                               for x in self.train_dataloader.dataset]
+            all_train_label = [tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks"]),
+                                                               dtype=tf.float64), axis=0) for x in self.train_dataloader.dataset]
 
-        # Squared Exponential
-        # kern_list = [
-        #     gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)
-        # ]
+            self.network = get_conv_SVGP(all_train_image, all_train_label,
+                                         self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+                                         self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+        else:
+            if self.kern == "matern52":
+                # Mater52 kernel
+                kern_list = [
+                    gpf.kernels.Matern52() + gpf.kernels.Linear() for _ in range(2)
+                ]
+            elif self.kern == "se":
+                # squared exponential
+                kern_list = [
+                    gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)
+                ]
+            elif self.kern == "rbf":
+                # Rbf kernel
+                kern_list = [
+                    gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)
+                ]
+            else:
+                raise ValueError("Kernel not implemented. Try 'matern52', 'se' or 'rbf")
 
-        flattened_sample_size = next(iter(self.train_dataloader))["image"].shape[-1]
+            flattened_sample_size = next(iter(self.train_dataloader))["image"].shape[-1]
 
-        # self.network = get_SVGP_model(flattened_sample_size, self.num_inducing_points,
-        #                               kern_list, inducing_dist="uniform")
-
-        all_images = []
-        all_labels = []
-        # all_x = self.train_dataloader.dataset["images"]
-        # all_y = self.train_dataloader.dataset["target_coords"]
-        all_train_image = [tf.squeeze(tf.convert_to_tensor((x["image"]), dtype=tf.float64), axis=0)
-                           for x in self.train_dataloader.dataset]
-        all_train_label = [tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks"]),
-                                      dtype=tf.float64), axis=0) for x in self.train_dataloader.dataset]
-        self.network = get_conv_SVGP(all_train_image, all_train_label,
-                                     self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, [3, 3])
+            self.network = get_SVGP_model(flattened_sample_size, self.num_inducing_points,
+                                          kern_list, inducing_dist="uniform")
 
         # Log network and initial weights
         if self.comet_logger:
@@ -129,8 +138,6 @@ class GPFlowTrainer(NetworkTrainer):
             mb_step = 0
             per_epoch_logs = self.dict_logger.get_epoch_logger()
 
-            # We pass in the entire self.training_data, and we tell it not to restart the dataloader.
-            # These will do one iteration over the entire dataset.
             generator = iter(self.train_dataloader)
             for data_dict in iter(generator):
 
@@ -145,7 +152,6 @@ class GPFlowTrainer(NetworkTrainer):
                     restart_dataloader=False
                 )
                 epoch_loss += l
-                # self.logger.info("Training Step %s, Loss, %s", step, l)
                 step += 1
                 mb_step += 1
                 if self.comet_logger:
@@ -155,7 +161,6 @@ class GPFlowTrainer(NetworkTrainer):
                 self.comet_logger.log_metric("training loss epoch",  epoch_loss/mb_step, self.epoch)
             # We validate every 200 epochs
             if self.epoch % self.validate_every == 0:
-                # self.logger.info("validation, %s", self.epoch)
 
                 generator = iter(self.valid_dataloader)
                 while generator is not None:
