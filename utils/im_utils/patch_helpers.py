@@ -150,7 +150,7 @@ def sample_patch_with_bias(image, landmarks, sample_patch_bias, load_im_size,  s
     )
 
 
-def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_patch_size, centre_patch_jitter, debug, groundtruth_lms=None, safe_padding=128):
+def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_patch_size, centre_patch_jitter, debug, groundtruth_lms=None, safe_padding=128, deterministic=False):
     """ Samples a patch from an image, centred around coords_to_centre_around.
         Patch is padded with zeros to the size of the patch to allow fo future data augmentation.
         If the coordinate is too near the edge of the image, the patch is adjusted towards the centre.
@@ -194,6 +194,10 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
         # Jitter needs to ensure centre_coord is still in the patch. Add some pixels for safety of image edges.
         max_x_jitter = max(0, ((sample_patch_size[0]/2)*centre_patch_jitter) - 5)
         max_y_jitter = max(0, ((sample_patch_size[1]/2)*centre_patch_jitter) - 5)
+
+        # Ensure the same jitter is applied to the landmarks
+        if deterministic:
+            np.random.seed(int(coords_to_centre_around[0, 0] +coords_to_centre_around[0, 1]))
 
         x_dir = np.random.choice([-1, 1])
         y_dir = np.random.choice([-1, 1])

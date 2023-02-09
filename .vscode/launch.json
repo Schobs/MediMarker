@@ -1,0 +1,77 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: LannUnet GP",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
+            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_gp/gp_debug2.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: PHD-Net",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
+            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_local/phdnet/debugger.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: LannUNet patch",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
+            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_local/patch_training/patch_debug.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: LannUNet Full",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
+            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_bess/nnunet/rebuttal/ISBITEST_LOCAL.yaml"],
+
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: LannUNet Misc",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
+            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_bess/phdnet/phdnet_bug.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: GPFLow",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/gpflow.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+        }, 
+    ]
+}
+
+
+

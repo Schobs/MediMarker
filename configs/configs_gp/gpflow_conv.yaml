@@ -66,7 +66,8 @@ MODEL:
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
   CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_196/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
   GP:
-    KERN: "matern"
+    KERN: "conv"
+    
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: True #Set True for plot of predictions with covariances plotted.
