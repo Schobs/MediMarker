@@ -3,7 +3,7 @@ from time import time
 import gpytorch
 
 from losses.losses import GPLoss
-from models.gp_model import ExactGPModel
+from models.gp_models.gp_model import ExactGPModel
 import torch
 import numpy as np
 
@@ -75,6 +75,7 @@ class GPTrainer(NetworkTrainer):
         # We have made sure the batch_size is the dataset.len() for GP so one next() gets the whole dataset.
         self.logger.info("Loading training data for the GP...")
         self.training_data = next(iter(self.train_dataloader))
+
 
         self.training_data["image"] = torch.squeeze(self.training_data["image"]).type(torch.float32)
         self.training_data["label"]["landmarks"] = torch.squeeze(

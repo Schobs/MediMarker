@@ -13,7 +13,7 @@ SOLVER:
   DATA_LOADER_BATCH_SIZE_TRAIN: 12
   MAX_EPOCHS: 10
   # REGRESS_SIGMA: True
-  DATA_LOADER_BATCH_SIZE_EVAL: -1
+  DATA_LOADER_BATCH_SIZE_EVAL: 3
 
 
 
@@ -21,8 +21,8 @@ SOLVER:
 
 DATASET:
   # DEBUG: True
-  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
-  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/' #change this to where you have the data
+  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid' #change this
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]

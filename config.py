@@ -122,6 +122,10 @@ _C.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS = True
 # [None, 48, 10] (none or any int. TODO: WRITE TEST FOR THIS)
 _C.MODEL.PHDNET.CLAMP_DIST = None
 
+#GPFLOW config
+_C.MODEL.GPFLOW = CN()
+_C.MODEL.GPFLOW.NUM_INDUCING_POINTS = 1000
+
 
 _C.INFERENCE = CN()
 _C.INFERENCE.SPLIT = "testing"  # Split/s of the data to perform inference. Can specify multiple splits.

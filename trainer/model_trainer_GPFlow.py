@@ -8,7 +8,6 @@ from time import time
 import gpytorch
 
 from losses.losses import GPLoss
-from models.gp_model import ExactGPModel
 import torch
 import numpy as np
 import tensorflow as tf
@@ -25,6 +24,8 @@ from gpflow.ci_utils import reduce_in_tests
 from gpflow.utilities import print_summary
 from torch.utils.data import DataLoader
 from utils.setup.argument_utils import checkpoint_loading_checking
+from models.gp_models.tf_gpmodels import get_SVGP_model, get_conv_SVGP
+
 
 gpf.config.set_default_float(np.float64)
 gpf.config.set_default_summary_fmt("notebook")
@@ -48,12 +49,12 @@ class GPFlowTrainer(NetworkTrainer):
         # get model config parameters
 
         # scheduler, initialiser and optimiser params
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=0.01)
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.initial_lr)
 
         # "Loss" for GPs - the marginal log likelihood
         self.loss_func = gpytorch.mlls.ExactMarginalLogLikelihood
 
-# likelihood = gpytorch.likelihoods.MultitaskGaussianLikelihood(num_tasks=2)
+        self.num_inducing_points = self.trainer_config.MODEL.GPFLOW.NUM_INDUCING_POINTS
         ################# Settings for saving checkpoints ##################################
         # self.save_every = 25
 
@@ -74,38 +75,36 @@ class GPFlowTrainer(NetworkTrainer):
 
     def initialize_network(self):
 
-        if self.trainer_config.TRAINER.INFERENCE_ONLY:
-            self.set_training_dataloaders()
+        # if not self.trainer_config.TRAINER.INFERENCE_ONLY:
+        #     self.set_training_dataloaders()
 
         self.logger.info("Initializing GP model...")
 
-        # create multi-output kernel
+        # Matern
         kern_list = [
-            gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)
+            gpf.kernels.Matern52() + gpf.kernels.Linear() for _ in range(2)
         ]
-        # Create multi-output kernel from kernel list
-        kernel = gpf.kernels.LinearCoregionalization(
-            kern_list, W=np.random.randn(2, 2)
-        )  # Notice that we initialise the mixing matrix W
+
+        # Squared Exponential
+        # kern_list = [
+        #     gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)
+        # ]
 
         flattened_sample_size = next(iter(self.train_dataloader))["image"].shape[-1]
-        num_inducing_points = 1000
-        Zinit = np.tile(np.linspace(0, flattened_sample_size, num_inducing_points)[:, None], flattened_sample_size)
-        Z = Zinit.copy()
-        # create multi-output inducing variables from Z
-        iv = gpf.inducing_variables.SharedIndependentInducingVariables(
-            gpf.inducing_variables.InducingPoints(Z)
-        )
 
-        # initialize mean of variational posterior to be of shape MxL
-        q_mu = np.zeros((num_inducing_points, 2))
-        # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
-        q_sqrt = np.repeat(np.eye(num_inducing_points)[None, ...], 2, axis=0) * 1.0
-        # create SVGP model as usual and optimize
-        self.network = gpf.models.SVGP(
-            kernel, gpf.likelihoods.Gaussian(), inducing_variable=iv, num_latent_gps=2, q_mu=q_mu, q_sqrt=q_sqrt,
-        )
-        # self.logger.info(self.network.parameters)
+        # self.network = get_SVGP_model(flattened_sample_size, self.num_inducing_points,
+        #                               kern_list, inducing_dist="uniform")
+
+        all_images = []
+        all_labels = []
+        # all_x = self.train_dataloader.dataset["images"]
+        # all_y = self.train_dataloader.dataset["target_coords"]
+        all_train_image = [tf.squeeze(tf.convert_to_tensor((x["image"]), dtype=tf.float64), axis=0)
+                           for x in self.train_dataloader.dataset]
+        all_train_label = [tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks"]),
+                                      dtype=tf.float64), axis=0) for x in self.train_dataloader.dataset]
+        self.network = get_conv_SVGP(all_train_image, all_train_label,
+                                     self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, [3, 3])
 
         # Log network and initial weights
         if self.comet_logger:
@@ -329,7 +328,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         y_mean, cov_matr = self.network.predict_f(data_dict["image"], full_cov=True, full_output_cov=True)
 
-        prediction = np.expand_dims(np.round(y_mean), axis=0)
+        prediction = np.expand_dims(np.round(y_mean), axis=1)
         # lower = y_mean - 1.96 * np.array([np.sqrt(cov_matr[x, 0, x, 0]) for x in range(y_mean.shape[0])])
         # upper = y_mean - 1.96 * [np.sqrt(cov_matr[x, 1, x, 1]) for x in range(y_mean.shape[0])]
 
