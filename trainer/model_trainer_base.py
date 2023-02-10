@@ -33,7 +33,8 @@ class NetworkTrainer(ABC):
         profiler=None,
     ):
         # Device
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
 
         # This is the trainer config dict
         self.trainer_config = trainer_config
@@ -75,7 +76,8 @@ class NetworkTrainer(ABC):
         # Regressing sigma parameters for heatmaps
         self.regress_sigma = self.trainer_config.SOLVER.REGRESS_SIGMA
         self.sigmas = [
-            torch.tensor(x, dtype=float, device=self.device, requires_grad=True)
+            torch.tensor(x, dtype=float, device=self.device,
+                         requires_grad=True)
             for x in np.repeat(
                 self.trainer_config.MODEL.GAUSS_SIGMA, len(self.landmarks)
             )
@@ -174,7 +176,6 @@ class NetworkTrainer(ABC):
 
     @abstractmethod
     def initialize_optimizer_and_scheduler(self):
-
         """
         Initialize the optimizer and LR scheduler here!
 
@@ -199,7 +200,8 @@ class NetworkTrainer(ABC):
             ep = self.epoch + 1
         else:
             ep = epoch
-        poly_lr_update = self.initial_lr * (1 - ep / self.max_num_epochs) ** exponent
+        poly_lr_update = self.initial_lr * \
+            (1 - ep / self.max_num_epochs) ** exponent
 
         self.optimizer.param_groups[0]["lr"] = poly_lr_update
 
@@ -216,7 +218,6 @@ class NetworkTrainer(ABC):
 
     @abstractmethod
     def get_coords_from_heatmap(self, model_output, original_image_size):
-
         """
         Function to take model output and return coordinates & a Dict of any extra information to log (e.g. max of heatmap)
         """
@@ -253,7 +254,8 @@ class NetworkTrainer(ABC):
                     logged_vars=per_epoch_logs,
                 )
                 if self.comet_logger:
-                    self.comet_logger.log_metric("training loss iteration", l, step)
+                    self.comet_logger.log_metric(
+                        "training loss iteration", l, step)
                 step += 1
             # del generator
             print("validation")
@@ -342,7 +344,8 @@ class NetworkTrainer(ABC):
         # This happens when we regress sigma with >0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
         if self.gen_hms_in_mainthread:
-            data_dict["label"] = self.generate_heatmaps_batch(data_dict, dataloader)
+            data_dict["label"] = self.generate_heatmaps_batch(
+                data_dict, dataloader)
 
         # Put targets to device
         target = {
@@ -536,7 +539,8 @@ class NetworkTrainer(ABC):
                 self.save_checkpoint(
                     os.path.join(
                         self.output_folder,
-                        "model_ep_" + str(self.epoch) + "_fold" + fold_str + ".model",
+                        "model_ep_" + str(self.epoch) +
+                        "_fold" + fold_str + ".model",
                     )
                 )
 
@@ -546,7 +550,8 @@ class NetworkTrainer(ABC):
                     self.save_every = 100
             self.save_checkpoint(
                 os.path.join(
-                    self.output_folder, "model_latest_fold" + (fold_str) + ".model"
+                    self.output_folder, "model_latest_fold" +
+                    (fold_str) + ".model"
                 )
             )
             print("done")
@@ -702,7 +707,8 @@ class NetworkTrainer(ABC):
 
     def evaluation_metrics(self, individual_results, landmark_errors):
         """Function to calculate evaluation metrics."""
-        radius_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 40, 50, 100]
+        radius_list = [1, 2, 3, 4, 5, 6, 7, 8,
+                       9, 10, 15, 20, 25, 30, 40, 50, 100]
         outlier_results = {}
         for rad in radius_list:
             out_res_rad = success_detection_rate(individual_results, rad)
@@ -835,7 +841,8 @@ class NetworkTrainer(ABC):
 
                     # Update the dictionaries with the results
                     for k_ in list(ensemble_result_dicts.keys()):
-                        ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
+                        ensemble_result_dicts[k_].extend(
+                            ensembles_analyzed[k_])
 
                     for ens_key, coord_extact_methods in ind_landmark_errors.items():
                         for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
@@ -918,10 +925,12 @@ class NetworkTrainer(ABC):
             self._maybe_init_amp()
 
             if "amp_grad_scaler" in checkpoint_info.keys():
-                self.amp_grad_scaler.load_state_dict(checkpoint_info["amp_grad_scaler"])
+                self.amp_grad_scaler.load_state_dict(
+                    checkpoint_info["amp_grad_scaler"])
 
         if self.print_initiaization_info:
-            print("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch))
+            print("Loaded checkpoint %s. Epoch: %s, " %
+                  (model_path, self.epoch))
 
     def checkpoint_loading_checking(self):
         """Checks that the loaded checkpoint is compatible with the current model and training settings.

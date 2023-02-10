@@ -229,7 +229,6 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
 
     return transform
 
-
 def get_albumentation_transforms(data_augmentation):
     """Returns a data augmentation sequence from the albumentation package
 
@@ -343,3 +342,6 @@ def get_albumentation_transforms(data_augmentation):
         )
 
     return transform
+
+# q: how to branch my own version of the repo?
+# a: https://stackoverflow.com/questions/1813634/how-to-branch-in-git
