@@ -1,3 +1,4 @@
+from ast import List, Tuple
 import json
 import numpy as np
 from utils.im_utils.visualisation import visualize_centre_patch, visualize_patch
@@ -197,7 +198,7 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
 
         # Ensure the same jitter is applied to the landmarks
         if deterministic:
-            np.random.seed(int(coords_to_centre_around[0, 0] +coords_to_centre_around[0, 1]))
+            np.random.seed(int(coords_to_centre_around[0, 0] + coords_to_centre_around[0, 1]))
 
         x_dir = np.random.choice([-1, 1])
         y_dir = np.random.choice([-1, 1])
@@ -323,3 +324,5 @@ def get_patch_stitching_info(image_size, patch_size):
             break
 
     return patch_start_idxs
+
+

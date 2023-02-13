@@ -3,7 +3,7 @@
 OUTPUT: 
   # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_196' #change this to where you have the data
+  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_induce_center' #change this to where you have the data
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
@@ -55,7 +55,7 @@ SAMPLER:
   PATCH:
     SAMPLER_BIAS: 1.0 #irrelevent for patch_centred
     RESOLUTION_TO_SAMPLE_FROM:  "input_size" #means it samples from 512,512 not the original resolution
-    SAMPLE_PATCH_SIZE: [128,128] #patch size
+    SAMPLE_PATCH_SIZE: [32,32] #patch size
     # CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAS_DS5/individual_results_allfolds.xlsx"
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_all/individual_results_fold0.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error_f0"
@@ -64,9 +64,12 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_196/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
-  GP:
-    KERN: "conv"
+  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_196/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
+  GPFLOW:
+    NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
+    KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
+    CONV_KERN_SIZE: [3,3]  # size of kernel for convolutional kernel
+
     
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]

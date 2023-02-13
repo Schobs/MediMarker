@@ -12,6 +12,8 @@ import gpflow as gpf
 from gpflow import set_trainable
 from gpflow.ci_utils import is_continuous_integration
 
+from utils.tensorflow_utils.conv_helpers import get_inducing_patches
+
 
 def affine_scalar_bijector(shift=None, scale=None):
     scale_bijector = (
@@ -69,7 +71,7 @@ def get_SVGP_model(num_dimensions, num_inducing_points, kern_list, inducing_dist
 
 
 def get_conv_SVGP(X, Y, inp_dim, num_inducing_patches, patch_shape=[3, 3], kern_type="se"):
-
+    # assert np.array([x.shape.ndims == 2 for x in X]).all(), "X must be a list of 2D arrays i.e. images"
     def f64(x): return np.array(x, dtype=np.float64)
 
     def positive_with_min(): return affine_scalar_bijector(shift=f64(1e-4))(
@@ -100,6 +102,7 @@ def get_conv_SVGP(X, Y, inp_dim, num_inducing_patches, patch_shape=[3, 3], kern_
     conv_k.base_kernel.lengthscales = gpf.Parameter(
         1.0, transform=positive_with_min()
     )
+
     # Weight scale and variance are non-identifiable. We also need to prevent variance from shooting off crazily.
     conv_k.base_kernel.variance = gpf.Parameter(1.0, transform=constrained())
     conv_k.weights = gpf.Parameter(conv_k.weights.numpy(), transform=max_abs_1())
@@ -107,13 +110,20 @@ def get_conv_SVGP(X, Y, inp_dim, num_inducing_patches, patch_shape=[3, 3], kern_
     # TODO: Write a new get_patches function that samples patches according to a Gaussian distribution
     # centered around the label (Y) of each patch. The variance of the Gaussian should be a hyperparameter
     # we can experiment with, since we need to have some distant blank patches too.
-    conv_f = gpf.inducing_variables.InducingPatches(
-        np.unique(conv_k.get_patches(np.array(X)).numpy().reshape(-1,
-                  (patch_shape[0]*patch_shape[1])), axis=0)[:num_inducing_patches, :]
-    )
 
+    inducing_patches = get_inducing_patches(X, Y, inp_dim, patch_shape, num_inducing_patches, std=4)
+    inducing_patches_flattened = inducing_patches.numpy().reshape(-1, patch_shape[0] * patch_shape[1])
+    inducing_patches_randomly_sampled = inducing_patches_flattened[np.random.choice(
+        inducing_patches_flattened.shape[0], num_inducing_patches, replace=False)]
+
+    conv_f_i = gpf.inducing_variables.InducingPatches(inducing_patches_randomly_sampled)
+
+    # conv_f = gpf.inducing_variables.InducingPatches(
+    #     np.unique(conv_k.get_patches((np.array(X).reshape(len(X), inp_dim[0] * inp_dim[1]))).numpy().reshape(-1,
+    #               (patch_shape[0]*patch_shape[1])), axis=0)[:num_inducing_patches, :]
+    # )
     # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
-    conv_m = gpf.models.SVGP(conv_k, gpf.likelihoods.Gaussian(), conv_f,  num_latent_gps=2)
+    conv_m = gpf.models.SVGP(conv_k, gpf.likelihoods.Gaussian(), conv_f_i,  num_latent_gps=2)
 
     # q_mu = np.zeros((num_inducing_points, 2))
     # # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM

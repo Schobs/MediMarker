@@ -91,6 +91,9 @@ class GPFlowTrainer(NetworkTrainer):
             self.network = get_conv_SVGP(all_train_image, all_train_label,
                                          self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
                                          self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+
+            del all_train_image
+            del all_train_label
         else:
             if self.kern == "matern52":
                 # Mater52 kernel

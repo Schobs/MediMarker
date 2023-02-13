@@ -64,11 +64,11 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2
   ARCHITECTURE: "GP"  # ["U-Net" , "PHD-Net"]
-  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gp_test1/GPmodel_fold0.model"
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/256_patch_matern_l8/model_best_valid_coord_error_fold0.model"
 
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
-  DEBUG: True
+  DEBUG: False
   
 SSH: 
   AUTO_AMEND_PATHS: True
