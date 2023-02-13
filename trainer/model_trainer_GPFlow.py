@@ -1,3 +1,4 @@
+from __future__ import annotations
 from ast import Dict, Tuple
 import pickle
 from typing import Any, Generator, Optional
@@ -136,7 +137,9 @@ class GPFlowTrainer(NetworkTrainer):
         pass
 
     def initialize_loss_function(self):
-        pass
+        self.loss_func = lambda x, y: tf.reduce_mean(tf.square(x - y))
+
+        self.loss = GPLoss(self.loss_func)
 
     # Override the train function from model_trainer_base.py
     def train(self) -> None:
