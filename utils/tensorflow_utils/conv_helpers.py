@@ -21,7 +21,7 @@ def get_inducing_patches(images: List, landmarks: List, original_image_dims: Lis
     List[np.ndarray]: A list of extracted patches.
     """
 
-    patches_per_image = max(1, num_inducing_patches // len(images))
+    patches_per_image = max(1, num_inducing_patches // len(images)) + 1
 
     minus_mean_x = patch_shape[0] // 2
     plus_mean_x = patch_shape[0] - minus_mean_x
@@ -43,4 +43,9 @@ def get_inducing_patches(images: List, landmarks: List, original_image_dims: Lis
             patches.append(tf.reshape(patch, [-1]))
         all_patches.append(patches)
     return_patches = tf.stack(all_patches)
-    return return_patches
+
+    inducing_patches_flattened = return_patches.numpy().reshape(-1, patch_shape[0] * patch_shape[1])
+    inducing_patches_randomly_sampled = inducing_patches_flattened[np.random.choice(
+        inducing_patches_flattened.shape[0], num_inducing_patches, replace=False)]
+
+    return inducing_patches_randomly_sampled

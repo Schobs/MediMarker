@@ -1,4 +1,6 @@
-
+from __future__ import annotations
+from ast import List, Tuple
+from typing import Optional
 import numpy as np
 # import gpflow as gpf
 import time
@@ -15,7 +17,23 @@ from gpflow.ci_utils import is_continuous_integration
 from utils.tensorflow_utils.conv_helpers import get_inducing_patches
 
 
-def affine_scalar_bijector(shift=None, scale=None):
+def affine_scalar_bijector(shift: Optional[float] = None, scale: Optional[float] = None) -> tfp.bijectors.Bijector:
+    """
+    Construct a bijector that applies an affine transformation to scalar inputs.
+
+    The affine transformation is defined as y = scale * x + shift, where x is the input, 
+    y is the output, and scale and shift are the parameters of the transformation.
+
+    Args:
+    shift: float, optional
+        The shift parameter of the affine transformation. If None, defaults to 0.
+    scale: float, optional
+        The scale parameter of the affine transformation. If None, defaults to 1.
+
+    Returns:
+    tfp.bijectors.Bijector
+        A bijector that applies the affine transformation to inputs.
+    """
     scale_bijector = (
         tfp.bijectors.Scale(scale) if scale else tfp.bijectors.Identity()
     )
@@ -25,21 +43,27 @@ def affine_scalar_bijector(shift=None, scale=None):
     return shift_bijector(scale_bijector)
 
 
-def get_SVGP_model(num_dimensions, num_inducing_points, kern_list, inducing_dist="uniform"):
-    """Gets a GPflow SVGP model based on parameters
-
-    Args:
-        num_dimensions (int): Number of dimensions of the input data (flattened image size)
-        num_inducing_points (int): Number of inducing points
-        kern_list ([Kernels]): List of kernels to use for the multi-output kernel
-        inducing_dist (str, optional): How to space the inducing points in the data. Defaults to "uniform".
-
-    Raises:
-        NotImplementedError: Only uniform inducing points are implemented
-
-    Returns:
-        gpf.models.SVGP: The SVGP model
+def get_SVGP_model(num_dimensions: int, num_inducing_points: int, kern_list: List[gpf.kernels.Kernel], inducing_dist: str = 'uniform'):
     """
+    This function creates a sparse variational Gaussian process (SVGP) model.
+
+    Parameters
+    ----------
+    num_dimensions: int
+        The number of dimensions of the input space.
+    num_inducing_points: int
+        The number of inducing points.
+    kern_list: List[gpflow.kernels.Kernel]
+        A list of kernels used to create a multi-output kernel.
+    inducing_dist: str
+        The distribution of inducing points. Currently, only "uniform" distribution is implemented.
+
+    Returns
+    -------
+    gpflow.models.SVGP
+        A sparse variational Gaussian process model.
+    """
+
     assert inducing_dist in ["uniform"], "Only uniform inducing points are implemented"
 
     # Get inducing points
@@ -70,7 +94,27 @@ def get_SVGP_model(num_dimensions, num_inducing_points, kern_list, inducing_dist
     )
 
 
-def get_conv_SVGP(X, Y, inp_dim, num_inducing_patches, patch_shape=[3, 3], kern_type="se"):
+def get_conv_SVGP(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
+                  patch_shape: List[int] = [3, 3], kern_type: str = "se") -> gpf.models.SVGP:
+    """
+    Returns a Gaussian process with a Convolutional kernel as the covariance function.
+
+    Args:
+    X (List[np.ndarray]): A list of 2D arrays representing the input images.
+    Y (List[np.ndarray]): A list of 2D arrays representing the corresponding labels for the input images.
+    inp_dim (Tuple[int, int]): The dimensions of the input images.
+    num_inducing_patches (int): The number of inducing patches to use in the Gaussian process.
+    patch_shape (List[int]=[3, 3]): The shape of the patches.
+    kern_type (str='se'): The type of the inner kernel to use in the Convolutional kernel. 
+                           Can be 'se' for SquaredExponential, 'matern52' for Matern52, or 'rbf' for RBF.
+
+    Returns:
+    gpf.models.SVGP: A Gaussian process model with a Convolutional kernel as the covariance function.
+
+    Raises:
+    ValueError: If the `kern_type` is not 'se', 'matern52', or 'rbf'.
+    """
+
     # assert np.array([x.shape.ndims == 2 for x in X]).all(), "X must be a list of 2D arrays i.e. images"
     def f64(x): return np.array(x, dtype=np.float64)
 
@@ -112,16 +156,14 @@ def get_conv_SVGP(X, Y, inp_dim, num_inducing_patches, patch_shape=[3, 3], kern_
     # we can experiment with, since we need to have some distant blank patches too.
 
     inducing_patches = get_inducing_patches(X, Y, inp_dim, patch_shape, num_inducing_patches, std=4)
-    inducing_patches_flattened = inducing_patches.numpy().reshape(-1, patch_shape[0] * patch_shape[1])
-    inducing_patches_randomly_sampled = inducing_patches_flattened[np.random.choice(
-        inducing_patches_flattened.shape[0], num_inducing_patches, replace=False)]
 
-    conv_f_i = gpf.inducing_variables.InducingPatches(inducing_patches_randomly_sampled)
+    conv_f_i = gpf.inducing_variables.InducingPatches(inducing_patches)
 
     # conv_f = gpf.inducing_variables.InducingPatches(
     #     np.unique(conv_k.get_patches((np.array(X).reshape(len(X), inp_dim[0] * inp_dim[1]))).numpy().reshape(-1,
     #               (patch_shape[0]*patch_shape[1])), axis=0)[:num_inducing_patches, :]
     # )
+
     # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
     conv_m = gpf.models.SVGP(conv_k, gpf.likelihoods.Gaussian(), conv_f_i,  num_latent_gps=2)
 
@@ -131,82 +173,3 @@ def get_conv_SVGP(X, Y, inp_dim, num_inducing_patches, patch_shape=[3, 3], kern_
     # create SVGP model as usual and optimize
 
     return conv_m
-
-
-#     def SVGP_matern(self):
-#         # Get inducing points
-#         if self.inducing_dist == "uniform":
-#             Zinit = np.tile(np.linspace(0, self.num_dimensions, self.num_inducing_points)
-#                             [:, None], self.num_dimensions)
-#         else:
-#             raise NotImplementedError("Only uniform inducing points are implemented")
-#         Z = Zinit.copy()
-
-#         # create multi-output kernel
-#         kern_list = [
-#             gpf.kernels.Matern52() + gpf.kernels.Linear() for _ in
-# def SVGP_square_exponential(num_dimensions, num_inducing_points, inducing_dist="uniform"):
-
-#     # Get inducing points
-#     if inducing_dist == "uniform":
-#         Zinit = np.tile(np.linspace(0, num_dimensions, num_inducing_points)[:, None], num_dimensions)
-#     else:
-#         raise NotImplementedError("Only uniform inducing points are implemented")
-#     Z = Zinit.copy()
-
-#     # create multi-output kernel
-#     kern_list = [
-#         gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)
-#     ]
-#     # Create multi-output kernel from kernel list
-#     kernel = gpf.kernels.LinearCoregionalization(
-#         kern_list, W=np.random.randn(2, 2)
-#     )  # Notice that we initialise the mixing matrix W
-
-#     # create multi-output inducing variables from Z
-#     iv = gpf.inducing_variables.SharedIndependentInducingVariables(
-#         gpf.inducing_variables.InducingPoints(Z)
-#     )
-
-#     # initialize mean of variational posterior to be of shape MxL
-#     q_mu = np.zeros((num_inducing_points, 2))
-#     # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
-#     q_sqrt = np.repeat(np.eye(num_inducing_points)[None, ...], 2, axis=0) * 1.0
-#     # create SVGP model as usual and optimize
-#     return gpf.models.SVGP(
-#         kernel, gpf.likelihoods.Gaussian(), inducing_variable=iv, num_latent_gps=2, q_mu=q_mu, q_sqrt=q_sqrt,
-#     )
-
-
-# def SVGP_matern(num_dimensions, num_inducing_points, inducing_dist="uniform"):
-
-#     # Get inducing points
-#     if inducing_dist == "uniform":
-#         Zinit = np.tile(np.linspace(0, num_dimensions, num_inducing_points)[:, None], num_dimensions)
-#     else:
-#         raise NotImplementedError("Only uniform inducing points are implemented")
-#     Z = Zinit.copy()
-
-#     # create multi-output kernel
-#     kern_list = [
-#         gpf.kernels.Matern52() + gpf.kernels.Linear() for _ in range(2)
-#     ]
-
-#     # Create multi-output kernel from kernel list
-#     kernel = gpf.kernels.LinearCoregionalization(
-#         kern_list, W=np.random.randn(2, 2)
-#     )  # Notice that we initialise the mixing matrix W
-
-#     # create multi-output inducing variables from Z
-#     iv = gpf.inducing_variables.SharedIndependentInducingVariables(
-#         gpf.inducing_variables.InducingPoints(Z)
-#     )
-
-#     # initialize mean of variational posterior to be of shape MxL
-#     q_mu = np.zeros((num_inducing_points, 2))
-#     # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
-#     q_sqrt = np.repeat(np.eye(num_inducing_points)[None, ...], 2, axis=0) * 1.0
-#     # create SVGP model as usual and optimize
-#     return gpf.models.SVGP(
-#         kernel, gpf.likelihoods.Gaussian(), inducing_variable=iv, num_latent_gps=2, q_mu=q_mu, q_sqrt=q_sqrt,
-#     )

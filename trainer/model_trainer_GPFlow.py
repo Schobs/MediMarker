@@ -1,5 +1,6 @@
-from ast import Tuple
+from ast import Dict, Tuple
 import pickle
+from typing import Any, Generator, Optional
 from losses.GPLosses import GPFlowLoss
 from transforms.generate_labels import GPFlowLabelGenerator
 from trainer.model_trainer_base import NetworkTrainer
@@ -34,7 +35,7 @@ gpf.config.set_default_jitter(1e-4)
 
 
 class GPFlowTrainer(NetworkTrainer):
-    """Class for the u-net trainer stuff."""
+    """Class for the GPFLow trainer."""
 
     def __init__(self, **kwargs):
 
@@ -50,9 +51,6 @@ class GPFlowTrainer(NetworkTrainer):
 
         # scheduler, initialiser and optimiser params
         self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.initial_lr)
-
-        # "Loss" for GPs - the marginal log likelihood
-        self.loss_func = gpytorch.mlls.ExactMarginalLogLikelihood
 
         self.num_inducing_points = self.trainer_config.MODEL.GPFLOW.NUM_INDUCING_POINTS
         ################# Settings for saving checkpoints ##################################
@@ -76,6 +74,17 @@ class GPFlowTrainer(NetworkTrainer):
         self.all_training_labels = None
 
     def initialize_network(self):
+        """
+        Initialize the GP model based on the selected kernel.
+
+        vbnet
+
+        If the `kern` attribute is set to "conv", the function will initialize a convolutional GP model.
+        If the `kern` attribute is set to "matern52", "se", or "rbf", the function will initialize a standard GP model.
+
+        Returns:
+            None
+        """
 
         if self.trainer_config.TRAINER.INFERENCE_ONLY:
             self.set_training_dataloaders()
@@ -127,10 +136,16 @@ class GPFlowTrainer(NetworkTrainer):
         pass
 
     def initialize_loss_function(self):
-        self.loss = GPFlowLoss(self.loss_func)
+        pass
 
     # Override the train function from model_trainer_base.py
-    def train(self):
+    def train(self) -> None:
+        """
+        Trains the network for a given number of epochs or until continue_training is False.
+        The training and validation losses are logged every validate_every epochs.
+
+        :return: None
+        """
         if not self.was_initialized:
             self.initialize(True)
         step = 0
@@ -185,33 +200,35 @@ class GPFlowTrainer(NetworkTrainer):
 
     def run_iteration(
         self,
-        generator,
-        dataloader,
-        backprop,
-        split,
-        log_coords,
-        logged_vars=None,
-        debug=False,
-        direct_data_dict=None,
-        restart_dataloader=True,
-    ):
-        """Runs a single iteration of a forward pass. It can perform back-propagation (training) or not (validation, testing), indicated w/ bool backprop.
-            It can also retrieve coordindates from predicted heatmap and log variables using DictLogger, dictated by the keys in the logged_vars dict.
-            It will generate a batch of samples from the generator, unless a direct_data_dict is provided, in which case it will use that instead.
+        generator: Generator[Dict[str, Any], None, None],
+        dataloader: DataLoader,
+        backprop: bool,
+        split: str,
+        log_coords: bool,
+        logged_vars: Optional[Dict[str, Any]] = None,
+        debug: bool = False,
+        direct_data_dict: Optional[Dict[str, Any]] = None,
+        restart_dataloader: bool = True,
+    ) -> Tuple[float, Generator[Dict[str, Any], None, None]]:
+        """
+        Runs a single iteration of a forward pass. It can perform back-propagation (training) or not (validation, testing), indicated w/ bool backprop.
+        It can also retrieve coordindates from model output and log variables using DictLogger, dictated by the keys in the logged_vars dict.
+        It will generate a batch of samples from the generator, unless a direct_data_dict is provided, in which case it will use that instead.
 
-        Args:
-            generator (Iterable): An iterable that generates a batch of samples (use a Pytorch DataLoader as the iterable type)
-            dataloader (Pytorch Dataloader): The python dataloader that can be reinitialized if the generator runs out of samples.
-            backprop (bool): Whether to perform backpropagation or not.
-            split (str): String for split  (training, validation or testing)
-            log_coords (bool): Whether to extract and log coordinates from the predicted heatmap.
-            logged_vars (Dict, optional): A Dictionary with keys to log, derived from a template in the class DictLogger. Defaults to None.
-            debug (bool, optional): Whether to debug the function. Defaults to False.
-            direct_data_dict (Dict, optional): If not None, will directly perform forward pass on this rather than iterate the generator. Defaults to None.
+        Parameters:
+        - self: The object instance
+        - generator (Generator[Dict[str, Any], None, None]): A generator that produces data dictionaries.
+        - dataloader (DataLoader): The dataloader to use if the generator reaches a StopIteration exception.
+        - backprop (bool): Whether or not to perform backpropagation.
+        - split (str): The split (e.g. train, validation) of the data.
+        - log_coords (bool): Whether to extract and log coordinates from the model output.
+        - logged_vars (Optional[Dict[str, Any]]):  A Dictionary with keys to log, derived from a template in the class DictLogger. Defaults to None.
+        - debug (bool): Whether or not to run in debug mode, defaults to False.
+        - direct_data_dict (Optional[Dict[str, Any]]): If not None, will directly perform forward pass on this rather than iterate the generator. Defaults to None.
+        - restart_dataloader (bool): Whether or not to restart the dataloader, defaults to True.
 
         Returns:
-            loss: The loss value for the iteration
-            generator: The generator, which is now one iteration ahead from the input generator, or may have been reinitialized if it ran out of samples (if training).
+        - Tuple[float, Generator[Dict[str, Any], None, None]]: A tuple with the loss from the iteration and the updated generator.
         """
 
         # We can either give the generator to be iterated or a data_dict directly
@@ -287,9 +304,17 @@ class GPFlowTrainer(NetworkTrainer):
 
         return l.numpy(), generator
 
-    def optimization_step(
-        self, batch, backprop
-    ):
+    def optimization_step(self, batch: Tuple, backprop: bool) -> float:
+        """Performs a single optimization step.
+
+        Args:
+            batch: A tuple representing the mini-batch of data.
+            backprop: A boolean indicating whether to perform backpropagation.
+
+        Returns:
+            The value of the loss function.
+        """
+
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(self.network.trainable_variables)
             loss = self.network.training_loss(batch)
@@ -298,20 +323,18 @@ class GPFlowTrainer(NetworkTrainer):
             self.optimizer.apply_gradients(zip(grads, self.network.trainable_variables))
         return loss
 
-    def maybe_get_coords(self, log_coords, data_dict):
-        """
-        From output gets coordinates and extra info for logging. If log_coords is false,
-        returns None for all. It also decides whether to resize heatmap, rescale coords
-        depending on config settings.
+    def maybe_get_coords(self, log_coords: Optional[bool], data_dict: Dict) -> Tuple:
+        """Retrieve predicted and target coordinates from data.
 
         Args:
-            output (_type_): _description_
-            log_coords (_type_): _description_
-            data_dict (_type_): _description_
+            log_coords (Optional[bool]): A flag indicating whether to retrieve coordinates.
+            data_dict (Dict): A dictionary containing data.
 
         Returns:
-            _type_: _description_
+            Tuple: A tuple of predicted coordinates, size of predicted coordinates input,
+            additional information, and target coordinates.
         """
+
         if log_coords:
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(data_dict)
             pred_coords, target_coords = self.maybe_rescale_coords(
@@ -323,15 +346,14 @@ class GPFlowTrainer(NetworkTrainer):
 
         return pred_coords, pred_coords_input_size, extra_info, target_coords
 
-    def get_coords_from_heatmap(self, data_dict):
-        """Gets x,y coordinates from a model output. Here we use the final layer prediction of the U-Net,
-            maybe resize and get coords as the peak pixel. Also return value of peak pixel.
+    def get_coords_from_heatmap(self, data_dict: Dict[str, Any]) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """Gets x,y coordinates from a model's output.
 
         Args:
-            output: model output - a stack of heatmaps
+            data_dict (Dict[str, Any]): A dictionary containing image data.
 
         Returns:
-            [int, int]: predicted coordinates
+            Tuple[np.ndarray, Dict[str, Any]]: A tuple of the predicted coordinates and additional information.
         """
 
         y_mean, cov_matr = self.network.predict_f(data_dict["image"], full_cov=True, full_output_cov=True)
@@ -353,10 +375,16 @@ class GPFlowTrainer(NetworkTrainer):
             "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
         )
 
-    def on_epoch_end(self, per_epoch_logs):
+    def on_epoch_end(self, per_epoch_logs: Dict[str, float]) -> bool:
         """
-         Always run to 1000 epochs
-        :return:
+        This function is called at the end of each epoch to log and update some important variables
+        related to the training process, check for early stopping conditions, and save a checkpoint if necessary.
+
+        Args:
+            per_epoch_logs (Dict[str, float]): A dictionary of metrics logged for the current epoch.
+
+        Returns:
+            bool: Indicates whether to continue training or not.
         """
 
         new_best_valid = False
@@ -406,12 +434,16 @@ class GPFlowTrainer(NetworkTrainer):
 
         return continue_training
 
-    def save_checkpoint(self, path):
-        """Save model checkpoint to path
+    def save_checkpoint(self, path: str):
+        """Save model checkpoint to `path`.
 
         Args:
             path (str): Path to save model checkpoint to.
+
+        Returns:
+            None
         """
+
         state = {
             "epoch": self.epoch + 1,
             "best_valid_loss": self.best_valid_loss,
@@ -431,13 +463,14 @@ class GPFlowTrainer(NetworkTrainer):
         manager = tf.train.CheckpointManager(ckpt, log_dir, max_to_keep=5)
         manager.save()
 
-    def load_checkpoint(self, model_path, training_bool):
+    def load_checkpoint(self, model_path: str, training_bool: bool):
         """Load checkpoint from path.
 
         Args:
-            model_path (str): path to checjpoint
+            model_path (str): path to checkpoint
             training_bool (bool): If training or not.
         """
+
         if not self.was_initialized:
             self.initialize(training_bool)
 
@@ -486,19 +519,21 @@ class GPFlowTrainer(NetworkTrainer):
 
     # @abstractmethod
 
-    def run_inference(self, split, debug=False):
-        """Function to run inference on a full sized input
+    def run_inference(self, split: str, debug: bool = False) -> Tuple[Dict[str, float], Dict[str, float]]:
+        """
+        Run inference on the model using the specified data split.
 
-        # 0) instantitate test dataset and dataloader
-        # 1A) if FULL:
-            i) iterate dataloader and run_iteration each time to go through and save results.
-            ii) should run using run_iteration with logged_vars to log
-        1B) if PATCHIFYING full_res_output  <- this can be fututre addition
-            i) use patchify_and_predict to stitch hm together with logged_vars to log
+        Parameters:
+        -----------
+        split: str
+            Specify the split of data to be used for inference, e.g. 'training', 'validation', 'test'.
+        debug: bool
+            Optional parameter to specify whether the run should be in debug mode. Default is False.
 
-        # 2) need a way to deal with the key dictionary & combine all samples
-        # 3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
-        # 4) return individual results & do summary results.
+        Returns:
+        --------
+        Tuple[Dict[str, float], Dict[str, float]]
+            A tuple containing two dictionaries representing the summary results and individual results of the inference.
         """
 
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
