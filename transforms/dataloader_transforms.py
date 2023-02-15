@@ -64,6 +64,26 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
         def transform(image, keypoints): return custom_flatten(
             iaa.CenterCropToFixedSize(final_im_size[0], final_im_size[1])(image=image, keypoints=keypoints))
 
+    elif data_augmentation == "AffineComplexFlatten":
+
+        def transform(image, keypoints): return custom_flatten(
+            iaa.Sequential(
+                [
+                    iaa.Sometimes(
+                        0.5,
+                        iaa.Affine(
+                            scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
+                            translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                            rotate=(-45, 45),
+                            shear=(-16, 16),
+                            order=[0, 1],
+                        ),
+                    ),
+                    iaa.flip.Flipud(p=0.5),
+                    iaa.CenterCropToFixedSize(final_im_size[0], final_im_size[1])
+                ])(image=image, keypoints=keypoints)
+        )
+
     elif data_augmentation == "AffineSimple":
 
         transform = iaa.Sequential(

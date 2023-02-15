@@ -3,7 +3,7 @@
 OUTPUT: 
   # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_small_jitter_coreg' #change this to where you have the data
+  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_data_aug' #change this to where you have the data
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
@@ -46,7 +46,7 @@ TRAINER:
   VALIDATE_EVERY: 1 #validation every X epochs
 
 SAMPLER:
-  DATA_AUG: "Flatten" #the data aug scheme, currently flattens, but can change this to other schemes.
+  DATA_AUG: "AffineComplexFlatten" #the data aug scheme, currently flattens, but can change this to other schemes.
   INPUT_SIZE : [512,512] #resizes data to this size, then gets patches of SAMPLER.PATCH.SAMPLE_PATCH_SIZE
   SAMPLE_MODE: 'patch_centred' # ['patch_bias', 'full', "patch_centred"] (patch_centred gets centre from stage 1 preds)
   EVALUATION_SAMPLE_MODE: "patch_centred"  # ['patch_bias', 'full', "patch_centred"] (evaluate from stage 1 preds)
@@ -61,8 +61,8 @@ SAMPLER:
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_all/individual_results_fold0.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error_f0"
     CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
-    CENTRED_PATCH_DETERMINISTIC: True  #if True, will always sample the same patch for a given image i.e. same jitter applied.
-    
+    CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
+
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]

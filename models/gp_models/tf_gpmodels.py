@@ -246,9 +246,14 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
 
     conv_f_i = gpf.inducing_variables.InducingPatches(inducing_patches)
 
-    iv = gpf.inducing_variables.FallbackSharedIndependentInducingVariables(
+    iv = gpf.inducing_variables.SharedIndependentInducingVariables(
         conv_f_i
     )
+
+    # @TOM: idk, seemed like it may be useful.
+    # iv = gpf.inducing_variables.FallbackSharedIndependentInducingVariables(
+    #     conv_f_i
+    # )
 
     # initialize mean of variational posterior to be of shape MxL
     q_mu = np.zeros(((num_inducing_patches), 2))

@@ -98,13 +98,13 @@ class GPFlowTrainer(NetworkTrainer):
             all_train_label = [tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks"]),
                                                                dtype=tf.float64), axis=0) for x in self.train_dataloader.dataset]
 
-            # self.network = get_conv_SVGP(all_train_image, all_train_label,
-            #                              self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-            #                              self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+            self.network = get_conv_SVGP(all_train_image, all_train_label,
+                                         self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+                                         self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
 
-            self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
-                                                      self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-                                                      self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+            # self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
+            #                                           self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+            #                                           self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
 
             del all_train_image
             del all_train_label
