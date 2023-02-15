@@ -26,7 +26,7 @@ from gpflow.ci_utils import reduce_in_tests
 from gpflow.utilities import print_summary
 from torch.utils.data import DataLoader
 from utils.setup.argument_utils import checkpoint_loading_checking
-from models.gp_models.tf_gpmodels import get_SVGP_model, get_conv_SVGP
+from models.gp_models.tf_gpmodels import get_SVGP_model, get_conv_SVGP, get_conv_SVGP_linear_coreg
 
 
 gpf.config.set_default_float(np.float64)
@@ -98,9 +98,13 @@ class GPFlowTrainer(NetworkTrainer):
             all_train_label = [tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks"]),
                                                                dtype=tf.float64), axis=0) for x in self.train_dataloader.dataset]
 
-            self.network = get_conv_SVGP(all_train_image, all_train_label,
-                                         self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-                                         self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+            # self.network = get_conv_SVGP(all_train_image, all_train_label,
+            #                              self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+            #                              self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+
+            self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
+                                                      self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+                                                      self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
 
             del all_train_image
             del all_train_label
@@ -359,7 +363,7 @@ class GPFlowTrainer(NetworkTrainer):
             Tuple[np.ndarray, Dict[str, Any]]: A tuple of the predicted coordinates and additional information.
         """
 
-        y_mean, cov_matr = self.network.predict_f(data_dict["image"], full_cov=True, full_output_cov=True)
+        y_mean, cov_matr = self.network.posterior().predict_f(data_dict["image"], full_cov=True, full_output_cov=True)
 
         prediction = np.expand_dims(np.round(y_mean), axis=1)
         # lower = y_mean - 1.96 * np.array([np.sqrt(cov_matr[x, 0, x, 0]) for x in range(y_mean.shape[0])])

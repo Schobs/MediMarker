@@ -611,13 +611,13 @@ class UNetLabelGenerator(LabelGenerator):
                         for x in range(len(predicted_coords[sample_idx]))
                         if (
                             ind_sample["L" + str(x)] != None
-                            and ind_sample["L" + str(x)] > 10
+                            and ind_sample["L" + str(x)] >= 0
                         )
                     ]
                 )
-                > 0
+                >= 0
             ):
-                fig, ax = plt.subplots(1, ncols=1, squeeze=False)
+                fig, ax = plt.subplots(1, ncols=2, squeeze=False)
 
                 for coord_idx, pred_coord in enumerate(predicted_coords[sample_idx]):
                     self.logger.info(
@@ -661,6 +661,7 @@ class UNetLabelGenerator(LabelGenerator):
                         (
                             input_size_pred_coords[sample_idx][coord_idx][0]
                             .detach()
+                            .cpu()
                             .numpy(),
                             input_size_pred_coords[sample_idx][coord_idx][1]
                             .detach()
@@ -715,6 +716,15 @@ class UNetLabelGenerator(LabelGenerator):
                             np.round(ind_sample["Error All Mean"], 2),
                             np.round(ind_sample["Error All Std"]),
                         )
+                    )
+
+                    ax[0, 1].set_title(
+                        "Predicted Heatmap"
+
+                    )
+                    ax[0, 1].imshow(
+                        predicted_heatmap[sample_idx, 0]
+
                     )
 
                     # # #2)

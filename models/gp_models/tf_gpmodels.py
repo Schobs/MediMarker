@@ -95,7 +95,7 @@ def get_SVGP_model(num_dimensions: int, num_inducing_points: int, kern_list: Lis
 
 
 def get_conv_SVGP(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
-                  patch_shape: List[int] = [3, 3], kern_type: str = "se") -> gpf.models.SVGP:
+                  patch_shape: List[int] = [3, 3], kern_type: str = "rbf") -> gpf.models.SVGP:
     """
     Returns a Gaussian process with a Convolutional kernel as the covariance function.
 
@@ -166,6 +166,102 @@ def get_conv_SVGP(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, 
 
     # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
     conv_m = gpf.models.SVGP(conv_k, gpf.likelihoods.Gaussian(), conv_f_i,  num_latent_gps=2)
+
+    # q_mu = np.zeros((num_inducing_points, 2))
+    # # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
+    # q_sqrt = np.repeat(np.eye(num_inducing_points)[None, ...], 2, axis=0) * 1.0
+    # create SVGP model as usual and optimize
+
+    return conv_m
+
+
+def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
+                               patch_shape: List[int] = [3, 3], kern_type: str = "rbf") -> gpf.models.SVGP:
+    """
+    Returns a Gaussian process with a Convolutional kernel as the covariance function.
+
+    Args:
+    X (List[np.ndarray]): A list of 2D arrays representing the input images.
+    Y (List[np.ndarray]): A list of 2D arrays representing the corresponding labels for the input images.
+    inp_dim (Tuple[int, int]): The dimensions of the input images.
+    num_inducing_patches (int): The number of inducing patches to use in the Gaussian process.
+    patch_shape (List[int]=[3, 3]): The shape of the patches.
+    kern_type (str='se'): The type of the inner kernel to use in the Convolutional kernel. 
+                           Can be 'se' for SquaredExponential, 'matern52' for Matern52, or 'rbf' for RBF.
+
+    Returns:
+    gpf.models.SVGP: A Gaussian process model with a Convolutional kernel as the covariance function.
+
+    Raises:
+    ValueError: If the `kern_type` is not 'se', 'matern52', or 'rbf'.
+    """
+
+    # assert np.array([x.shape.ndims == 2 for x in X]).all(), "X must be a list of 2D arrays i.e. images"
+    def f64(x): return np.array(x, dtype=np.float64)
+
+    def positive_with_min(): return affine_scalar_bijector(shift=f64(1e-4))(
+        tfp.bijectors.Softplus()
+    )
+
+    # @TOM: Should we use this for regression rather than classification? I don't rememember what you said it does.
+    def constrained(): return affine_scalar_bijector(shift=f64(1e-4), scale=f64(100.0))(
+        tfp.bijectors.Sigmoid()
+    )
+
+    def max_abs_1(): return affine_scalar_bijector(shift=f64(-2.0), scale=f64(4.0))(
+        tfp.bijectors.Sigmoid()
+    )
+
+    if kern_type == "se":
+        inner_kern = gpf.kernels.SquaredExponential()
+    elif kern_type == "matern52":
+        inner_kern = gpf.kernels.Matern52()
+    elif kern_type == "rbf":
+        inner_kern = gpf.kernels.RBF()
+    else:
+        raise ValueError("Invalid kernel type. Try 'se', 'matern', or 'rbf'.")
+
+    convs_k = []
+    for i in range((2)):
+        conv_k = gpf.kernels.Convolutional(
+            inner_kern, inp_dim, patch_shape
+        )
+        conv_k.base_kernel.lengthscales = gpf.Parameter(
+            1.0, transform=positive_with_min()
+        )
+
+        # Weight scale and variance are non-identifiable. We also need to prevent variance from shooting off crazily.
+        conv_k.base_kernel.variance = gpf.Parameter(1.0, transform=constrained())
+        conv_k.weights = gpf.Parameter(conv_k.weights.numpy(), transform=max_abs_1())
+        convs_k.append(conv_k)
+
+    kernel = gpf.kernels.LinearCoregionalization(
+        convs_k, W=np.random.randn(2, 2)
+    )
+    # TODO: Write a new get_patches function that samples patches according to a Gaussian distribution
+    # centered around the label (Y) of each patch. The variance of the Gaussian should be a hyperparameter
+    # we can experiment with, since we need to have some distant blank patches too.
+
+    inducing_patches = get_inducing_patches(X, Y, inp_dim, patch_shape, num_inducing_patches, std=4)
+
+    conv_f_i = gpf.inducing_variables.InducingPatches(inducing_patches)
+
+    iv = gpf.inducing_variables.FallbackSharedIndependentInducingVariables(
+        conv_f_i
+    )
+
+    # initialize mean of variational posterior to be of shape MxL
+    q_mu = np.zeros(((num_inducing_patches), 2))
+    # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
+    q_sqrt = np.repeat(np.eye(num_inducing_patches)[None, ...], 2, axis=0) * 1.0
+
+    # conv_f = gpf.inducing_variables.InducingPatches(
+    #     np.unique(conv_k.get_patches((np.array(X).reshape(len(X), inp_dim[0] * inp_dim[1]))).numpy().reshape(-1,
+    #               (patch_shape[0]*patch_shape[1])), axis=0)[:num_inducing_patches, :]
+    # )
+
+    # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
+    conv_m = gpf.models.SVGP(kernel, gpf.likelihoods.Gaussian(), inducing_variable=iv, q_mu=q_mu, q_sqrt=q_sqrt)
 
     # q_mu = np.zeros((num_inducing_points, 2))
     # # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM

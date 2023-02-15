@@ -200,6 +200,10 @@ def main():
         )
     ) as writer_:
         for n, df in (all_model_summaries).items():
+            # Prevent sheet name from being too long, max is 31 characters.
+            # Asumes most important stuff is at the end
+            if len(n) > 31:
+                n = n[-31:]
             df.to_excel(writer_, n)
 
     logger.info(
@@ -216,6 +220,10 @@ def main():
         )
     ) as writer_:
         for n, df in (all_model_individuals).items():
+            # Prevent sheet name from being too long, max is 31 characters.
+            # Asumes most important stuff is at the end
+            if len(n) > 31:
+                n = n[-31:]
             df.to_excel(writer_, n)
 
     if writer is not None:

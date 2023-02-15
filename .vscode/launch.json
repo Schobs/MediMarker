@@ -51,8 +51,8 @@
             "name": "Python: LannUNet Misc",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
-            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_bess/phdnet/phdnet_bug.yaml"],
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/conv_baseline.yaml"],
             "console": "integratedTerminal",
             "justMyCode": true
         }, 
