@@ -375,7 +375,6 @@ def arg_parse():
         cfg.OUTPUT.OUTPUT_DIR = cfg.OUTPUT.OUTPUT_DIR + args.out_path_append
 
     if args.landmark:
-        assert len(args.landmark) == 1, "Only a single landmark setup can be specified on command line."
         cfg.DATASET.LANDMARKS = [args.landmark]
     # cfg.freeze()
     cfg = infer_additional_arguments(cfg)

@@ -15,7 +15,7 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 1 # Leave this.
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE_TRAIN: 12 # indicates entire dataset for batch (needed for ExactGP)
-  MAX_EPOCHS: 1 
+  MAX_EPOCHS: 200 
   MINI_BATCH_SIZE: 150 # Leave this.
   # REGRESS_SIGMA: True
   DATA_LOADER_BATCH_SIZE_EVAL: 12
@@ -41,7 +41,7 @@ TRAINER:
   SAVE_LATEST_ONLY: False
   CACHE_DATA: False # Kind of irrelevant for ExactGP
   INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
-  SAVE_EVERY: 5 # Saves checkpoint every X epochs
+  SAVE_EVERY: 20 # Saves checkpoint every X epochs
   VALIDATE_EVERY: 1 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
 

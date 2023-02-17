@@ -755,6 +755,7 @@ class NetworkTrainer(ABC):
         # Generate summary Results
         summary_results = generate_summary_df(landmark_errors, outlier_results)
         ind_results = pd.DataFrame(individual_results)
+        ind_results = ind_results.drop(columns="final_heatmaps", errors='ignore')
 
         return summary_results, ind_results
 
