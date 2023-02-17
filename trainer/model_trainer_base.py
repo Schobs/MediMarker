@@ -41,6 +41,8 @@ class NetworkTrainer(ABC):
         # This is the trainer config dict
         self.trainer_config = trainer_config
         self.is_train = is_train
+        self.validation_log_heatmaps = trainer_config.TRAINER.VALIDATION_LOG_HEATMAPS
+        self.inference_log_heatmaps = trainer_config.INFERENCE.LOG_HEATMAPS
 
         # Dataset class to use
         self.dataset_class = dataset_class
@@ -198,6 +200,8 @@ class NetworkTrainer(ABC):
             self.regress_sigma,
             self.loss.loss_seperated_keys,
             self.dataset_class.additional_sample_attribute_keys,
+            log_valid_heatmap=self.validation_log_heatmaps,
+            log_inference_heatmap=self.inference_log_heatmaps
         )
 
         self.was_initialized = True
@@ -532,6 +536,11 @@ class NetworkTrainer(ABC):
                 self.comet_logger, per_epoch_logs, self.epoch
             )
 
+        # Delete big data in logs for printing and memory
+        per_epoch_logs.pop("individual_results", None)
+        per_epoch_logs.pop("final_heatmaps", None)
+        per_epoch_logs.pop("individual_results_extra_keys", None)
+
         if self.verbose_logging:
             self.logger.info("Epoch %s logs: %s", self.epoch, per_epoch_logs)
 
@@ -729,6 +738,9 @@ class NetworkTrainer(ABC):
         summary_results, ind_results = self.evaluation_metrics(
             evaluation_logs["individual_results"], evaluation_logs["landmark_errors"]
         )
+
+        if self.inference_log_heatmaps:
+            self.save_heatmaps(evaluation_logs)
 
         return summary_results, ind_results
 
@@ -1122,3 +1134,9 @@ class NetworkTrainer(ABC):
             return dataset.__len__()
         else:
             return batch_size
+
+    def save_heatmaps(self, heatmaps):
+        hm_dict = {"final_heatmaps": []}
+        for idx, results_dict in enumerate(heatmaps['individual_results']):
+            hm_dict["final_heatmaps"].append([results_dict["uid"]+"_eval_phase", results_dict["final_heatmaps"]])
+        self.dict_logger.log_dict_to_comet(self.comet_logger, hm_dict, -1)

@@ -191,7 +191,7 @@ class UnetTrainer(NetworkTrainer):
         model_output = model_output[-1]
 
         final_heatmap = model_output
-        original_image_size = original_image_size.cpu().detach().numpy()[:, ::-1, :]
+        original_image_size = original_image_size.cpu().detach().numpy()[:, :: -1, :]
         all_ims_same_size = np.all(original_image_size[0] == original_image_size)
 
         # Perform inference on each image
@@ -241,7 +241,7 @@ class UnetTrainer(NetworkTrainer):
             )
 
         extra_info["hm_max"] = input_max_values
-        extra_info["final_heatmaps"] = final_heatmap
+        extra_info["final_heatmaps"] = np.array(final_heatmap.cpu().detach(), dtype=np.float16)
 
         return pred_coords, extra_info
 

@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.patches as patches
 import matplotlib.patheffects as path_effects
+from scipy.stats import multivariate_normal
+import matplotlib.patches as patchesplt
 
 
 def visualize_image_target(image, target, coordinates):
@@ -391,7 +393,6 @@ def visualize_centre_patch(
     )
     ax[0, 0].add_patch(rect13)
 
-
     ax[0, 1].imshow(image_patch, cmap="gray")
     rect20 = patches.Rectangle(
         (int(patch_landmarks[0][0]), int(patch_landmarks[0][1])),
@@ -543,3 +544,40 @@ def visualize_predicted_heatmaps(heatmaps, predicted_coords, target_coords):
 
     # plt.show()
     # plt.close()
+
+
+def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape):
+
+
+    transformed_input_image = data_dict["image"]
+    all_hms = []
+    for sample_idx, ind_sample_image in enumerate(transformed_input_image):
+        # extra_info = {"lower": lower, "upper": upper, "cov_matr": cov_matr}
+
+        # extra_info = ind_sample["extra_info"]
+        # create  kernel
+        m1 = y_mean[sample_idx]
+        s1 = cov_matr[sample_idx,:,sample_idx,:]
+        k1 = multivariate_normal(mean=m1, cov=s1)
+
+        # create a grid of (x,y) coordinates at which to evaluate the kernels
+        xlim = (0, heatmap_shape[0])
+        ylim = (0, heatmap_shape[1])
+        xres = int(heatmap_shape[0])
+        yres = int(heatmap_shape[1])
+
+        x = np.linspace(xlim[0], xlim[1], xres)
+        y = np.linspace(ylim[0], ylim[1], yres)
+        xx, yy = np.meshgrid(x, y)
+
+        # evaluate kernels at grid points
+        xxyy = np.c_[xx.ravel(), yy.ravel()]
+        zz = k1.pdf(xxyy)
+
+        # reshape and plot image
+        img = np.array(zz.reshape((xres, yres))*100, dtype=np.float16)
+        all_hms.append(np.expand_dims(img,axis=0))
+    return np.array(all_hms)
+
+
+        

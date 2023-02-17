@@ -5,11 +5,13 @@ import copy
 class DictLogger():
     """ A dictionary based logger to save results. Extend this class to log any extra variables!
     """
-    def __init__(self, num_landmarks, is_regressing_sigma, multi_part_loss_keys, additional_sample_attribute_keys):
+    def __init__(self, num_landmarks, is_regressing_sigma, multi_part_loss_keys, additional_sample_attribute_keys, log_valid_heatmap=False, log_inference_heatmap=False):
         #Device
 
         self.num_landmarks = num_landmarks
         self.is_regressing_sigma = is_regressing_sigma
+        self.is_log_valid_heatmap = log_valid_heatmap
+        self.is_log_inference_heatmap = log_inference_heatmap
         self.multi_part_loss_keys = multi_part_loss_keys
         self.add_sample_att_keys = additional_sample_attribute_keys
         self.standard_info_keys = ["uid", "full_res_coords", "annotation_available", "image_path", "target_coords",  "resizing_factor", "original_image_size"] 
@@ -23,10 +25,16 @@ class DictLogger():
 
     def per_epoch_log_template(self):
         logged_per_epoch =  {"valid_coord_error_mean": [], "epoch_time": [], "lr": [], "individual_results_extra_keys": []}
+        if self.is_log_valid_heatmap:
+            logged_per_epoch["individual_results_extra_keys"] = ["final_heatmaps"] 
+            logged_per_epoch["individual_results"] = []
+            logged_per_epoch["final_heatmaps"] = []
+
         if self.is_regressing_sigma:
             logged_per_epoch["sigmas_mean"] =  []
             for sig in range(self.num_landmarks):
                  logged_per_epoch["sigma_"+str(sig)] = []
+
 
         #initialise keys for logging the multi-part losses.
         for key_ in self.multi_part_loss_keys:
@@ -36,11 +44,16 @@ class DictLogger():
         return logged_per_epoch
 
     def evaluation_log_template(self):
-        return {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
+
+
+        eval_logs = {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
             "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
             "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['hm_max', 'coords_og_size']}
 
+        if self.is_log_inference_heatmap:
+            eval_logs["individual_results_extra_keys"].append("final_heatmaps")
 
+        return eval_logs
 
     def ensemble_inference_log_template(self):
 
@@ -78,16 +91,10 @@ class DictLogger():
             if key_ in vars_to_log:
                 log_dict[key_].append(value)
 
-        # print("len of data dict@ ", (data_dict))
-        # #log learning rate
-        # if "lr" in vars_to_log:
-        #     log_dict["lr"].append(extra_info["lr"])
-        #2) If log_coords, get coords from output. Then, check for the keys for what to log.
-
+ 
         #Only log info we requested in the evaluation/ensemble templates
-        # print("before extra info filter", extra_info.keys())
-        extra_info = {k: extra_info[k] for k in log_dict['individual_results_extra_keys'] if k in extra_info}
-        # print("after extra info filter", extra_info.keys())
+        if extra_info is not None:
+            extra_info = {k: extra_info[k] for k in log_dict['individual_results_extra_keys'] if k in extra_info}
 
         if log_coords:
 
@@ -100,12 +107,7 @@ class DictLogger():
                 coord_error = np.linalg.norm((pred_coords- target_coords), axis=2)
 
 
-            # #Get coord error of the original image resolution
-            # pred_coords_original_resolution = ((pred_coords.detach().cpu())) * data_dict["resizing_factor"]
-            # target_coords_original_resolution = data_dict["full_res_coords"]
-            # coord_error_og_size = torch.linalg.norm((pred_coords_original_resolution- target_coords_original_resolution), axis=2)
-
-            # print("PCOR %s TCOR %s ER %s" % (pred_coords_original_resolution, target_coords_original_resolution, coord_error_og_size))
+      
     
             if split == "validation":
                 if "valid_coord_error_mean"  in vars_to_log:
@@ -131,22 +133,10 @@ class DictLogger():
 
                         ind_dict[standard_info_key] = data_point
 
-                    # ind_dict["annotation_available"] = ((data_dict["annotation_available"][idx].detach().cpu()))
-                    # ind_dict["uid"] = ((data_dict["uid"][idx]))
-                    # ind_dict["image_path"] = ((data_dict["image_path"][idx]))
-                    # ind_dict["full_res_coords"] = ((data_dict["full_res_coords"][idx]))
-
-                    # for k_ in self.add_sample_att_keys:
-                    #     ind_dict[k_] = ((data_dict[k_][idx]))
-
 
                     ind_dict["predicted_coords"] = ((pred_coords[idx].detach().cpu().numpy()))
 
-                    # ind_dict["predicted_coords_original_resolution"] = pred_coords_original_resolution[idx].detach().cpu().numpy()
-
-                    # print("pred coords, resize factor, resized coords: ",ind_dict["predicted_coords"],  data_dict["resizing_factor"][idx], ind_dict["predicted_coords_original_resolution"] )
-                    # if "predicted_heatmaps" in vars_to_log:
-                    #     log_dict["predicted_heatmaps"][coord_idx].append(model_output)
+           
 
                     #If target annotation not avaliable, we don't know the error
                     if ind_dict["annotation_available"] == False:
@@ -159,15 +149,6 @@ class DictLogger():
 
                         for coord_idx, er in enumerate(coord_error[idx]):
                             ind_dict["L"+str(coord_idx)] = None
-
-                        # #Save for original image size resolution
-                        # ind_dict["Error All Mean (Original Resolution)"] = None
-                        # ind_dict["Error All Std (Original Resolution)"] = None
-                        # ind_dict["ind_errors (Original Resolution)"] = None
-                        # ind_dict["target_coords (Original Resolution)"] = None
-
-                        # for coord_idx, er in enumerate(coord_error[idx]):
-                        #     ind_dict["L"+str(coord_idx)+ " (Original Resolution)"] = None
 
 
                             
@@ -185,46 +166,19 @@ class DictLogger():
                             if "landmark_errors" in vars_to_log:
                                 log_dict["landmark_errors"][coord_idx].append(er.detach().cpu().numpy())
 
-                        # #Save for original image size resolution
-                        # ind_dict["Error All Mean (Original Resolution)"] = (np.mean(coord_error_og_size[idx].detach().cpu().numpy()))
-                        # ind_dict["Error All Std (Original Resolution)"] = (np.std(coord_error_og_size[idx].detach().cpu().numpy()))
-                        # ind_dict["ind_errors (Original Resolution)"] = ((coord_error_og_size[idx].detach().cpu().numpy()))
-                        # ind_dict["target_coords (Original Resolution)"] = ((target_coords_original_resolution[idx].detach().cpu().numpy()))
-
-
-                        # for coord_idx, er in enumerate(coord_error_og_size[idx]):
-                        #     ind_dict["L"+str(coord_idx)+ " (Original Resolution)"] = er.detach().cpu().numpy()
-
-                        #     if "landmark_errors" in vars_to_log:
-                        #         log_dict["landmark_errors_original_resolution"][coord_idx].append(er.detach().cpu().numpy())
 
                     #any extra info returned by the child class when calculating coords from outputs e.g. heatmap_max
                     for key_ in list(extra_info.keys()):
-                        # print(extra_info[key_][idx])
-                        # print("extra_info key_ ", key_, len(extra_info[key_]))
+                       
                         if "debug" not in key_:
-                            # if key_ == "coords_og_size":
-                            #     continue
-                            # if type(extra_info[key_][idx]) != list:
-                            ind_dict[key_] = ((extra_info[key_][idx].detach().cpu().numpy()))
+
+                            if torch.is_tensor(extra_info[key_]):
+                                ind_dict[key_] = ((extra_info[key_][idx].detach().cpu().numpy()))
+                            else:
+                                ind_dict[key_] = ((extra_info[key_][idx]))
                             
-                            # else:
-                            #     ind_dict[key_] = [x.detach().cpu().numpy() for x in ((extra_info[key_][idx].detach().cpu().numpy()))]
-
-
                     log_dict["individual_results"].append(ind_dict)
-            
-#                 if debug:
-#                     for idx in range(len(pred_coords)):
-#                         print("\n uid: %s. Mean Error: %s " % (data_dict["uid"][idx],(np.mean(coord_error[idx].detach().cpu().numpy())) ))
-#                         for coord_idx, er in enumerate(coord_error[idx]):
-#                             print("L%s: Prediction: %s, Target: %s, Error: %s" % (coord_idx, pred_coords[idx][coord_idx].detach().cpu().numpy(), 
-#                             target_coords[idx][coord_idx].detach().cpu().numpy(), er))
-# # self, input_dict, prediction_output, predicted_coords
-#                             label_generator.debug_sample(data_dict)
-                        
-
-
+     
         
         return log_dict
 
@@ -249,17 +203,36 @@ class DictLogger():
                     per_epoch_logs["sigma_"+str(idx)] = sig
 
         for key, value in per_epoch_logs.items():
-            #get the mean of all the batches from the training/validations. 
-            if isinstance(value, list):
-                per_epoch_logs[key] = np.round(np.mean([x.detach().cpu().numpy() if torch.is_tensor(x) else x for x in value]),5)
-            if torch.is_tensor(value):
-                per_epoch_logs[key] = np.round(value.detach().cpu().numpy(), 5)
+            
+            #Handle heatmap logging
+            if key == "individual_results" and "final_heatmaps" in list(per_epoch_logs.keys()):
+                [per_epoch_logs["final_heatmaps"].append([x["uid"]+"_training_phase", x["final_heatmaps"]]) for x in value]
+            else:
+                #Don't worry about averaging these, we handled those above.
+                if key in ["individual_results_extra_keys", "final_heatmaps"]:
+                    continue
+                #get the mean of all the batches from the training/validations. 
+                if isinstance(value, list):
+                    per_epoch_logs[key] = np.round(np.mean([x.detach().cpu().numpy() if torch.is_tensor(x) else x for x in value]),5)
+                if torch.is_tensor(value):
+                    per_epoch_logs[key] = np.round(value.detach().cpu().numpy(), 5)
             
         return per_epoch_logs
     
 
     def log_dict_to_comet(self, comet_logger, dict_to_log, time_step):
         for key, value in dict_to_log.items():
-            if not np.isnan(value):
-                comet_logger.log_metric(key, value, time_step)
+            #Don't log this meta info
+            if key in ["individual_results_extra_keys", "individual_results"]:
+                continue 
+            #Log heatmaps during training to keep track.
+            if key == "final_heatmaps":
+                for uid, heatmaps in value:
+                    for l_idx, heatmap in enumerate(heatmaps):
+                        comet_logger.log_image(heatmap, name=uid+"L_"+str(l_idx), step=time_step)
+            #Log other metrics.
+            else:
+                if not np.isnan(value): 
+                    comet_logger.log_metric(key, value, time_step)
+
     

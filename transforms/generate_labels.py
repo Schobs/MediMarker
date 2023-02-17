@@ -332,9 +332,9 @@ class GPFlowLabelGenerator(LabelGenerator):
 
             # create a grid of (x,y) coordinates at which to evaluate the kernels
             xlim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
-            ylim = (0, np.sqrt(len(transformed_input_image[sample_idx][0])))
+            ylim = (0, np.sqrt(len(transformed_input_image[sample_idx][1])))
             xres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
-            yres = int(np.sqrt(len(transformed_input_image[sample_idx][0])))
+            yres = int(np.sqrt(len(transformed_input_image[sample_idx][1])))
 
             x = np.linspace(xlim[0], xlim[1], xres)
             y = np.linspace(ylim[0], ylim[1], yres)

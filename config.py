@@ -94,7 +94,7 @@ _C.TRAINER.VALIDATE_EVERY = 10
 _C.TRAINER.CACHE_DATA = True
 _C.TRAINER.FOLD = 0
 _C.TRAINER.INFERENCE_ONLY = True
-
+_C.TRAINER.VALIDATION_LOG_HEATMAPS = False
 
 # ---------------------------------------------------------------------------- #
 # U-Net Model configs# ---------------------------------------------------------------------------- #
@@ -138,6 +138,7 @@ _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first"  # ["scale_heatmap_first", 
 _C.INFERENCE.FIT_GAUSS = (
     False  # If false, uses max, if true, first fits gaussian to output heatmap.
 )
+_C.INFERENCE.LOG_HEATMAPS = True
 
 _C.INFERENCE.ENSEMBLE_INFERENCE = False  # average predictions from multiple models
 _C.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS = [

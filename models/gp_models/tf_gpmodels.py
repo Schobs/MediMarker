@@ -15,6 +15,10 @@ from gpflow import set_trainable
 from gpflow.ci_utils import is_continuous_integration
 
 from utils.tensorflow_utils.conv_helpers import get_inducing_patches
+from gpflow.inducing_variables import SharedIndependentInducingVariables
+from gpflow.kernels import SharedIndependent, SeparateIndependent, LinearCoregionalization
+from check_shapes import check_shapes
+from gpflow.covariances.dispatch import Kuf
 
 
 def affine_scalar_bijector(shift: Optional[float] = None, scale: Optional[float] = None) -> tfp.bijectors.Bijector:
@@ -196,22 +200,6 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     ValueError: If the `kern_type` is not 'se', 'matern52', or 'rbf'.
     """
 
-    # assert np.array([x.shape.ndims == 2 for x in X]).all(), "X must be a list of 2D arrays i.e. images"
-    def f64(x): return np.array(x, dtype=np.float64)
-
-    def positive_with_min(): return affine_scalar_bijector(shift=f64(1e-4))(
-        tfp.bijectors.Softplus()
-    )
-
-    # @TOM: Should we use this for regression rather than classification? I don't rememember what you said it does.
-    def constrained(): return affine_scalar_bijector(shift=f64(1e-4), scale=f64(100.0))(
-        tfp.bijectors.Sigmoid()
-    )
-
-    def max_abs_1(): return affine_scalar_bijector(shift=f64(-2.0), scale=f64(4.0))(
-        tfp.bijectors.Sigmoid()
-    )
-
     if kern_type == "se":
         inner_kern = gpf.kernels.SquaredExponential()
     elif kern_type == "matern52":
@@ -273,4 +261,147 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     # q_sqrt = np.repeat(np.eye(num_inducing_points)[None, ...], 2, axis=0) * 1.0
     # create SVGP model as usual and optimize
 
+    return conv_m
+
+
+@Kuf.register(SharedIndependentInducingVariables, SeparateIndependent, object)
+@check_shapes(
+    "inducing_variable: [M, D, P]",
+    "Xnew: [batch..., N, D2]",
+    "return: [L, M, batch..., N]",
+)
+def Kuf_conv_shared_separate(
+    inducing_variable: SharedIndependentInducingVariables,
+    kernel: SeparateIndependent,
+    Xnew: tf.Tensor,
+) -> tf.Tensor:
+    Kzxs = []
+    for k in kernel.kernels:
+        Xp = k.get_patches(Xnew)  # [N, num_patches, patch_len]
+        bigKzx = k.base_kernel.K(
+            inducing_variable.inducing_variable.Z, Xp
+        )  # [M, N, P] -- thanks to broadcasting of kernels
+        Kzx = tf.reduce_sum(bigKzx * k.weights if hasattr(k, "weights") else bigKzx, [2])
+        Kzxs.append(Kzx / k.num_patches)
+    return tf.stack(Kzxs, axis=0)
+
+
+@Kuf.register(SharedIndependentInducingVariables, SharedIndependent, object)
+@check_shapes(
+    "inducing_variable: [M, D, P]",
+    "Xnew: [batch..., N, D2]",
+    "return: [M, batch..., N]",
+)
+def Kuf_conv_shared_shared(
+    inducing_variable: SharedIndependentInducingVariables,
+    kernel: SharedIndependent,
+    Xnew: tf.Tensor,
+) -> tf.Tensor:
+    Xp = kernel.kernel.get_patches(Xnew)  # [N, num_patches, patch_len]
+    bigKzx = kernel.kernel.base_kernel.K(
+        inducing_variable.inducing_variable.Z, Xp
+    )  # [M, N, P] -- thanks to broadcasting of kernels
+    Kzx = tf.reduce_sum(bigKzx * kernel.kernel.weights if hasattr(kernel.kernel, "weights") else bigKzx, [2])
+    return Kzx / kernel.kernel.num_patches
+
+
+@Kuf.register(SharedIndependentInducingVariables, LinearCoregionalization, object)
+@check_shapes(
+    "inducing_variable: [M, D, L]",
+    "kernel.W: [P, L]",
+    "Xnew: [batch..., N, D2]",
+    "return: [L, M, batch..., N]",
+)
+def Kuf_conv_shared_linear_coregionalization(
+    inducing_variable: SharedIndependentInducingVariables,
+    kernel: LinearCoregionalization,
+    Xnew: tf.Tensor,
+) -> tf.Tensor:
+    Kzxs = []
+    for k in kernel.kernels:
+        Xp = k.get_patches(Xnew)  # [N, num_patches, patch_len]
+        bigKzx = k.base_kernel.K(
+            inducing_variable.inducing_variable.Z, Xp
+        )  # [M, N, P] -- thanks to broadcasting of kernels
+        Kzx = tf.reduce_sum(bigKzx * k.weights if hasattr(k, "weights") else bigKzx, [2])
+        Kzxs.append(Kzx / k.num_patches)
+    return tf.stack(Kzxs, axis=0)
+
+# assert np.array([x.shape.ndims == 2 for x in X]).all(), "X must be a list of 2D arrays i.e. images"
+# Define functions for constraints
+
+
+def affine_scalar_bijector(shift=None, scale=None):
+    scale_bijector = (
+        tfp.bijectors.Scale(scale) if scale else tfp.bijectors.Identity()
+    )
+    shift_bijector = (
+        tfp.bijectors.Shift(shift) if shift else tfp.bijectors.Identity()
+    )
+    return shift_bijector(scale_bijector)
+
+
+def f64(x): return np.array(x, dtype=np.float64)
+
+
+def positive_with_min(): return affine_scalar_bijector(shift=f64(1e-4))(
+    tfp.bijectors.Softplus()
+)
+
+
+def constrained(): return affine_scalar_bijector(shift=f64(1e-4), scale=f64(100.0))(
+    tfp.bijectors.Sigmoid()
+)
+
+
+def max_abs_1(): return affine_scalar_bijector(shift=f64(-2.0), scale=f64(4.0))(
+    tfp.bijectors.Sigmoid()
+)
+
+
+def toms(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
+         patch_shape: List[int] = [3, 3], kern_type: str = "rbf"):
+
+    print("getting toms GP")
+    # Define convolutional kernel parameters
+    # PATCH_SHAPE = [3, 3]
+    NUM_INDUCING_PATCHES = 200
+    NUM_LATENT_GPS = NUM_OUTPUTS = 2
+    # IMG_SHAPE = [32, 32]
+
+    # OPTION 1 - independent GPs with shared inducing patches
+    unique_patches = None
+    conv_k_ds = []
+    for i in range(NUM_OUTPUTS):
+        conv_k_d = gpf.kernels.Convolutional(
+            gpf.kernels.SquaredExponential(), list(inp_dim), patch_shape
+        )
+        conv_k_d.base_kernel.lengthscales = gpf.Parameter(
+            1.0, transform=positive_with_min()
+        )
+        conv_k_d.base_kernel.variance = gpf.Parameter(1.0, transform=constrained())
+        conv_k_d.weights = gpf.Parameter(conv_k_d.weights.numpy(), transform=max_abs_1())
+        if i == 0:
+            unique_patches = np.unique(conv_k_d.get_patches(
+                X).numpy().reshape(-1, (patch_shape[0]*patch_shape[1])), axis=0)
+        conv_k_ds.append(conv_k_d)
+    conv_k = gpf.kernels.SeparateIndependent(conv_k_ds)
+    # conv_k = gpf.kernels.SharedIndependent(conv_k_d)
+
+    # OPTION 2 - LMC (NOTE - COMMENT OUT TO USE OPTION 1)
+    # conv_k = gpf.kernels.LinearCoregionalization(conv_k_ds, W=np.random.randn(2, 2))
+
+    # Create inducing patches and share across outputs
+    conv_f = gpf.inducing_variables.InducingPatches(
+        unique_patches[np.random.choice(unique_patches.shape[0], NUM_INDUCING_PATCHES), :]
+    )
+    conv_f = gpf.inducing_variables.SharedIndependentInducingVariables(conv_f)
+    print('IP shape: ', conv_f.inducing_variable.shape)
+
+    lik = gpf.likelihoods.Gaussian()
+
+    conv_m = gpf.models.SVGP(conv_k, lik, conv_f, num_latent_gps=NUM_LATENT_GPS,
+                             q_mu=np.zeros((NUM_INDUCING_PATCHES, NUM_LATENT_GPS)),
+                             # q_mu=(np.ones((NUM_INDUCING_PATCHES, NUM_LATENT_GPS))* 10.0),
+                             q_sqrt=(np.repeat(np.eye(NUM_INDUCING_PATCHES)[None, ...], NUM_LATENT_GPS, axis=0) * 1.0))
     return conv_m

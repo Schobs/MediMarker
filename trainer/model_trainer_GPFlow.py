@@ -25,8 +25,9 @@ import gpflow as gpf
 from gpflow.ci_utils import reduce_in_tests
 from gpflow.utilities import print_summary
 from torch.utils.data import DataLoader
+from utils.im_utils.visualisation import multi_variate_hm
 from utils.setup.argument_utils import checkpoint_loading_checking
-from models.gp_models.tf_gpmodels import get_SVGP_model, get_conv_SVGP, get_conv_SVGP_linear_coreg
+from models.gp_models.tf_gpmodels import get_SVGP_model, get_conv_SVGP, get_conv_SVGP_linear_coreg, toms
 
 
 gpf.config.set_default_float(np.float64)
@@ -98,9 +99,13 @@ class GPFlowTrainer(NetworkTrainer):
             all_train_label = [tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks"]),
                                                                dtype=tf.float64), axis=0) for x in self.train_dataloader.dataset]
 
-            self.network = get_conv_SVGP(all_train_image, all_train_label,
-                                         self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-                                         self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+            # self.network = get_conv_SVGP(all_train_image, all_train_label,
+            #                              self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+            #                              self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+
+            self.network = toms(all_train_image, all_train_label,
+                                self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+                                self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
 
             # self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
             #                                           self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
@@ -153,6 +158,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         :return: None
         """
+
         if not self.was_initialized:
             self.initialize(True)
         step = 0
@@ -172,6 +178,7 @@ class GPFlowTrainer(NetworkTrainer):
                     backprop=True,
                     split="training",
                     log_coords=False,
+                    log_heatmaps=False,
                     logged_vars=per_epoch_logs,
                     direct_data_dict=data_dict,
                     restart_dataloader=False
@@ -195,6 +202,7 @@ class GPFlowTrainer(NetworkTrainer):
                         backprop=False,
                         split="validation",
                         log_coords=True,
+                        log_heatmaps=self.validation_log_heatmaps,
                         logged_vars=per_epoch_logs,
                         restart_dataloader=False
                     )
@@ -212,6 +220,7 @@ class GPFlowTrainer(NetworkTrainer):
         backprop: bool,
         split: str,
         log_coords: bool,
+        log_heatmaps: bool,
         logged_vars: Optional[Dict[str, Any]] = None,
         debug: bool = False,
         direct_data_dict: Optional[Dict[str, Any]] = None,
@@ -276,7 +285,7 @@ class GPFlowTrainer(NetworkTrainer):
                     pred_coords_input_size,
                     extra_info,
                     target_coords,
-                ) = self.maybe_get_coords(log_coords, data_dict)
+                ) = self.maybe_get_coords(log_coords, log_heatmaps, data_dict)
 
                 if pred_coords is not None:
                     pred_coords = torch.tensor(pred_coords)
@@ -324,13 +333,14 @@ class GPFlowTrainer(NetworkTrainer):
 
         with tf.GradientTape(watch_accessed_variables=False) as tape:
             tape.watch(self.network.trainable_variables)
+
             loss = self.network.training_loss(batch)
         if backprop:
             grads = tape.gradient(loss, self.network.trainable_variables)
             self.optimizer.apply_gradients(zip(grads, self.network.trainable_variables))
         return loss
 
-    def maybe_get_coords(self, log_coords: Optional[bool], data_dict: Dict) -> Tuple:
+    def maybe_get_coords(self, log_coords: bool, log_heatmaps: bool, data_dict: Dict) -> Tuple:
         """Retrieve predicted and target coordinates from data.
 
         Args:
@@ -343,7 +353,7 @@ class GPFlowTrainer(NetworkTrainer):
         """
 
         if log_coords:
-            pred_coords_input_size, extra_info = self.get_coords_from_heatmap(data_dict)
+            pred_coords_input_size, extra_info = self.get_coords_from_heatmap(data_dict, log_heatmaps)
             pred_coords, target_coords = self.maybe_rescale_coords(
                 pred_coords_input_size, data_dict
             )
@@ -353,7 +363,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         return pred_coords, pred_coords_input_size, extra_info, target_coords
 
-    def get_coords_from_heatmap(self, data_dict: Dict[str, Any]) -> Tuple[np.ndarray, Dict[str, Any]]:
+    def get_coords_from_heatmap(self, data_dict: Dict[str, Any], log_heatmaps: bool) -> Tuple[np.ndarray, Dict[str, Any]]:
         """Gets x,y coordinates from a model's output.
 
         Args:
@@ -370,6 +380,10 @@ class GPFlowTrainer(NetworkTrainer):
         # upper = y_mean - 1.96 * [np.sqrt(cov_matr[x, 1, x, 1]) for x in range(y_mean.shape[0])]
 
         extra_info = {"cov_matr": cov_matr}
+        if log_heatmaps:
+            extra_info["final_heatmaps"] = multi_variate_hm(
+                data_dict, y_mean, cov_matr, self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE)
+
         return prediction,  extra_info
 
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
@@ -413,6 +427,11 @@ class GPFlowTrainer(NetworkTrainer):
             self.dict_logger.log_dict_to_comet(
                 self.comet_logger, per_epoch_logs, self.epoch
             )
+
+        # Delete big data in logs for printing and memory
+        per_epoch_logs.pop("individual_results", None)
+        per_epoch_logs.pop("final_heatmaps", None)
+        per_epoch_logs.pop("individual_results_extra_keys", None)
 
         if self.verbose_logging:
             self.logger.info("Epoch %s logs: %s", self.epoch, per_epoch_logs)
@@ -462,13 +481,14 @@ class GPFlowTrainer(NetworkTrainer):
             "training_sampler": self.sampler_mode,
             "training_resolution": self.training_resolution,
         }
-        with open(path+'meta_state.pkl', 'wb') as f:
-            pickle.dump(state, f)
 
         log_dir = path
         ckpt = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer)
         manager = tf.train.CheckpointManager(ckpt, log_dir, max_to_keep=5)
         manager.save()
+
+        with open(path + '/meta_state.pkl', 'wb') as f:
+            pickle.dump(state, f)
 
     def load_checkpoint(self, model_path: str, training_bool: bool):
         """Load checkpoint from path.
@@ -486,7 +506,7 @@ class GPFlowTrainer(NetworkTrainer):
             checkpoint, model_path, max_to_keep=5)
         status = checkpoint.restore(manager.latest_checkpoint)
 
-        with open(model_path+'meta_state.pkl', 'rb') as f:
+        with open(model_path + '/meta_state.pkl', 'rb') as f:
             checkpoint_info = pickle.load(f)
 
         self.epoch = checkpoint_info["epoch"]
@@ -586,6 +606,7 @@ class GPFlowTrainer(NetworkTrainer):
                     backprop=False,
                     split=split,
                     log_coords=True,
+                    log_heatmaps=self.inference_log_heatmaps,
                     logged_vars=evaluation_logs,
                     debug=debug,
                     restart_dataloader=False
@@ -599,5 +620,8 @@ class GPFlowTrainer(NetworkTrainer):
         summary_results, ind_results = self.evaluation_metrics(
             evaluation_logs["individual_results"], evaluation_logs["landmark_errors"]
         )
+
+        if self.inference_log_heatmaps:
+            self.save_heatmaps(evaluation_logs)
 
         return summary_results, ind_results

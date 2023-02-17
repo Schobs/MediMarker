@@ -172,7 +172,8 @@ def main():
             for i, model_p in enumerate(model_paths):
                 logger.info("loading %s", model_p)
                 trainer.load_checkpoint(model_p, training_bool=False)
-                summary_results, ind_results = trainer.run_inference(split=inference_split, debug=cfg.INFERENCE.DEBUG)
+                summary_results, ind_results = trainer.run_inference(
+                    split=inference_split, debug=cfg.INFERENCE.DEBUG)
 
                 all_model_summaries[model_names[i]] = summary_results
                 all_model_individuals[model_names[i]] = ind_results

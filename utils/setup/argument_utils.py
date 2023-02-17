@@ -354,7 +354,14 @@ def arg_parse():
         help="gpu id(s) to use. None/int(0) for cpu. list[x,y] for xth, yth GPU."
         "str(x) for the first x GPUs. str(-1)/int(-1) for all available GPUs",
     )
-    parser.add_argument("--fold", type=int)
+    parser.add_argument("--fold", type=int,
+                        help="specify the index the fold of the dataset you want to train/test/validate on.")
+    parser.add_argument("--landmark", type=int,
+                        help="specify the index of a single landmark for a single landmark model.")
+
+    parser.add_argument("--out_path_append", type=str,
+                        help="A path to append to the output path (OUTPUT.OUTPUT_DIR).")
+
     args = parser.parse_args()
 
     # ---- setup configs ----
@@ -363,6 +370,13 @@ def arg_parse():
 
     if args.fold:
         cfg.TRAINER.FOLD = args.fold
+
+    if args.out_path_append:
+        cfg.OUTPUT.OUTPUT_DIR = cfg.OUTPUT.OUTPUT_DIR + args.out_path_append
+
+    if args.landmark:
+        assert len(args.landmark) == 1, "Only a single landmark setup can be specified on command line."
+        cfg.DATASET.LANDMARKS = [args.landmark]
     # cfg.freeze()
     cfg = infer_additional_arguments(cfg)
 

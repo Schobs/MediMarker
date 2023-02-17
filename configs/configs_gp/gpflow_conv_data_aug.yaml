@@ -17,7 +17,7 @@ SOLVER:
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE_TRAIN: 12 # indicates entire dataset for batch (needed for ExactGP)
   MAX_EPOCHS: 15000 
-  MINI_BATCH_SIZE: 1 # Leave this.
+  MINI_BATCH_SIZE: 150 # Leave this.
   # REGRESS_SIGMA: True
   DATA_LOADER_BATCH_SIZE_EVAL: 12
   BASE_LR: 0.01
@@ -41,7 +41,7 @@ TRAINER:
   PERFORM_VALIDATION: False
   SAVE_LATEST_ONLY: False
   CACHE_DATA: False # Kind of irrelevant for ExactGP
-  INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
+  INFERENCE_ONLY: True # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
   SAVE_EVERY: 50 # Saves checkpoint every X epochs
   VALIDATE_EVERY: 1 #validation every X epochs
 
@@ -66,7 +66,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_small/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
+  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_data_aug/model_ep_700_fold0.model" #Put your checkpoint for Inference here.
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
@@ -75,5 +75,5 @@ MODEL:
     
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
-  DEBUG: False #Set True for plot of predictions with covariances plotted.
-  # SPLIT: "training"
+  DEBUG: True #Set True for plot of predictions with covariances plotted.
+  SPLIT: "training"
