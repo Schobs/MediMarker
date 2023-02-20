@@ -40,9 +40,8 @@
             "name": "Python: LannUNet Full",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
-            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_bess/nnunet/rebuttal/ISBITEST_LOCAL.yaml"],
-
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/unet_S1_predictions.yaml"],
             "console": "integratedTerminal",
             "justMyCode": true
         }, 

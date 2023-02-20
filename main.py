@@ -40,7 +40,7 @@ def main():
     logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
     logger.info("Config \n %s ", cfg)
 
-    exp_name = cfg.OUTPUT.OUTPUT_DIR.split("/")[-1] + "_Fold" + fold + "_" + str(time)
+    exp_name = '_'.join(cfg.OUTPUT.OUTPUT_DIR.split("/")[-2:]) + "_Fold" + fold + "_" + str(time)
 
     # Set up Comet logging
     if cfg.OUTPUT.USE_COMETML_LOGGING:
@@ -49,6 +49,7 @@ def main():
             api_key=cfg.OUTPUT.COMET_API_KEY,
             project_name=cfg.OUTPUT.COMET_PROJECT_NAME,
             workspace=cfg.OUTPUT.COMET_WORKSPACE,
+            display_summary_level=0
         )
         writer.set_name(exp_name)
         writer.add_tag("fold" + str(cfg.TRAINER.FOLD))
