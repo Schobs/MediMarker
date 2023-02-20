@@ -49,6 +49,7 @@ def main():
             api_key=cfg.OUTPUT.COMET_API_KEY,
             project_name=cfg.OUTPUT.COMET_PROJECT_NAME,
             workspace=cfg.OUTPUT.COMET_WORKSPACE,
+            display_summary_level=0
         )
         writer.set_name(exp_name)
         writer.add_tag("fold" + str(cfg.TRAINER.FOLD))

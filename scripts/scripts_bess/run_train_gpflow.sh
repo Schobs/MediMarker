@@ -9,6 +9,7 @@ module load cuDNN/7.6.4.38-gcccuda-2019b
 
 source activate tensorflowEnv
 
+
 python ../../main.py  "$@" 
 
 

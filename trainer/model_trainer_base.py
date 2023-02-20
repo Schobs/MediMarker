@@ -729,6 +729,15 @@ class NetworkTrainer(ABC):
                     debug=debug,
                     restart_dataloader=False
                 )
+
+                if self.inference_log_heatmaps:
+                    self.save_heatmaps(evaluation_logs)
+
+                    # per_epoch_logs.pop("individual_results", None)
+
+                for idx, results_dict in enumerate(evaluation_logs['individual_results']):
+                    results_dict.pop("final_heatmaps", None)
+
             del generator
             print()
         else:
@@ -738,9 +747,6 @@ class NetworkTrainer(ABC):
         summary_results, ind_results = self.evaluation_metrics(
             evaluation_logs["individual_results"], evaluation_logs["landmark_errors"]
         )
-
-        if self.inference_log_heatmaps:
-            self.save_heatmaps(evaluation_logs)
 
         return summary_results, ind_results
 
@@ -1139,5 +1145,6 @@ class NetworkTrainer(ABC):
     def save_heatmaps(self, heatmaps):
         hm_dict = {"final_heatmaps": []}
         for idx, results_dict in enumerate(heatmaps['individual_results']):
-            hm_dict["final_heatmaps"].append([results_dict["uid"]+"_eval_phase", results_dict["final_heatmaps"]])
+            if "final_heatmaps" in results_dict.keys():
+                hm_dict["final_heatmaps"].append([results_dict["uid"]+"_eval_phase", results_dict["final_heatmaps"]])
         self.dict_logger.log_dict_to_comet(self.comet_logger, hm_dict, -1)
