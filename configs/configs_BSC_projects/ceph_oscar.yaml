@@ -1,0 +1,43 @@
+OUTPUT:
+  OUTPUT_DIR: "/shared/ai4h/Shared/oscar/results/" #Where to save models and results
+
+  #Logging stuff. HIGHLY RECOMMENDED. CHECK THE DOCS FOR INFO. Please use it, it will help you a LOT.
+  # If not using set USE_COMETML_LOGGING to False.
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "yncS2q9q4j8UPdveJP0yEmka2"
+  COMET_WORKSPACE: "oscargavin"
+  COMET_PROJECT_NAME: "dissertation"
+
+SOLVER:
+  DEEP_SUPERVISION: True
+  NUM_RES_SUPERVISIONS: 5
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 12 #As high as will fit in gpu memory
+  MAX_EPOCHS: 25 #How long you want to train? ideal is at least 150-250.
+
+MODEL:
+  GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.
+  # CHECKPOINT: "/path_to/checkpoint" #Use this to resume training from a checkpoint, or load the checkpoint during inference
+
+DATASET:
+  ROOT: "/shared/ai4h/Shared/Data/medical/ISBI2015_landmarks/"
+  SRC_TARGETS: "/shared/ai4h/Shared/Data/medical/ISBI2015_landmarks/lann_folds/w_valid/"
+  NAME: "ISBI"
+  IMAGE_MODALITY: "Cephalometric"
+  LANDMARKS: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+
+TRAINER:
+  INFERENCE_ONLY: False # set to true if already trained and want to perform inference (testing) only.
+  CACHE_DATA: True #Ideally true, saves time from loading from disk.
+  FOLD: 0 # Pick the fold. this dataset has folds 0,1,2,3. You can set to -1 and directly put the path to JSON in SRC_TARGETS if you want.
+
+INFERENCE:
+  EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: False #Set to true to get some visualization of predicted heatmaps!
+
+SAMPLER:
+  NUM_WORKERS: 8 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down.
+  DATA_AUG: "AffineComplex" # set to None for no augmentation. for other schemes see the documentation.
+  INPUT_SIZE: [512, 512]
+  DEBUG: False #Set to true to get some visualization of data augmentation and the target heatmaps! Are they close to the predicted heatmaps after training?
+
