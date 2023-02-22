@@ -69,11 +69,11 @@
 
         {
             "cwd": "${workspaceFolder}",
-            "name": "Python: GPFLow",
+            "name": "Python: GPFLow Test",
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/main.py",
-            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/gpflow.yaml"],
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/gpflow_conv_test.yaml"],
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {

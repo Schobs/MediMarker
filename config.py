@@ -129,6 +129,7 @@ _C.MODEL.GPFLOW = CN()
 _C.MODEL.GPFLOW.NUM_INDUCING_POINTS = 100
 _C.MODEL.GPFLOW.KERN = "conv"  # possible values: ["conv", "rbf", "matern52"]
 _C.MODEL.GPFLOW.CONV_KERN_SIZE = [3, 3]  # Size of kernel for convolutional kernel gaussian process
+_C.MODEL.GPFLOW.CONV_KERN_STRIDE = 1  # Size of kernel for convolutional kernel gaussian process
 
 
 _C.INFERENCE = CN()

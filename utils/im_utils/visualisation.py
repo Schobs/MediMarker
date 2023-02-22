@@ -546,18 +546,55 @@ def visualize_predicted_heatmaps(heatmaps, predicted_coords, target_coords):
     # plt.close()
 
 
-def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape):
+# def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plot_targ=False):
 
 
+#     transformed_input_image = data_dict["image"]
+#     all_hms = []
+#     for sample_idx, ind_sample_image in enumerate(transformed_input_image):
+#         # extra_info = {"lower": lower, "upper": upper, "cov_matr": cov_matr}
+
+#         # extra_info = ind_sample["extra_info"]
+#         # create  kernel
+#         m1 = y_mean[sample_idx]
+#         s1 = cov_matr[sample_idx,:,sample_idx,:]
+
+#         if noise is not None:
+#             s1 += [[noise, 0], [0, noise]]
+
+#         k1 = multivariate_normal(mean=m1, cov=s1)
+
+
+#         # create a grid of (x,y) coordinates at which to evaluate the kernels
+#         xlim = (0, heatmap_shape[0])
+#         ylim = (0, heatmap_shape[1])
+#         xres = int(heatmap_shape[0])
+#         yres = int(heatmap_shape[1])
+
+#         x = np.linspace(xlim[0], xlim[1], xres)
+#         y = np.linspace(ylim[0], ylim[1], yres)
+#         xx, yy = np.meshgrid(x, y)
+
+#         # evaluate kernels at grid points
+#         xxyy = np.c_[xx.ravel(), yy.ravel()]
+#         zz = k1.pdf(xxyy)
+
+#         # reshape and plot image
+#         img = np.array(zz.reshape((xres, yres))*100, dtype=np.float16)
+
+#         img = generate_heatmap_and_landmark(k1,data_dict["label"]["landmarks"][sample_idx] )
+
+#         all_hms.append(np.expand_dims(img,axis=0))
+#     return np.array(all_hms)
+
+def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plot_targ=False):
     transformed_input_image = data_dict["image"]
     all_hms = []
-    for sample_idx, ind_sample_image in enumerate(transformed_input_image):
-        # extra_info = {"lower": lower, "upper": upper, "cov_matr": cov_matr}
-
-        # extra_info = ind_sample["extra_info"]
-        # create  kernel
+    for sample_idx, _ in enumerate(transformed_input_image):
         m1 = y_mean[sample_idx]
-        s1 = cov_matr[sample_idx,:,sample_idx,:]
+        s1 = cov_matr[sample_idx, :, sample_idx, :]
+        if noise is not None:
+            s1 += [[noise, 0], [0, noise]]
         k1 = multivariate_normal(mean=m1, cov=s1)
 
         # create a grid of (x,y) coordinates at which to evaluate the kernels
@@ -565,7 +602,6 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape):
         ylim = (0, heatmap_shape[1])
         xres = int(heatmap_shape[0])
         yres = int(heatmap_shape[1])
-
         x = np.linspace(xlim[0], xlim[1], xres)
         y = np.linspace(ylim[0], ylim[1], yres)
         xx, yy = np.meshgrid(x, y)
@@ -574,10 +610,31 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape):
         xxyy = np.c_[xx.ravel(), yy.ravel()]
         zz = k1.pdf(xxyy)
 
-        # reshape and plot image
-        img = np.array(zz.reshape((xres, yres))*100, dtype=np.float16)
-        all_hms.append(np.expand_dims(img,axis=0))
+        # reshape heatmap
+        heatmap = np.array(zz.reshape((xres, yres)), dtype=np.float32)
+        heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min()) * 255.0
+        heatmap = np.clip(heatmap, 0, 255)
+        heatmap = heatmap.astype(np.uint8)
+
+        # create 3-channel image with heatmap in channel 0
+        image = np.zeros((heatmap_shape[0], heatmap_shape[1], 3), dtype=np.uint8)
+        image[:, :, 0] = heatmap
+
+        if plot_targ:
+            # add green cross at landmark location
+            landmark = data_dict["label"]["landmarks"][sample_idx]
+            cross_size = 6
+            # add intersection over the landmark
+            x_min = max(0, int(landmark[0] - cross_size / 2))
+            x_max = min(heatmap_shape[0], int(landmark[0] + (cross_size / 2)+1))
+            y_min = max(0, int(landmark[1] - cross_size / 2))
+            y_max = min(heatmap_shape[1], int(landmark[1] + (cross_size / 2)+1))
+            image[x_min:x_max, int(landmark[1]), 1] = 255  # green line
+            image[int(landmark[0]), y_min:y_max, 1] = 255  # green line
+
+            image[x_min:x_max, int(landmark[1]), 1] = 255  # green line
+            image[int(landmark[0]), y_min:y_max, 1] = 255  # green line
+
+        all_hms.append(np.expand_dims(image, axis=0))
+
     return np.array(all_hms)
-
-
-        

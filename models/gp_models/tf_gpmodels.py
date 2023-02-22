@@ -408,7 +408,7 @@ def toms(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num
 
 
 def conv_sgp_rbf_fix(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
-                     patch_shape: List[int] = [3, 3], kern_type: str = "rbf") -> gpf.models.SVGP:
+                     patch_shape: List[int] = [3, 3], kern_type: str = "rbf", kern_stride: int = 1) -> gpf.models.SVGP:
     """
     22/02/22
     Returns a Gaussian process with a Convolutional kernel as the covariance function.
@@ -476,11 +476,10 @@ def conv_sgp_rbf_fix(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[in
     # )
 
     # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
-    conv_m = gpf.models.SVGP(conv_k, gpf.likelihoods.Gaussian(), conv_f_i,  num_latent_gps=2)
-
-    # q_mu = np.zeros((num_inducing_points, 2))
+    # # np.zeros((NUM_INDUCING_PATCHES, NUM_LATENT_GPS))
+    # q_mu = np.full((num_inducing_patches, 2), int(inp_dim[0]//2))
     # # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
-    # q_sqrt = np.repeat(np.eye(num_inducing_points)[None, ...], 2, axis=0) * 1.0
-    # create SVGP model as usual and optimize
+    # q_sqrt = np.repeat(np.eye(num_inducing_patches)[None, ...], 2, axis=0) * 1.0
+    conv_m = gpf.models.SVGP(conv_k, gpf.likelihoods.Gaussian(), conv_f_i,  num_latent_gps=2)
 
     return conv_m

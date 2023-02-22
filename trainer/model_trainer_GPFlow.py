@@ -70,6 +70,7 @@ class GPFlowTrainer(NetworkTrainer):
                                          }
 
         self.kern = self.trainer_config.MODEL.GPFLOW.KERN
+        self.kern_stride = self.trainer_config.MODEL.GPFLOW.CONV_KERN_STRIDE
 
         self.training_data = None
         self.all_training_input = None
@@ -105,7 +106,7 @@ class GPFlowTrainer(NetworkTrainer):
 
             self.network = conv_sgp_rbf_fix(all_train_image, all_train_label,
                                             self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-                                            self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+                                            self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, kern_stride=self.kern_stride)
 
             # self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
             #                                           self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
@@ -271,7 +272,7 @@ class GPFlowTrainer(NetworkTrainer):
         # Only attempts loss if annotations avaliable for entire batch
         if all(data_dict["annotation_available"]):
             l = self.optimization_step((data, target), backprop)
-            loss_dict = {"all_loss_all": l.numpy()}
+            loss_dict = {"all_loss_all": l.numpy(), "noise": self.network.likelihood.variance.numpy()}
         else:
             l = 0
             loss_dict = {}
@@ -375,6 +376,9 @@ class GPFlowTrainer(NetworkTrainer):
 
         y_mean, cov_matr = self.network.posterior().predict_f(data_dict["image"], full_cov=True, full_output_cov=True)
 
+        # get noise
+        noise = self.network.likelihood.variance.numpy()
+
         prediction = np.expand_dims(np.round(y_mean), axis=1)
         # lower = y_mean - 1.96 * np.array([np.sqrt(cov_matr[x, 0, x, 0]) for x in range(y_mean.shape[0])])
         # upper = y_mean - 1.96 * [np.sqrt(cov_matr[x, 1, x, 1]) for x in range(y_mean.shape[0])]
@@ -382,7 +386,7 @@ class GPFlowTrainer(NetworkTrainer):
         extra_info = {"cov_matr": cov_matr}
         if log_heatmaps:
             extra_info["final_heatmaps"] = multi_variate_hm(
-                data_dict, y_mean, cov_matr, self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE)
+                data_dict, y_mean, cov_matr, self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, noise=noise, plot_targ=self.is_train)
 
         return prediction,  extra_info
 
