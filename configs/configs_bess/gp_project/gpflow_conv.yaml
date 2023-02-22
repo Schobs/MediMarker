@@ -1,9 +1,9 @@
 
  
 OUTPUT: 
-  # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_conv_toms_fixed" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_toms_fixed' #change this to where you have the data
+  # OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_toms_fixed' #change this to where you have the data
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
