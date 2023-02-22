@@ -3,7 +3,7 @@
 OUTPUT: 
   # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_toms' #change this to where you have the data
+  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_toms_fixed' #change this to where you have the data
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
@@ -16,7 +16,7 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 1 # Leave this.
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE_TRAIN: 12 # indicates entire dataset for batch (needed for ExactGP)
-  MAX_EPOCHS: 1 
+  MAX_EPOCHS: 1000
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
   DATA_LOADER_BATCH_SIZE_EVAL: 12
@@ -68,7 +68,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_toms/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
+  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_toms/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]

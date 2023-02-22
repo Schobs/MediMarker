@@ -27,7 +27,7 @@ from gpflow.utilities import print_summary
 from torch.utils.data import DataLoader
 from utils.im_utils.visualisation import multi_variate_hm
 from utils.setup.argument_utils import checkpoint_loading_checking
-from models.gp_models.tf_gpmodels import get_SVGP_model, get_conv_SVGP, get_conv_SVGP_linear_coreg, toms
+from models.gp_models.tf_gpmodels import conv_sgp_rbf_fix, get_SVGP_model, get_conv_SVGP, get_conv_SVGP_linear_coreg, toms
 
 
 gpf.config.set_default_float(np.float64)
@@ -103,9 +103,9 @@ class GPFlowTrainer(NetworkTrainer):
             #                              self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
             #                              self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
 
-            self.network = toms(all_train_image, all_train_label,
-                                self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-                                self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+            self.network = conv_sgp_rbf_fix(all_train_image, all_train_label,
+                                            self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+                                            self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
 
             # self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
             #                                           self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
