@@ -2,11 +2,8 @@
 
  
 OUTPUT: 
-<<<<<<< HEAD:configs/configs_gp/unet_S1_predictions.yaml
   OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_test_f1/"
-=======
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_test_f1"
->>>>>>> 645228fb8550ed76a5277b3feae0e2dab64b667b:configs/configs_gp/s1_preds/unet_S1_predictions_f1test.yaml
+
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"

@@ -57,7 +57,7 @@ def main():
         for tag_ in cfg.OUTPUT.COMET_TAGS:
             writer.add_tag(str(tag_))
 
-        logger.info("The comet.ml experiment HTML is %s ", exp_name)
+        logger.info("The comet.ml experiment HTML is %s ", writer.url)
 
     else:
         writer = None
@@ -230,6 +230,9 @@ def main():
 
     if writer is not None:
         writer.add_tag("completed inference")
+        logger.info("Experiment found:at %s" % writer.url)
+
+    logger.info("Done!")
 
 
 if __name__ == "__main__":
