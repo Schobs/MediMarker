@@ -38,7 +38,8 @@ _C.SAMPLER.SAMPLE_MODE = "full"  # ['patch', 'full']
 
 _C.SAMPLER.DEBUG = False
 _C.SAMPLER.INPUT_SIZE = [512, 512]
-_C.SAMPLER.EVALUATION_SAMPLE_MODE = "full"  # ['patch', "full"] Whether to sample patches or the full image during evaluation
+# ['patch', "full"] Whether to sample patches or the full image during evaluation
+_C.SAMPLER.EVALUATION_SAMPLE_MODE = "full"
 
 _C.SAMPLER.DATA_AUG = "AffineComplex"  # None
 _C.SAMPLER.DATA_AUG_PACKAGE = "imgaug"  # ['imgaug', 'albumentations']
@@ -51,7 +52,8 @@ _C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = "input_size"  # ['full', 'input_siz
 _C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [512, 512]
 
 _C.SAMPLER.PATCH.SAMPLER_BIAS = 0.66
-_C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional"  # ["patchify_and_stitch", "fully_convolutional"] # patchify_and_stitch if you wish to patchify and stitch the RESOLUTION_TO_SAMPLE_FROM sized image, fully_convolutional to use input size directly RESOLUTION_TO_SAMPLE_FROM
+# ["patchify_and_stitch", "fully_convolutional"] # patchify_and_stitch if you wish to patchify and stitch the RESOLUTION_TO_SAMPLE_FROM sized image, fully_convolutional to use input size directly RESOLUTION_TO_SAMPLE_FROM
+_C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional"
 # _C.SAMPLER.SAMPLE_PATCH = False
 # _C.SAMPLER.SAMPLE_PATCH_SIZE = [512,512]
 # _C.SAMPLER.SAMPLE_FROM_FULLRES =  True
@@ -79,7 +81,7 @@ _C.SOLVER.REGRESS_SIGMA = False
 _C.SOLVER.REGRESS_SIGMA_LOSS_WEIGHT = 0.005
 
 
-## model trainer
+# model trainer
 _C.TRAINER = CN()
 _C.TRAINER.PERFORM_VALIDATION = True
 _C.TRAINER.SAVE_LATEST_ONLY = True
@@ -91,7 +93,7 @@ _C.TRAINER.INFERENCE_ONLY = True
 # ---------------------------------------------------------------------------- #
 # U-Net Model configs# ---------------------------------------------------------------------------- #
 _C.MODEL = CN()
-_C.MODEL.ARCHITECTURE = "U-Net"  # ["U-Net" , "PHD-Net"]
+_C.MODEL.ARCHITECTURE = "U-Net"  # ["U-Net" , "PHD-Net", "TrU-Net"]
 # _C.MODEL.ACTIVATION_FUNCTION = "leaky_relu"
 _C.MODEL.GAUSS_SIGMA = 4
 _C.MODEL.HM_LAMBDA_SCALE = 100.0

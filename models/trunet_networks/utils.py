@@ -25,7 +25,6 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-from apps.utils import get_logger
 from config import PathLike
 from utils.misc import ensure_tuple, save_obj, set_determinism
 from utils.module import look_up_option, pytorch_after
@@ -52,8 +51,6 @@ __all__ = [
     "look_up_named_module",
     "set_named_module",
 ]
-
-logger = get_logger(module_name=__name__)
 
 
 def look_up_named_module(name: str, mod, print_all_options=False):
@@ -517,8 +514,7 @@ def copy_model_state(
 
     updated_keys = sorted(set(updated_keys))
     unchanged_keys = sorted(set(all_keys).difference(updated_keys))
-    logger.info(
-        f"'dst' model updated: {len(updated_keys)} of {len(dst_dict)} variables.")
+
     if inplace and isinstance(dst, torch.nn.Module):
         if isinstance(dst, (nn.DataParallel, nn.parallel.DistributedDataParallel)):
             dst = dst.module
@@ -526,7 +522,7 @@ def copy_model_state(
     return dst_dict, updated_keys, unchanged_keys
 
 
-def save_state(src: torch.nn.Module | dict, path: PathLike, **kwargs):
+def save_state(src: torch.nn.Module | dict, path, **kwargs):
     """
     Save the state dict of input source data with PyTorch `save`.
     It can save `nn.Module`, `state_dict`, a dictionary of `nn.Module` or `state_dict`.

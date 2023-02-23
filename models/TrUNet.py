@@ -15,9 +15,9 @@ from collections.abc import Sequence
 
 import torch.nn as nn
 
-from networks.blocks.dynunet_block import UnetOutBlock
-from networks.blocks.unetr_block import UnetrBasicBlock, UnetrPrUpBlock, UnetrUpBlock
-from networks.nets.vit import ViT
+from models.trunet_networks.blocks.dynunet_block import UnetOutBlock
+from models.trunet_networks.blocks.unetr_block import UnetrBasicBlock, UnetrPrUpBlock, UnetrUpBlock
+from models.trunet_networks.nets.vit import ViT
 from utils import ensure_tuple_rep
 
 
