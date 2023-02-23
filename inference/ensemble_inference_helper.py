@@ -155,7 +155,7 @@ class EnsembleUncertainties():
         for coord_idx, coord in enumerate(average_coords):
             all_coord_vars.append(np.mean([abs(np.linalg.norm(coord- x)) for x in [dic['predicted_coords'][coord_idx] for dic in individual_results]]))
                 
-
+        #import pdb; pdb.set_trace()
         ensemble_results_dict["ecpv"]["predicted_coords"] = np.round(average_coords)
         ensemble_results_dict["ecpv"]["uncertainty"] = all_coord_vars
 

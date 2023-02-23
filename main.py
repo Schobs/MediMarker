@@ -17,13 +17,11 @@ from config import get_cfg_defaults
 from datasets.dataset_index import DATASET_INDEX
 from trainer.model_trainer_index import MODEL_TRAINER_INDEX
 from utils.setup.argument_utils import arg_parse
-from utils.local_logging.lannu_net_pprint import pprint
 
 def main():
     """The main for this domain adaptation example, showing the workflow"""
     cfg = arg_parse()
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    pprint(f"Using device: {device}")
     seed = cfg.SOLVER.SEED
     seed_everything(seed)
     os.makedirs(cfg.OUTPUT.OUTPUT_DIR, exist_ok=True)
@@ -70,41 +68,63 @@ def main():
         trainer.initialize(training_bool=False)
 
     #--------- Testing ---------#
+    local_sum_path = os.path.join(cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold"+fold+".xlsx")
+    indv_sample_sum_path = os.path.join(cfg.OUTPUT.OUTPUT_DIR, "ensemble_individual_results_fold"+fold+".xlsx")
     all_model_summaries = {}
     all_model_individuals = {}
     if cfg.INFERENCE.ENSEMBLE_INFERENCE:
         if writer is not None:
             writer.add_tag("ensemble_inference")
-        all_summary_results, ind_results = trainer.run_inference_ensemble_models(split="testing", 
-                                                                                 checkpoint_list=cfg.INFERENCE.ENSEMBLE_CHECKPOINTS,
-                                                                                 debug=cfg.INFERENCE.DEBUG)
+        all_summary_results, ind_results = trainer.run_inference_ensemble_models("testing", cfg.INFERENCE.ENSEMBLE_CHECKPOINTS,
+                                                                                 cfg.INFERENCE.DEBUG)
         html_to_log = save_comet_html(all_summary_results, ind_results)
         writer.log_html(html_to_log)
         if cfg.OUTPUT.RESULTS_CSV_APPEND is not None:
             output_append = "_"+ str(cfg.OUTPUT.RESULTS_CSV_APPEND)
         else:
             output_append = ""
-        pprint("Saving summary of results locally to: ", os.path.join(cfg.OUTPUT.OUTPUT_DIR, f"summary_results_fold{fold}.xlsx"))
-        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, f"ensemble_summary_results_fold{fold}{output_append}.xlsx")) as writer_:
+        print("Saving summary of results locally to: {local_sum_path}")
+        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "ensemble_summary_results_fold"+fold+output_append+".xlsx")) as writer_:
             for n, df in (all_summary_results).items():
                 df.to_excel(writer_, n)
-        pprint("Saving individual sample results locally to: ", os.path.join(cfg.OUTPUT.OUTPUT_DIR, f"ensemble_individual_results_fold{fold}.xlsx"))
-        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "ensemble_individual_results_fold{fold}{output_append}.xlsx")) as writer_:
+        print("Saving individual sample results locally to: {indv_sample_sum_path}")
+        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "ensemble_individual_results_fold"+fold+output_append+".xlsx")) as writer_:
             for n, df in (ind_results).items():
                 df.to_excel(writer_, n)
         writer.add_tag("completed ensemble_inference")
         writer.add_tag("completed inference")
     else:
-        if cfg.MODEL.CHECKPOINT:
-            pprint(f"Loading provided checkpoint {cfg.MODEL.CHECKPOINT}")
+        if cfg.INFERENCE.TTA_ENSEMBLE_INFERENCE:
+            if writer is not None:
+                writer.add_tag("tta_inference")
+                all_summary_results, ind_results = trainer.run_inference_tta("testing", cfg.INFERENCE.ENSEMBLE_CHECKPOINTS,
+                                                                             cfg.INFERENCE.DEBUG)
+                html_to_log = save_comet_html(all_summary_results, ind_results)
+                writer.log_html(html_to_log)
+                if cfg.OUTPUT.RESULTS_CSV_APPEND is not None:
+                    output_append = "_"+ str(cfg.OUTPUT.RESULTS_CSV_APPEND)
+                else:
+                    output_append = ""
+                print("Saving summary of results locally to: {local_sum_path}")
+                with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "tta_summary_results_fold"+fold+output_append+".xlsx")) as writer_:
+                    for n, df in (all_summary_results).items():
+                        df.to_excel(writer_, n)
+                print("Saving individual sample results locally to: {indv_sample_sum_path}")
+                with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "tta_individual_results_fold"+fold+output_append+".xlsx")) as writer_:
+                    for n, df in (ind_results).items():
+                        df.to_excel(writer_, n)
+                writer.add_tag("completed tta_inference")
+                writer.add_tag("completed inference")
+        elif cfg.MODEL.CHECKPOINT:
+            print("Loading provided checkpoint" + str(cfg.MODEL.CHECKPOINT))
             model_name = cfg.MODEL.CHECKPOINT.split('/')[-1].split(".model")[0]
-            pprint(f"{model_name} model now loaded")
+            print(str(model_name) + "model now loaded")
             trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
             summary_results, ind_results = trainer.run_inference(split="testing", debug=cfg.INFERENCE.DEBUG)
             all_model_summaries[model_name] = summary_results
             all_model_individuals[model_name] = ind_results
         else:
-            pprint(f"Loading all models from {cfg.OUTPUT.OUTPUT_DIR}")
+            print("Loading all models from: " +cfg.OUTPUT.OUTPUT_DIR)
             model_paths = []
             model_names = []
             models_to_test = ["model_best_valid_loss", "model_best_valid_coord_error", "model_latest"]
@@ -114,7 +134,7 @@ def main():
             for name in model_names:
                 model_paths.append(os.path.join(cfg.OUTPUT.OUTPUT_DIR, (name+ ".model")))
             for i in range(len(model_paths)):
-                pprint("loading ", model_paths[i])
+                print("loading:" + str({model_paths[i]}))
                 trainer.load_checkpoint( model_paths[i], training_bool=False)
                 summary_results, ind_results = trainer.run_inference(split="testing", debug=cfg.INFERENCE.DEBUG)
                 all_model_summaries[model_names[i]] = summary_results
@@ -124,17 +144,17 @@ def main():
         if writer is not None:
             html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
             writer.log_html(html_to_log)
-            pprint("Logged all results to CometML.")
+            print("Logged all results to CometML.")
         if cfg.OUTPUT.RESULTS_CSV_APPEND is not None:
             output_append = "_"+ str(cfg.OUTPUT.RESULTS_CSV_APPEND)
         else:
             output_append = ""
-        pprint("Saving summary of results locally to: ", os.path.join(cfg.OUTPUT.OUTPUT_DIR, f"summary_results_fold{fold}.xlsx"))
-        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, f"summary_results_fold{fold}{output_append}.xlsx")) as writer_:
+        print("Saving summary of results locally to: " +local_sum_path)
+        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "ensemble_summary_results_fold"+fold+output_append+".xlsx")) as writer_:
             for n, df in (all_model_summaries).items():
                 df.to_excel(writer_, n)
-        pprint("Saving individual sample results locally to: ", os.path.join(cfg.OUTPUT.OUTPUT_DIR, f"individual_results_fold{fold}.xlsx"))
-        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, f"individual_results_fold{fold}{output_append}.xlsx")) as writer_:
+        print("Saving individual sample results locally to: " +indv_sample_sum_path)
+        with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "ensemble_individual_results_fold"+fold+output_append+".xlsx")) as writer_:
             for n, df in (all_model_individuals).items():
                 df.to_excel(writer_, n)
         if writer is not None:

@@ -8,8 +8,6 @@ Define the learning model and configure training parameters.
 
 from copy import deepcopy
 
-
-
 import torch.nn as nn
 from torch import cat as torch_concat
 from torch import device, cuda
@@ -18,7 +16,7 @@ class ConvNormNonlin(nn.Module):
     def __init__(self, input_channels, output_channels,
                     conv_op=nn.Conv2d, conv_kwargs=None,
                     norm_op=nn.InstanceNorm2d, norm_op_kwargs=None,
-                    nonlin=nn.LeakyReLU, nonlin_kwargs=None):
+                    nonlin=nn.LeakyReLU, nonlin_kwargs=None): #dropout_rate=None
         super(ConvNormNonlin, self).__init__()
         if nonlin_kwargs is None:
             nonlin_kwargs = {'negative_slope': 1e-2, 'inplace': True}
@@ -45,10 +43,14 @@ class ConvNormNonlin(nn.Module):
         #Activation function
         self.activation = self.nonlin(**self.nonlin_kwargs)
 
+        #self.dropout = nn.Dropout(dropout_rate) if dropout_rate is not None else None
 
     def forward(self, x):
         x = self.convolution(x)
-        return self.activation(self.normalization(x))
+        #if self.dropout is not None:
+            #x = self.dropout(x)
+        x = self.activation(self.normalization(x))
+        return x
 
 
 class UNet(nn.Module):

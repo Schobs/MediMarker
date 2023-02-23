@@ -6,6 +6,9 @@ import enum
 import os
 from time import time
 from abc import ABC, abstractmethod
+import math
+from typing import Tuple, List, Dict
+import random
 
 import torch
 import numpy as np
@@ -27,7 +30,7 @@ class NetworkTrainer(ABC):
     Centralised super class for all model trainers within the LaNNU-Net framework.
     """
     @abstractmethod
-    def __init__(self, trainer_config,  is_train= True, dataset_class=None, output_folder=None, comet_logger=None, profiler=None):
+    def __init__(self, trainer_config, is_train= True, dataset_class=None, output_folder=None, comet_logger=None, profiler=None):
         #Device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.trainer_config = trainer_config
@@ -67,8 +70,6 @@ class NetworkTrainer(ABC):
         self.early_stop_patience = 150
         self.initial_lr = self.trainer_config.SOLVER.BASE_LR
         self.fit_gauss_inference = self.trainer_config.INFERENCE.FIT_GAUSS
-        self.apply_tta = self.trainer.config.INFERENCE.APPLY_TTA
-        self.tta_samples = self.trainer.config.NUM_TTA_SAMPLES
         self.epoch = 0
         self.best_valid_loss = 999999999999999999999999999
         self.best_valid_coord_error = 999999999999999999999999999
@@ -208,14 +209,10 @@ class NetworkTrainer(ABC):
             loss: The loss value for the iteration
             generator: The generator, which is now one iteration ahead from the input generator, or may have been reinitialized if it ran out of samples (if training).
         """
-
-        so = time()
-
         #We can either give the generator to be iterated or a data_dict directly
-        if direct_data_dict ==  None:
+        if direct_data_dict == None:
             try:
                 data_dict = next(generator)
-
             except StopIteration:
                 if split != "training":
                     return 0, None
@@ -225,7 +222,6 @@ class NetworkTrainer(ABC):
         else:
             data_dict = direct_data_dict
         data = (data_dict['image']).to( self.device )
-        import pdb; pdb.set_trace()
         # This happens when we regress sigma with >0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
         if self.gen_hms_in_mainthread:
@@ -234,7 +230,6 @@ class NetworkTrainer(ABC):
         target = {key: ([x.to(self.device) for x in val ] if isinstance(val, list) else val.to(self.device) ) for key, val in data_dict['label'].items() }
         self.optimizer.zero_grad()
         #Run the forward pass, using auto mixed precision if enabled
-        so = time()
         if self.auto_mixed_precision:
             with autocast():
                 output = self.network(data)
@@ -269,15 +264,13 @@ class NetworkTrainer(ABC):
                 l = torch.tensor(0).to(self.device)
                 loss_dict = {}
         #Log info from this iteration.
-        s= time()
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
                 pred_coords, pred_coords_input_size, extra_info, target_coords = self.maybe_get_coords(output, log_coords, data_dict)
                 logged_vars = self.dict_logger.log_key_variables(logged_vars, pred_coords, extra_info, target_coords, loss_dict, data_dict, log_coords, split)
                 if debug:
                     debug_vars = [x for x in logged_vars["individual_results"]  if x["uid"] in data_dict['uid']]
-                    self.eval_label_generator.debug_prediction(data_dict, output, pred_coords,pred_coords_input_size, debug_vars, extra_info)         
-        e = time()
+                    self.eval_label_generator.debug_prediction(data_dict, output, pred_coords,pred_coords_input_size, debug_vars, extra_info)
         if self.profiler:
             self.profiler.step()
         del output
@@ -309,12 +302,9 @@ class NetworkTrainer(ABC):
          Always run to 1000 epochs
         :return:
         """
-
         new_best_valid = False
         new_best_coord_valid = False
-
         continue_training = self.epoch < self.max_num_epochs
-
         #######Logging some end of epoch info #############
         time_taken =self.epoch_end_time - self.epoch_start_time
         per_epoch_logs = self.dict_logger.log_epoch_end_variables(per_epoch_logs, time_taken, self.sigmas, self.optimizer.param_groups[0]['lr'])
@@ -535,105 +525,355 @@ class NetworkTrainer(ABC):
 
         torch.save(state, path)
 
-    def run_inference_ensemble_models(self, split, checkpoint_list, debug=False):
-        """ Run inference on a list of checkpoints (ensemble) and return results and uncertainty measures.
+    def reformat_numpy_for_transformation(self, arr):
+        """"""
+        return np.array([arr[3], arr[4], arr[0]])
 
-        Args:
-            split (str): Split to run inference on
-            checkpoint_list ([str"]): List of paths of checkpoints to load
-            debug (bool, optional): Debug mode. Defaults to False.
-
-        Raises:
-            NotImplementedError: Patch-based ensemble inference not implemented.
-
-        Returns:
-            all_summary_results: Summary of results for all uncertainty measures from EnsembleUncertainties
-            ind_results: Individual results for each sample for all uncertainty measures from EnsembleUncertainties
+    def apply_tta_augmentation(self, data : List, seed : int, idx : int):
         """
-        
-        #If trained using patch, return the full image, else ("full") will return the image size network was trained on. 
+        A function that applies a random TTA trnasformation on an inputted image. Takes a random seed to determine the specific transformation and
+        the magnitude of such transformation using a basic mapping function with the boundaries provided by the imgaug documentation for each
+        specific transformation (hence the difference in allowed values). Also determines randomly whether the allowed transformations should be
+        multiplied by -1 to allow for wider range of possible transforms.
+        Parameters
+        ----------
+        `data` : List
+            The dict containing the features and information of the image in question.
+        `seed` : Int
+            A stochastic seed variable used as described as above.
+        Returns
+        -------
+        `augemented_dict` : Dict
+            The augmented image.
+        `inverse_transform` : Dict
+            With the key being the name of the augmentation transform, and the value being the magnitude with which the transform was applied.
+        """
+        functs_list = ["rotate", "scale", "shear", "flipud"]
+        function_index = math.floor(seed / 10000 * 4)
+        function_name = functs_list[function_index]
+        negative_sign = True if seed / 2 == 0 else False
+        rotate_magnitude = math.floor(seed / 10000 * 360) if function_name == "rotate" else 0
+        shear_magnitude = math.floor(seed / 10000 * 20) if function_name == "shear" else 0
+        scale_magnitude = round(random.uniform(0.8, 1.2), 2)
+        rotate_magnitude = rotate_magnitude * -1 if negative_sign and rotate_magnitude is not 0 else rotate_magnitude
+        shear_magnitude = shear_magnitude * -1 if negative_sign and shear_magnitude is not 0 else shear_magnitude
+        functions = {    
+            "rotate" : iaa.Sequential([iaa.Rotate(rotate_magnitude)]),
+            "shear" : iaa.Sequential([iaa.ShearY(shear_magnitude)]),
+            "scale" : iaa.Sequential([iaa.ScaleX(scale_magnitude)]),
+            "flipud" : iaa.Sequential([iaa.Flipud(1)])
+        }
+        inverse_functions = {
+            "inverse_rotate" : rotate_magnitude,
+            "inverse_shear" : shear_magnitude,
+            "inverse_scale" : scale_magnitude,
+            "inverse_flip" : 1
+        }
+        transform = list(functions.values())[function_index]
+        inverse_transform = {list(inverse_functions.keys())[function_index] :
+                            list(inverse_functions.values())[function_index]}
+        img = data['image'][idx].cpu().detach().numpy()
+        img_dims = img.shape
+        img = np.reshape(img, (img_dims[1], img_dims[2], img_dims[0]))
+        augemented_img = transform.augment_image(img)
+        augemented_img = np.reshape(augemented_img, (img_dims[0], img_dims[1], img_dims[2]))
+        data['image'][idx] = torch.from_numpy(augemented_img.copy())
+        return data, inverse_transform
+
+    def invert_coordinates(self, eval_logs : List, inverse_functs : Dict):
+        """
+        A function to invert the TTA processes laid out in a previous function. Note that only teh rotate function has an effect of transforming the coords therefore it is the
+        only function that needs inversing.
+        Parameters
+        ----------
+        `eval_logs` : List of Dicts
+            The evaluation logs of layout: {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
+                                            "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
+                                            "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['hm_max', 'coords_og_size']}.
+        `inverse_functs` : Dict
+            A dict containing the names and magnitudes of each applied TTA function.
+        Returns
+        -------
+        `eval_logs` : List of Dicts
+            The now altered evaluation logs with the updated, and inversed, coordinates from the TTA processes.
+        """
+        for funct, eval_log in zip(inverse_functs, eval_logs['individual_results']):
+            key = funct.keys()
+            if "inverse_rotate" in key:
+                coords = np.array([self.extract_original_coords_from_rotation(funct["inverse_rotate"], coords) for coords in eval_log["predicted_coords"]])
+                #import pdb; pdb.set_trace()
+                eval_log['predicted_coords'] = coords
+            elif "inverse_shear" in key:
+                coords = np.array([self.extract_original_coords_from_shear(funct["inverse_shear"], coords) for coords in eval_log['predicted_coords']])
+                #import pdb; pdb.set_trace()
+                eval_log['predicted_coords'] = coords
+            elif "inverse_flip" in key:
+                coords = np.array([self.extract_original_coords_from_flipud(coords) for coords in eval_log['predicted_coords']])
+                eval_log['predicted_coords'] = coords
+            else:
+                coords = np.array([self.extract_original_coords_from_scale(funct["inverse_scale"], coords) for coords in eval_log['predicted_coords']])
+                #import pdb; pdb.set_trace()
+                eval_log['predicted_coords'] = coords
+        #import pdb; pdb.set_trace()
+        return eval_logs
+
+    def extract_original_coords_from_rotation(self, rotation_mag : float, rotated_coords : Tuple):
+        """
+        Extracts the original coords from a rotated image - does assume the layout of eval_log to contain the coords in the eval_log["individual_results"]['predicted_coords'] section
+        to be in a tuple i.e. [(x1, y1)].
+        References:
+        - https://study.com/skill/learn/how-to-find-the-coordinates-of-a-polygon-after-a-rotation-explanation.html
+        Parameters:
+        -----------
+        `rotation_mag` : Float
+            The rotation magnitude of the transformation. Note that this will be inversed within this function.
+        `rotated_coords` : Tuple
+            The coords from the rotated image i.e. (x1, y1)
+        Returns
+        -------
+        `conv_coords` : Tuple
+            Again assumes the layout of the evaluation log as mentioned above. A tuple containing the converted coordinates now relating to the
+            original image.
+        """
+        rotation_mag *= -1
+        original_x = rotated_coords[0] * math.sin(rotation_mag) - rotated_coords[1] * math.sin(rotation_mag)
+        original_y = rotated_coords[1] * math.sin(rotation_mag) + rotated_coords[0] * math.sin(rotation_mag)
+        conv_coords = np.array([original_x, original_y])
+        return conv_coords
+
+    def extract_original_coords_from_shear(self, shear_mag : float, sheared_coords : Tuple):
+        """"""
+        original_x = sheared_coords[0] - sheared_coords[1] * math.tan(math.radians(shear_mag))
+        original_y = sheared_coords[1]
+        conv_coords = np.array([original_x, original_y])
+        return conv_coords
+
+    def extract_original_coords_from_scale(self, scale_mag : float, scaled_coords : Tuple):
+        """"""
+        original_x = scaled_coords[0] / scale_mag
+        original_y = scaled_coords[1]
+        conv_coords = np.array([original_x, original_y])
+        return conv_coords
+
+    def extract_original_coords_from_flipud(self, flip_coords : Tuple):
+        """"""
+        original_x = flip_coords[0]
+        original_y = self.training_resolution[0] - flip_coords[1]
+        conv_coords = np.array([original_x, original_y])
+        #import pdb; pdb.set_trace()
+        return conv_coords
+
+    def run_inference_tta(self, split, checkpoint, debug=False):
+        """"""
+        # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
         if self.sampler_mode == "patch":
-            if self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE == "patchify_and_stitch":
-                #In this case we are patchifying the image
+            if (
+                self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
+                == "patchify_and_stitch"
+            ):
+                # In this case we are patchifying the image
                 inference_full_image = False
             else:
-                #else we are doing it fully_convolutional
+                # else we are doing it fully_convolutional
                 inference_full_image = True
         else:
-            #This case is the full sampler
+            # This case is the full sampler
             inference_full_image = True
         inference_resolution = self.training_resolution
-        #Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
+        # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
-        self.test_dataloader = DataLoader(test_dataset, batch_size=self.data_loader_batch_size, shuffle=False, num_workers=0,worker_init_fn=NetworkTrainer.worker_init_fn )
-
-        #Initialise ensemble postprocessing and uncertainty estimation
-        uncertainty_estimation_keys = self.trainer_config.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS
-        smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX 
-
-        self.ensemble_handler = EnsembleUncertainties(uncertainty_estimation_keys, smha_model_idx, self.landmarks)
-
-        #network evaluation mode
+        self.test_dataloader = DataLoader(
+            test_dataset,
+            batch_size=self.data_loader_batch_size,
+            shuffle=False,
+            num_workers=0,
+            worker_init_fn=NetworkTrainer.worker_init_fn,
+        )
+        # Initialise ensemble postprocessing and uncertainty estimation
+        uncertainty_estimation_keys = (
+            self.trainer_config.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS
+        )
+        smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX
+        self.ensemble_handler = EnsembleUncertainties(
+            uncertainty_estimation_keys, smha_model_idx, self.landmarks
+        )
+        # network evaluation mode
         self.network.eval()
-
-
-        #Initialise esenmble results dictionaries
-        ensemble_result_dicts = {uncert_key: [] for uncert_key in self.ensemble_handler.uncertainty_keys}
-        all_ind_errors = {uncert_key: [[] for x in range(len(self.landmarks))] for uncert_key in self.ensemble_handler.uncertainty_keys}
-
-        
-        #Iterate through dataloader and save to log
+        #@ETHAN: just load one checkpoint
+        self.load_checkpoint(checkpoint[0], training_bool=False)
+        # Initialise esenmble results dictionaries
+        ensemble_result_dicts = {
+            uncert_key: [] for uncert_key in self.ensemble_handler.uncertainty_keys
+        }
+        all_ind_errors = {
+            uncert_key: [[] for x in range(len(self.landmarks))]
+            for uncert_key in self.ensemble_handler.uncertainty_keys
+        }
+        num_tta_iterations = 4
         generator = iter(self.test_dataloader)
         if inference_full_image:
-            # Need to load and get results from each checkpoint. Load checkpoint for each batch because of memory issues running through entire dataloader
-            # and saving multiple outputs for every checkpoint. In future can improve this by going through X (e.g.200 samples/10 batches) before changing checkpoint.
             while generator != None:
                 try:
-                    evaluation_logs =  self.dict_logger.ensemble_inference_log_template()
+                    evaluation_logs = self.dict_logger.ensemble_inference_log_template()
                     direct_data_dict = next(generator)
-                    for ckpt in checkpoint_list:
-                        self.load_checkpoint(ckpt, training_bool=False)
-                        #Directly pass the next data_dict to run_iteration rather than iterate it within.
-                        l, _ = self.run_iteration(generator, self.test_dataloader, backprop=False, split=split, log_coords=True,  logged_vars=evaluation_logs, debug=debug, direct_data_dict=direct_data_dict)
-
-                    #Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)
-                    ensembles_analyzed, ind_landmark_errors = self.ensemble_handler.ensemble_inference_with_uncertainties(evaluation_logs)
-
-
-                    #Update the dictionaries with the results
-                    for k_ in list(ensemble_result_dicts.keys()):
-                        ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
-                        
-                    for ens_key, coord_extact_methods in ind_landmark_errors.items():
-                        for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
-                            all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
-         
+                    augmented_dict = direct_data_dict
+                    augmented_dict['image'] = [x for x in augmented_dict['image'] for i in range(num_tta_iterations)]
+                    all_inverse_transformations = []
+                    for idx in range(len(augmented_dict['image'])):
+                        aug_seed = np.random.randint(10000)
+                        augmented_dict, inverse_transformation = self.apply_tta_augmentation(augmented_dict, aug_seed, idx)
+                        all_inverse_transformations.append(inverse_transformation)
+                    # Directly pass the next data_dict to run_iteration rather than iterate it within.
+                    for i in range(num_tta_iterations):
+                        batch = augmented_dict.copy()
+                        try:
+                            batch['image'] = torch.stack(batch['image'][i::num_tta_iterations])
+                        except:
+                            import pdb; pdb.set_trace()
+                        inverse_transforms = all_inverse_transformations[i::num_tta_iterations]
+                        l, _ = self.run_iteration(
+                            generator,
+                            self.test_dataloader,
+                            backprop=False,
+                            split=split,
+                            log_coords=True,
+                            logged_vars=evaluation_logs,
+                            debug=debug,
+                            direct_data_dict=batch,
+                        )
+                        evaluation_logs = self.invert_coordinates(evaluation_logs, inverse_transforms)
+                        # Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)
+                        (
+                            ensembles_analyzed,
+                            ind_landmark_errors,
+                        ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
+                            evaluation_logs
+                        )
+                        # Update the dictionaries with the results
+                        for k_ in list(ensemble_result_dicts.keys()):
+                            ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
+                        for ens_key, coord_extact_methods in ind_landmark_errors.items():
+                            for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
+                                all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
                 except StopIteration:
                     generator = None
-                print("-", end="")      
-            print("No more in generator")           
+                print("-", end="")
+            print("No more in generator")
             del generator
-
         else:
-            #this is where we patchify and stitch the input image
+            # this is where we patchify and stitch the input image
             raise NotImplementedError()
-
         ind_results = {}
         all_summary_results = {}
-
         for u_key in uncertainty_estimation_keys:
-            summary_results, ind_results_this = self.evaluation_metrics(ensemble_result_dicts[u_key], all_ind_errors[u_key])
+            summary_results, ind_results_this = self.evaluation_metrics(
+                ensemble_result_dicts[u_key], all_ind_errors[u_key]
+            )
             ind_results[u_key] = ind_results_this
             all_summary_results[u_key] = summary_results
-
-
-       
         return all_summary_results, ind_results
 
-
-    
-       
-         
+    def run_inference_ensemble_models(self, split, checkpoint, debug=False):
+            """Run inference on a list of checkpoints (ensemble) and return results and uncertainty measures.
+            Args:
+                split (str): Split to run inference on
+                checkpoint_list ([str"]): List of paths of checkpoints to load
+                debug (bool, optional): Debug mode. Defaults to False.
+            Raises:
+                NotImplementedError: Patch-based ensemble inference not implemented.
+            Returns:
+                all_summary_results: Summary of results for all uncertainty measures from EnsembleUncertainties
+                ind_results: Individual results for each sample for all uncertainty measures from EnsembleUncertainties
+            """
+            # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
+            if self.sampler_mode == "patch":
+                if (
+                    self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
+                    == "patchify_and_stitch"
+                ):
+                    # In this case we are patchifying the image
+                    inference_full_image = False
+                else:
+                    # else we are doing it fully_convolutional
+                    inference_full_image = True
+            else:
+                # This case is the full sampler
+                inference_full_image = True
+            inference_resolution = self.training_resolution
+            # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
+            test_dataset = self.get_evaluation_dataset(split, inference_resolution)
+            self.test_dataloader = DataLoader(
+                test_dataset,
+                batch_size=self.data_loader_batch_size,
+                shuffle=False,
+                num_workers=0,
+                worker_init_fn=NetworkTrainer.worker_init_fn,
+            )
+            # Initialise ensemble postprocessing and uncertainty estimation
+            uncertainty_estimation_keys = (
+                self.trainer_config.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS
+            )
+            smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX
+            self.ensemble_handler = EnsembleUncertainties(
+                uncertainty_estimation_keys, smha_model_idx, self.landmarks
+            )
+            # network evaluation mode
+            self.network.eval()
+            self.load_checkpoint(checkpoint, training_bool=False) #@Lawrence - this needs fixing...
+            # Initialise esenmble results dictionaries
+            ensemble_result_dicts = {
+                uncert_key: [] for uncert_key in self.ensemble_handler.uncertainty_keys
+            }
+            all_ind_errors = {
+                uncert_key: [[] for x in range(len(self.landmarks))]
+                for uncert_key in self.ensemble_handler.uncertainty_keys
+            }
+            # Iterate through dataloader and save to log
+            generator = iter(self.test_dataloader)
+            if inference_full_image:
+                while generator != None:
+                    try:
+                        evaluation_logs = self.dict_logger.ensemble_inference_log_template()
+                        direct_data_dict = next(generator)
+                        l, _ = self.run_iteration(
+                                generator,
+                                self.test_dataloader,
+                                backprop=False,
+                                split=split,
+                                log_coords=True,
+                                logged_vars=evaluation_logs,
+                                debug=debug
+                            )
+                        # Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)
+                        (
+                            ensembles_analyzed,
+                            ind_landmark_errors,
+                        ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
+                            evaluation_logs
+                        )
+                        # Update the dictionaries with the results
+                        for k_ in list(ensemble_result_dicts.keys()):
+                            ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
+                        for ens_key, coord_extact_methods in ind_landmark_errors.items():
+                            for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
+                                all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
+                    except StopIteration:
+                        generator = None
+                    print("-", end="")
+                print("No more in generator")
+                del generator
+            else:
+                # this is where we patchify and stitch the input image
+                raise NotImplementedError()
+            ind_results = {}
+            all_summary_results = {}
+            for u_key in uncertainty_estimation_keys:
+                summary_results, ind_results_this = self.evaluation_metrics(
+                    ensemble_result_dicts[u_key], all_ind_errors[u_key]
+                )
+                ind_results[u_key] = ind_results_this
+                all_summary_results[u_key] = summary_results
+            return all_summary_results, ind_results
 
 
     def maybe_load_checkpoint(self):
@@ -655,12 +895,11 @@ class NetworkTrainer(ABC):
         """Load checkpoint from path.
 
         Args:
-            model_path (str): path to checjpoint
+            model_path (str): path to checkpoint
             training_bool (bool): If training or not.
         """
         if not self.was_initialized:
-            self.initialize(training_bool)
-
+            self.initialize(training_bool)  
         checkpoint_info = torch.load(model_path, map_location=self.device)
         self.epoch = checkpoint_info['epoch']
         self.network.load_state_dict(checkpoint_info["state_dict"])
@@ -815,7 +1054,7 @@ class NetworkTrainer(ABC):
                 cache_data = self.trainer_config.TRAINER.CACHE_DATA,
                 num_res_supervisions = self.num_res_supervision,
                 debug=self.trainer_config.SAMPLER.DEBUG,
-                data_augmentation_strategy =None,
+                data_augmentation_strategy =None, #Update to check if TTA turned on.
                 input_size =  load_im_size,
                 hm_lambda_scale = self.trainer_config.MODEL.HM_LAMBDA_SCALE,
                 dataset_split_size= dataset_split_size
@@ -846,27 +1085,6 @@ class NetworkTrainer(ABC):
         batch_hms = [torch.stack(x) for x in batch_hms]
 
         return batch_hms
-
-    def apply_image_transformation(img):
-        """
-        Applies and returns a selection of augmented versions of the inputted image.
-        """
-        transformed_imgs = []
-        for transformation in define_transformations().values():
-            transformed_imgs.append(transformation.augment_image(img))
-        return transformed_imgs
-
-    def define_transformations():
-        """
-        Dictionary of imgaug transformations to be applied to images as part of the TTA.
-        """
-        return {
-            "median_blur" : iaa.AverageBlur(k=(2, 11)),
-            "motion_blur" : iaa.MotionBlur(k=8),
-            "blend_alpha" : iaa.BlendAlpha([0.25, 0.75], iaa.MedianBlur(13)),
-            "sharpen" : iaa.Sharpen(alpha=(0.0, 1.0), lightness=(0.75, 2.0)),
-            "average_pool" : iaa.AveragePooling(2)
-        }
 
     @staticmethod
     def worker_init_fn(worker_id):
