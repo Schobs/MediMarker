@@ -10,10 +10,10 @@ from datasets.dataset_index import DATASET_INDEX
 
 
 from trainer.model_trainer_index import MODEL_TRAINER_INDEX
-from utils.logging.comet_logging import save_comet_html
+# from utils.logging.comet_logging import save_comet_html
 from utils.setup.argument_utils import arg_parse
 
-from utils.logging.python_logger import get_logger, initialize_logging
+# from utils.logging.python_logger import get_logger, initialize_logging
 
 
 def main():
@@ -40,7 +40,8 @@ def main():
     logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
     logger.info("Config \n %s ", cfg)
 
-    exp_name = '_'.join(cfg.OUTPUT.OUTPUT_DIR.split("/")[-2:]) + "_Fold" + fold + "_" + str(time)
+    exp_name = '_'.join(cfg.OUTPUT.OUTPUT_DIR.split(
+        "/")[-2:]) + "_Fold" + fold + "_" + str(time)
 
     # Set up Comet logging
     if cfg.OUTPUT.USE_COMETML_LOGGING:
@@ -157,7 +158,8 @@ def main():
                 "model_latest",
             ]
 
-            logger.info("Loading MODELS that match substrings in: %s", models_to_test)
+            logger.info(
+                "Loading MODELS that match substrings in: %s", models_to_test)
 
             for fname in os.listdir(cfg.OUTPUT.OUTPUT_DIR):
                 if ("fold" + fold in fname and ".model" in fname) and any(
@@ -187,13 +189,15 @@ def main():
 
     ########### Now Save all model results to a spreadsheet #############
     if writer is not None:
-        html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
+        html_to_log = save_comet_html(
+            all_model_summaries, all_model_individuals)
         writer.log_html(html_to_log)
         logger.info("Logged all results to CometML.")
 
     logger.info(
         "saving summary of results locally to: %s",
-        os.path.join(cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold" + fold + ".xlsx"),
+        os.path.join(cfg.OUTPUT.OUTPUT_DIR,
+                     "summary_results_fold" + fold + ".xlsx"),
     )
     with ExcelWriter(  # pylint: disable=abstract-class-instantiated
         os.path.join(

@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import torch.nn
 
-from networks.layers.factories import Act, Dropout, Norm, Pool, split_args
-from utils import has_option
+from .factories import Act, Dropout, Norm, Pool, split_args
+# from .utils import has_option
 
 __all__ = ["get_norm_layer", "get_act_layer",
            "get_dropout_layer", "get_pool_layer"]

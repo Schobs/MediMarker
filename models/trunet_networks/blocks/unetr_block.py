@@ -16,7 +16,7 @@ from collections.abc import Sequence
 import torch
 import torch.nn as nn
 
-from networks.blocks.dynunet_block import UnetBasicBlock, UnetResBlock, get_conv_layer
+from .dynunet_block import UnetBasicBlock, UnetResBlock, get_conv_layer
 
 
 class UnetrUpBlock(nn.Module):

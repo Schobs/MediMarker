@@ -18,7 +18,7 @@ import torch.nn as nn
 from models.trunet_networks.blocks.dynunet_block import UnetOutBlock
 from models.trunet_networks.blocks.unetr_block import UnetrBasicBlock, UnetrPrUpBlock, UnetrUpBlock
 from models.trunet_networks.nets.vit import ViT
-from utils import ensure_tuple_rep
+# from utils import ensure_tuple_rep
 
 
 class TrUNet(nn.Module):

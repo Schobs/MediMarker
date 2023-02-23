@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import torch.nn as nn
 
-from networks.blocks.mlp import MLPBlock
-from networks.blocks.selfattention import SABlock
+from models.trunet_networks.blocks.mlp import MLPBlock
+from models.trunet_networks.blocks.selfattention import SABlock
 
 
 class TransformerBlock(nn.Module):

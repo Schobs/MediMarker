@@ -68,10 +68,10 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-from utils import look_up_option, optional_import
+# from utils import look_up_option, optional_import
 
-InstanceNorm3dNVFuser, has_nvfuser = optional_import(
-    "apex.normalization", name="InstanceNorm3dNVFuser")
+# InstanceNorm3dNVFuser, has_nvfuser = optional_import(
+#     "apex.normalization", name="InstanceNorm3dNVFuser")
 
 __all__ = ["LayerFactory", "Dropout", "Norm",
            "Act", "Conv", "Pool", "Pad", "split_args"]

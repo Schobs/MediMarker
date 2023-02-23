@@ -17,9 +17,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from networks.blocks.convolutions import Convolution
-from networks.layers.factories import Act, Norm
-from networks.layers.utils import get_act_layer, get_norm_layer
+from .convolutions import Convolution
+from models.trunet_networks.layers.factories import Act, Norm
+from models.trunet_networks.layers.utils import get_act_layer, get_norm_layer
 
 
 class UnetResBlock(nn.Module):

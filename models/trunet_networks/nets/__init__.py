@@ -11,5 +11,4 @@
 
 from __future__ import annotations
 
-from ...TrUNet import UNETR
 from .vit import ViT

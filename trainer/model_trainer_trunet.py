@@ -14,7 +14,7 @@ from utils.im_utils.heatmap_manipulation import get_coords, get_coords_fit_gauss
 import matplotlib.pyplot as plt
 
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
-from torchvision.transform import Resize, InterpolationMode
+from torchvision.transforms import Resize, InterpolationMode
 from trainer.model_trainer_base import NetworkTrainer
 
 from transforms.generate_labels import TrUNetLabelGenerator
