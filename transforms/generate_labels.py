@@ -109,7 +109,8 @@ class UNetLabelGenerator(LabelGenerator):
             for idx, lm in enumerate(landmarks):
 
                 lm = np.round(lm / size_f)
-                downsample_size = [input_size[0] / size_f[0], input_size[1] / size_f[1]]
+                downsample_size = [input_size[0] /
+                                   size_f[0], input_size[1] / size_f[1]]
                 down_sigma = hm_sigmas[idx] / size_f[0]
 
                 # If the landmark is present in image, generate a heatmap, otherwise generate a blank heatmap.
@@ -121,7 +122,8 @@ class UNetLabelGenerator(LabelGenerator):
                     )
                 else:
                     intermediate_heatmaps.append(
-                        np.zeros((int(downsample_size[0]), int(downsample_size[1])))
+                        np.zeros(
+                            (int(downsample_size[0]), int(downsample_size[1])))
                     )
             heatmap_list.append(np.array(intermediate_heatmaps))
 
@@ -305,7 +307,275 @@ class UNetLabelGenerator(LabelGenerator):
                         "L"
                         + str(coord_idx)
                         + " E="
-                        + str(np.round(ind_sample["L" + str(coord_idx)], 2)),  # Text
+                        # Text
+                        + str(np.round(ind_sample["L" + str(coord_idx)], 2)),
+                        verticalalignment="bottom",  # Centered bottom with line
+                        horizontalalignment="center",  # Centered with horizontal line
+                        fontsize=12,  # Font size
+                        color=pred_text,  # Color
+                    )
+                    ax[0, 0].set_title(
+                        "uid: %s. Mean Error: %s +/- %s"
+                        % (
+                            ind_sample["uid"],
+                            np.round(ind_sample["Error All Mean"], 2),
+                            np.round(ind_sample["Error All Std"]),
+                        )
+                    )
+
+                    # # #2)
+                    # print("len of predicted heatmaps ", len(predicted_heatmap), " size of sample idx heatmaps ", predicted_heatmap[sample_idx].shape)
+                    # ax[0,1].imshow(predicted_heatmap[sample_idx][coord_idx])
+
+                    # rect45 = patchesplt.Rectangle(( predicted_coords[sample_idx][coord_idx][0], predicted_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='pink',facecolor='none')
+                    # ax[0,1].add_patch(rect45)
+                    # rect46 = patchesplt.Rectangle((  full_res_coords[sample_idx][coord_idx][0], full_res_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='g',facecolor='none')
+                    # ax[0,1].add_patch(rect46)
+
+                    # 3)
+                    # ax[coord_idx,2].imshow(heatmap_label[sample_idx][coord_idx])
+                    # rect35 = patchesplt.Rectangle((  full_res_coords[sample_idx][coord_idx][0], full_res_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='g',facecolor='none')
+                    # ax[coord_idx,2].add_patch(rect35)
+
+                    # rect15 = patchesplt.Rectangle((  full_res_coords[sample_idx][coord_idx][0], full_res_coords[sample_idx][coord_idx][1]) ,6,6,linewidth=2,edgecolor='g',facecolor='none')
+                    # ax[0,0].add_patch(rect15)
+
+                plt.show()
+                plt.close()
+
+
+class TrUNetLabelGenerator(LabelGenerator):
+    """Generates target heatmaps for the U-Net network training scheme"""
+
+    def __init__(self):
+        super(LabelGenerator, self).__init__()
+
+    def generate_labels(
+        self,
+        landmarks,
+        x_y_corner_patch,
+        landmarks_in_indicator,
+        input_size,
+        hm_sigmas,
+        num_res_supervisions,
+        hm_lambda_scale=100,
+        dtype=np.float32,
+        to_tensor=True,
+    ):
+        """Generates Gaussian heatmaps for given landmarks of size input_size, using sigma hm_sigmas."""
+
+        return_dict = {"heatmaps": []}
+
+        heatmap_list = []
+        resizing_factors = [[2**x, 2**x] for x in range(num_res_supervisions)]
+
+        # Generates a heatmap for multiple resolutions based on # down steps in encoder (1x, 0.5x, 0.25x etc)
+        for size_f in resizing_factors:
+            intermediate_heatmaps = []
+            # Generate a heatmap for each landmark
+            for idx, lm in enumerate(landmarks):
+
+                lm = np.round(lm / size_f)
+                downsample_size = [input_size[0] /
+                                   size_f[0], input_size[1] / size_f[1]]
+                down_sigma = hm_sigmas[idx] / size_f[0]
+
+                # If the landmark is present in image, generate a heatmap, otherwise generate a blank heatmap.
+                if landmarks_in_indicator[idx] == 1:
+                    intermediate_heatmaps.append(
+                        gaussian_gen(
+                            lm, downsample_size, 1, down_sigma, dtype, hm_lambda_scale
+                        )
+                    )
+                else:
+                    intermediate_heatmaps.append(
+                        np.zeros(
+                            (int(downsample_size[0]), int(downsample_size[1])))
+                    )
+            heatmap_list.append(np.array(intermediate_heatmaps))
+
+        hm_list = heatmap_list[::-1]
+
+        if to_tensor:
+            all_seg_labels = []
+            for maps in hm_list:
+                all_seg_labels.append(torch.from_numpy(maps).float())
+
+            hm_list = all_seg_labels
+
+        return_dict["heatmaps"] = hm_list
+        return return_dict
+
+    def stitch_heatmap(self, patch_predictions, stitching_info):
+        """
+        Use model outputs from a patchified image to stitch together a full resolution heatmap
+
+        """
+
+    def debug_sample(self, sample_dict, untrans_image, untrans_coords):
+        """Visually debug a sample. Provide logging and visualisation of the sample."""
+
+        # print("before coords: ", landmarks)
+        # print("og image sahpe: ", image.shape, "trans image shape", sample_dict["image"].shape, "trans targ coords: ", sample_dict["target_coords"])
+        # print("len of hetamps ", len(sample_dict["label"]), " and shape: ", sample_dict["label"][-1].shape, " and hm exp shape ", np.expand_dims(sample_dict["label"][-1], axis=0).shape)
+        # landmarks_from_label = get_coords(torch.from_numpy(np.expand_dims(sample_dict["label"][-1], axis=0)))
+        # print("landmarks reverse engineered from heatmap label: ", landmarks_from_label)
+
+        # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
+        visualize_image_trans_coords(
+            untrans_image[0],
+            untrans_coords,
+            sample_dict["image"][0],
+            sample_dict["target_coords"],
+        )
+
+    def debug_crop(
+        self, original_im, cropped_im, original_lms, normalized_lms, lms_indicators
+    ):
+        """Visually debug a cropped sample. Provide logging and visualisation of the sample."""
+
+        print("before coords: ", original_lms)
+        print("normalized lms: ", normalized_lms)
+        print("landmark indicators", lms_indicators)
+
+        # visualize_image_trans_target(np.squeeze(image), sample["image"][0], heatmaps[-1])
+        visualize_imageNcoords_cropped_imgNnormcoords(
+            original_im[0], cropped_im[0], original_lms, normalized_lms, lms_indicators
+        )
+
+    def debug_prediction(
+        self,
+        input_dict,
+        prediction_output,
+        predicted_coords,
+        input_size_pred_coords,
+        logged_vars,
+        extra_info,
+    ):
+        """Visually debug a prediction and compare to the target. Provide logging and visualisation of the sample."""
+        heatmap_label = input_dict["label"]["heatmaps"][
+            -1
+        ]  # -1 to get the last layer only (ignore deep supervision labels)
+
+        transformed_targ_coords = np.array(input_dict["target_coords"])
+        full_res_coords = np.array(input_dict["full_res_coords"])
+        transformed_input_image = input_dict["image"]
+
+        predicted_heatmap = [x.cpu().detach().numpy() for x in prediction_output][
+            -1
+        ]  # -1 to get the last layer only (ignore deep supervision predictions)
+
+        predicted_coords = [x.cpu().detach().numpy() for x in predicted_coords]
+        input_size_pred_coords = extra_info["coords_og_size"]
+
+        for sample_idx, ind_sample in enumerate(logged_vars):
+            print(
+                "\n uid: %s. Mean Error: %s "
+                % (ind_sample["uid"], ind_sample["Error All Mean"])
+            )
+            colours = np.arange(len(predicted_coords[sample_idx]))
+
+            # Only show debug if any landmark error is >10 pixels!
+            if (
+                len(
+                    [
+                        x
+                        for x in range(len(predicted_coords[sample_idx]))
+                        if (
+                            ind_sample["L" + str(x)] != None
+                            and ind_sample["L" + str(x)] > 10
+                        )
+                    ]
+                )
+                > 0
+            ):
+                fig, ax = plt.subplots(1, ncols=1, squeeze=False)
+
+                for coord_idx, pred_coord in enumerate(predicted_coords[sample_idx]):
+                    print(
+                        "L%s: Full Res Prediction: %s, Full Res Target: %s, Error: %s. Input Res targ %s, input res pred %s."
+                        % (
+                            coord_idx,
+                            pred_coord,
+                            full_res_coords[sample_idx][coord_idx],
+                            ind_sample["L" + str(coord_idx)],
+                            transformed_targ_coords[sample_idx][coord_idx],
+                            input_size_pred_coords[sample_idx][coord_idx],
+                        )
+                    )
+
+                    # difference between these is removing the padding (so -128, or whatever the patch padding was)
+                    print(
+                        "predicted (red) vs  target coords (green): ",
+                        input_size_pred_coords[sample_idx][coord_idx],
+                        transformed_targ_coords[sample_idx][coord_idx],
+                    )
+
+                    # 1) show input image with target lm and predicted lm
+                    # 2) show predicted heatmap
+                    # 3 show target heatmap
+
+                    # 1)
+                    ax[0, 0].imshow(transformed_input_image[sample_idx][0])
+                    rect1 = patchesplt.Rectangle(
+                        (
+                            transformed_targ_coords[sample_idx][coord_idx][0],
+                            transformed_targ_coords[sample_idx][coord_idx][1],
+                        ),
+                        6,
+                        6,
+                        linewidth=2,
+                        edgecolor="g",
+                        facecolor="none",
+                    )
+                    ax[0, 0].add_patch(rect1)
+                    rect2 = patchesplt.Rectangle(
+                        (
+                            input_size_pred_coords[sample_idx][coord_idx][0]
+                            .detach()
+                            .numpy(),
+                            input_size_pred_coords[sample_idx][coord_idx][1]
+                            .detach()
+                            .cpu()
+                            .numpy(),
+                        ),
+                        6,
+                        6,
+                        linewidth=2,
+                        edgecolor="pink",
+                        facecolor="none",
+                    )
+                    ax[0, 0].add_patch(rect2)
+
+                    ax[0, 0].text(
+                        transformed_targ_coords[sample_idx][coord_idx][0],
+                        transformed_targ_coords[sample_idx][coord_idx][1]
+                        + 10,  # Position
+                        "L" + str(coord_idx),  # Text
+                        verticalalignment="bottom",  # Centered bottom with line
+                        horizontalalignment="center",  # Centered with horizontal line
+                        fontsize=12,  # Font size
+                        color="g",  # Color
+                    )
+                    if ind_sample["L" + str(coord_idx)] > 10:
+                        pred_text = "r"
+                    else:
+                        pred_text = "pink"
+                    ax[0, 0].text(
+                        input_size_pred_coords[sample_idx][coord_idx][0]
+                        .detach()
+                        .cpu()
+                        .numpy(),
+                        input_size_pred_coords[sample_idx][coord_idx][1]
+                        .detach()
+                        .cpu()
+                        .numpy()
+                        + 10,  # Position
+                        "L"
+                        + str(coord_idx)
+                        + " E="
+                        # Text
+                        + str(np.round(ind_sample["L" + str(coord_idx)], 2)),
                         verticalalignment="bottom",  # Centered bottom with line
                         horizontalalignment="center",  # Centered with horizontal line
                         fontsize=12,  # Font size
@@ -434,7 +704,8 @@ class PHDNetLabelGenerator(LabelGenerator):
 
         if to_tensor:
             return_dict["patch_heatmap"] = torch.stack(
-                [torch.from_numpy(x).float() for x in return_dict["patch_heatmap"]]
+                [torch.from_numpy(x).float()
+                 for x in return_dict["patch_heatmap"]]
             )
             return_dict["patch_displacements"] = torch.stack(
                 [
@@ -553,7 +824,8 @@ class PHDNetLabelGenerator(LabelGenerator):
             ),
         ).reshape(self.sample_grid_size)
         coords_from_uhm, arg_max = get_coords(
-            torch.tensor(np.expand_dims(np.expand_dims(upscaled_hm, axis=0), axis=0))
+            torch.tensor(np.expand_dims(
+                np.expand_dims(upscaled_hm, axis=0), axis=0))
         )
         print("get_coords from upscaled_hm: ", coords_from_uhm)
 
@@ -718,7 +990,8 @@ class PHDNetLabelGenerator(LabelGenerator):
                     predicted_coords[sample_idx][coord_idx] / downsample_factor
                 )
                 downsampled_targ = (
-                    transformed_targ_coords[sample_idx][coord_idx] / downsample_factor
+                    transformed_targ_coords[sample_idx][coord_idx] /
+                    downsample_factor
                 )
                 max_square, _ = get_coords(
                     torch.from_numpy(
@@ -795,10 +1068,12 @@ class PHDNetLabelGenerator(LabelGenerator):
                 ax[1, 1].imshow(transformed_input_image[sample_idx][0])
 
                 for x_idx, x in enumerate(
-                    range(0, self.sample_grid_size[0], (2**self.maxpool_factor))
+                    range(0, self.sample_grid_size[0],
+                          (2**self.maxpool_factor))
                 ):
                     for y_idx, y in enumerate(
-                        range(0, self.sample_grid_size[1], (2**self.maxpool_factor))
+                        range(
+                            0, self.sample_grid_size[1], (2**self.maxpool_factor))
                     ):
 
                         center_xy = [
@@ -847,7 +1122,8 @@ class PHDNetLabelGenerator(LabelGenerator):
                             ]
 
                         loc = [center_xy[0] + x_disp, center_xy[1] + y_disp]
-                        ax[1, 1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
+                        ax[1, 1].arrow(
+                            center_xy[0], center_xy[1], x_disp, y_disp)
 
                 # 5)
 
@@ -871,10 +1147,12 @@ def generate_heatmaps(
         intermediate_heatmaps = []
         for idx, lm in enumerate(landmarks):
             lm = np.round(lm / size_f)
-            downsample_size = [image_size[0] / size_f[0], image_size[1] / size_f[1]]
+            downsample_size = [image_size[0] /
+                               size_f[0], image_size[1] / size_f[1]]
             down_sigma = sigma[idx] / size_f[0]
             intermediate_heatmaps.append(
-                gaussian_gen(lm, downsample_size, 1, down_sigma, dtype, lambda_scale)
+                gaussian_gen(lm, downsample_size, 1,
+                             down_sigma, dtype, lambda_scale)
             )
         heatmap_list.append(np.array(intermediate_heatmaps))
 
@@ -905,7 +1183,8 @@ def gaussian_gen(
         (1)
         / (2.0 * np.pi * sx * sy)
         * np.exp(
-            -((x - mx) ** 2.0 / (2.0 * sx**2.0) + (y - my) ** 2.0 / (2.0 * sy**2.0))
+            -((x - mx) ** 2.0 / (2.0 * sx**2.0) +
+              (y - my) ** 2.0 / (2.0 * sy**2.0))
         )
     )
 
@@ -943,7 +1222,8 @@ def gaussian_gen_fast(predictions, resolution, sigma):
         (1)
         / (2.0 * np.pi * sx * sy)
         * np.exp(
-            -((x - mx) ** 2.0 / (2.0 * sx**2.0) + (y - my) ** 2.0 / (2.0 * sy**2.0))
+            -((x - mx) ** 2.0 / (2.0 * sx**2.0) +
+              (y - my) ** 2.0 / (2.0 * sy**2.0))
         )
     )
     # normalise between 0 and 1
@@ -1131,8 +1411,8 @@ def gen_patch_displacements_heatmap(
         downscaled_padded_lm, hm_res, 1, sigma, lambda_scale=lambda_scale
     )
     gaussian_weights = gaussian_weights_full[
-        (safe_padding // step_size) : (safe_padding + grid_size[0]) // step_size,
-        safe_padding // step_size : (safe_padding + grid_size[1]) // step_size,
+        (safe_padding // step_size): (safe_padding + grid_size[0]) // step_size,
+        safe_padding // step_size: (safe_padding + grid_size[1]) // step_size,
     ]
     displacement_weights = gaussian_weights / lambda_scale
 
@@ -1162,11 +1442,13 @@ def gen_patch_displacements_heatmap(
         tensor_weights = torch.tensor(
             np.expand_dims(np.expand_dims(gaussian_weights, axis=0), axis=0)
         )
-        print("weights and resize requestion: ", tensor_weights.shape, grid_size)
+        print("weights and resize requestion: ",
+              tensor_weights.shape, grid_size)
         resized_gauss = (
             (
                 F.interpolate(
-                    tensor_weights, [grid_size[0], grid_size[1]], mode="nearest"
+                    tensor_weights, [grid_size[0],
+                                     grid_size[1]], mode="nearest"
                 )
             )
             .cpu()
