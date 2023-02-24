@@ -26,8 +26,8 @@ SOLVER:
 
 
 DATASET:
-  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/' #change this to where you have the data
-  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid' #change this
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [11] #Choose landmark (between 0-17)
@@ -46,7 +46,7 @@ TRAINER:
 
 
 SAMPLER:
-  DATA_AUG: "Flatten" #the data aug scheme, currently flattens, but can change this to other schemes.
+  DATA_AUG: "AffineComplexFlatten" #the data aug scheme, currently flattens, but can change this to other schemes.
   INPUT_SIZE : [512,512] #resizes data to this size, then gets patches of SAMPLER.PATCH.SAMPLE_PATCH_SIZE
   SAMPLE_MODE: 'patch_centred' # ['patch_bias', 'full', "patch_centred"] (patch_centred gets centre from stage 1 preds)
   EVALUATION_SAMPLE_MODE: "patch_centred"  # ['patch_bias', 'full', "patch_centred"] (evaluate from stage 1 preds)

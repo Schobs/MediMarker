@@ -15,7 +15,7 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 1 # Leave this.
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE_TRAIN: 12 # indicates entire dataset for batch (needed for ExactGP)
-  MAX_EPOCHS: 10000
+  MAX_EPOCHS: 30
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
   DATA_LOADER_BATCH_SIZE_EVAL: 12
@@ -26,8 +26,8 @@ SOLVER:
 
 
 DATASET:
-  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/' #change this to where you have the data
-  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid' #change this
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [11] #Choose landmark (between 0-17)

@@ -26,8 +26,8 @@ SOLVER:
 
 
 DATASET:
-  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/' #change this to where you have the data
-  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid' #change this
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [11] #Choose landmark (between 0-17)
