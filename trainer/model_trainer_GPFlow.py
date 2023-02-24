@@ -74,6 +74,9 @@ class GPFlowTrainer(NetworkTrainer):
         self.ip_sample_var = self.trainer_config.MODEL.GPFLOW.INDUCING_SAMPLE_VAR
         self.conv_kern_ls = self.trainer_config.MODEL.GPFLOW.CONV_KERN_LS  # base kernel lengthscale
         self.conv_kern_var = self.trainer_config.MODEL.GPFLOW.CONV_KERN_V  # base kernel variance
+        self.fix_noise_until = self.trainer_config.MODEL.GPFLOW.FIX_NOISE_UNTIL_EPOCH
+        self.fix_inducing_points = self.trainer_config.MODEL.GPFLOW.TRAIN_IP
+        self.initial_likelihood_noise = self.trainer_config.MODEL.GPFLOW.MODEL_NOISE_INIT
 
         self.training_data = None
         self.all_training_input = None
@@ -114,8 +117,13 @@ class GPFlowTrainer(NetworkTrainer):
             self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
                                                       self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
                                                       self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, inducing_sample_var=self.ip_sample_var,
-                                                      base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var)
+                                                      base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var, init_likelihood_noise=self.initial_likelihood_noise,)
 
+            if self.fix_inducing_points:
+                gpf.set_trainable(self.network.inducing_variable, False)
+
+            if self.fix_noise_until > 0:
+                gpf.set_trainable(self.network.likelihood.variance, False)
             # TODO set this false. add config for #epochs to turn back on try 10,50,100
 
             # gpf.set_trainable(self.network.likelihood.variance, False)
@@ -470,6 +478,10 @@ class GPFlowTrainer(NetworkTrainer):
             )
 
         self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
+        self.maybe_update_lr()
+
+        if (self.fix_noise_until > 0) and (self.epoch > self.fix_noise_until):
+            gpf.set_trainable(self.network.likelihood.variance, True)
 
         return continue_training
 
@@ -639,19 +651,10 @@ class GPFlowTrainer(NetworkTrainer):
 
         return summary_results, ind_results
 
-    # def maybe_update_lr(self, epoch=None, exponent=0.9):
-    #     """
-    #     if epoch is not None we overwrite epoch. Else we use epoch = self.epoch + 1
+    def maybe_update_lr(self):
+        """
+        Update the learning rate if the learning rate policy is set to "scheduled_10".
 
-    #     (maybe_update_lr is called in on_epoch_end which is called before epoch is incremented.
-    #     Therefore we need to do +1 here)
-
-    #     """
-
-    #     if self.lr_policy == "schedule":
-    #         if ep in self.lr_schedule:
-    #             self.optimizer.param_groups[0]["lr"] = self.lr_schedule[ep]
-    #     elif self.lr_policy == "poly
-    #     poly_lr_update = self.initial_lr * (1 - ep / self.max_num_epochs) ** exponent
-
-    #     self.optimizer.param_groups[0]["lr"] = poly_lr_update
+        """
+        if self.lr_policy == "scheduled_10" and self.epoch > 10:
+            self.optimizer.lr.assign(self.initial_lr / 10)

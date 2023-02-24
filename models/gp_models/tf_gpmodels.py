@@ -180,8 +180,8 @@ def get_conv_SVGP(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, 
 
 
 def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
-                               patch_shape: List[int] = [3, 3], kern_type: str = "rbf", inducing_sample_var: float = 1.0,
-                               base_kern_ls: int = 3, base_kern_var: int = 3) -> gpf.models.SVGP:
+                               patch_shape: List[int] = [3, 3], kern_type: str = "rbf", inducing_sample_var: int = 1,
+                               base_kern_ls: int = 3, base_kern_var: int = 3, init_likelihood_noise: float = 1.0) -> gpf.models.SVGP:
     """
     Returns a Gaussian process with a Convolutional kernel as the covariance function.
 
@@ -256,7 +256,7 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     # )
 
     # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
-    conv_m = gpf.models.SVGP(kernel, gpf.likelihoods.Gaussian(), inducing_variable=iv,
+    conv_m = gpf.models.SVGP(kernel, gpf.likelihoods.Gaussian(variance=init_likelihood_noise), inducing_variable=iv,
                              q_mu=q_mu, q_sqrt=q_sqrt, num_latent_gps=2)
 
     # q_mu = np.zeros((num_inducing_points, 2))
