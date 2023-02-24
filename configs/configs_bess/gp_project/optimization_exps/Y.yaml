@@ -1,15 +1,14 @@
 
  
 OUTPUT: 
-  # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/Y" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_toms_LR001_l11_0J_1STDIP' #change this to where you have the data
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
   VERBOSE: True #whether to print results every epoch
-  COMET_TAGS: ["gp", "conv_gp"]
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization"]
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
@@ -22,10 +21,8 @@ SOLVER:
   DATA_LOADER_BATCH_SIZE_EVAL: 12
   BASE_LR: 0.01
   AUTO_MIXED_PRECISION: False
-  EARLY_STOPPING_PATIENCE: 1000 # epochs for validation coord error not improving before stopping training
-  DECAY_POLICY: "schedule"
-
-
+  EARLY_STOPPING_PATIENCE: 500 # epochs for validation coord error not improving before stopping training
+  DECAY_POLICY: None
 
 DATASET:
   ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/' #change this to where you have the data
@@ -42,8 +39,8 @@ TRAINER:
   SAVE_LATEST_ONLY: False
   CACHE_DATA: True # Kind of irrelevant for ExactGP
   INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
-  SAVE_EVERY: 50 # Saves checkpoint every X epochs
-  VALIDATE_EVERY: 1 #validation every X epochs
+  SAVE_EVERY: 100 # Saves checkpoint every X epochs
+  VALIDATE_EVERY: 25 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
 
 
@@ -59,21 +56,25 @@ SAMPLER:
     SAMPLER_BIAS: 1.0 #irrelevent for patch_centred
     RESOLUTION_TO_SAMPLE_FROM:  "input_size" #means it samples from 512,512 not the original resolution
     SAMPLE_PATCH_SIZE: [32,32] #patch size
-    # CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAS_DS5/individual_results_allfolds.xlsx"
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_all/individual_results_fold0.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error_f0"
     CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
-    CENTRED_PATCH_DETERMINISTIC: True  #if True, will always sample the same patch for a given image i.e. same jitter applied.
+    CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
 
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_toms_LR001_l11_0J_1STDIP/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
+    INDUCING_SAMPLE_VAR: 3
     KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
     CONV_KERN_SIZE: [5,5]  # size of kernel for convolutional kernel
-
+    CONV_KERN_STRIDE: 1  #stride of convolutional kernel
+    CONV_KERN_LS: 5  # base kernel lengthscale
+    CONV_KERN_V: 5  # base kernel variance
+    FIX_NOISE_UNTIL_EPOCH: 500 
+    MODEL_NOISE_INIT: 0.01
+    TRAIN_IP: False
     
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]

@@ -130,7 +130,13 @@ _C.MODEL.GPFLOW.NUM_INDUCING_POINTS = 100
 _C.MODEL.GPFLOW.KERN = "conv"  # possible values: ["conv", "rbf", "matern52"]
 _C.MODEL.GPFLOW.CONV_KERN_SIZE = [3, 3]  # Size of kernel for convolutional kernel gaussian process
 _C.MODEL.GPFLOW.CONV_KERN_STRIDE = 1  # Size of kernel for convolutional kernel gaussian process
+_C.MODEL.GPFLOW.CONV_KERN_LS = 5  # Size of kernel for convolutional kernel gaussian process
+_C.MODEL.GPFLOW.CONV_KERN_V = 5  # Size of kernel for convolutional kernel gaussian process
+_C.MODEL.GPFLOW.MODEL_NOISE_INIT = 1.0
+_C.MODEL.GPFLOW.FIX_NOISE_UNTIL_EPOCH = 0
+_C.MODEL.GPFLOW.TRAIN_IP = True
 
+_C.MODEL.GPFLOW.INDUCING_SAMPLE_VAR = 1.0
 
 _C.INFERENCE = CN()
 _C.INFERENCE.SPLIT = "testing"  # Split/s of the data to perform inference. Can specify multiple splits.

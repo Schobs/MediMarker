@@ -25,7 +25,7 @@ def affine_scalar_bijector(shift: Optional[float] = None, scale: Optional[float]
     """
     Construct a bijector that applies an affine transformation to scalar inputs.
 
-    The affine transformation is defined as y = scale * x + shift, where x is the input, 
+    The affine transformation is defined as y = scale * x + shift, where x is the input,
     y is the output, and scale and shift are the parameters of the transformation.
 
     Args:
@@ -109,7 +109,7 @@ def get_conv_SVGP(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, 
     inp_dim (Tuple[int, int]): The dimensions of the input images.
     num_inducing_patches (int): The number of inducing patches to use in the Gaussian process.
     patch_shape (List[int]=[3, 3]): The shape of the patches.
-    kern_type (str='se'): The type of the inner kernel to use in the Convolutional kernel. 
+    kern_type (str='se'): The type of the inner kernel to use in the Convolutional kernel.
                            Can be 'se' for SquaredExponential, 'matern52' for Matern52, or 'rbf' for RBF.
 
     Returns:
@@ -180,7 +180,8 @@ def get_conv_SVGP(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, 
 
 
 def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
-                               patch_shape: List[int] = [3, 3], kern_type: str = "rbf") -> gpf.models.SVGP:
+                               patch_shape: List[int] = [3, 3], kern_type: str = "rbf", inducing_sample_var: float = 1.0,
+                               base_kern_ls: int = 3, base_kern_var: int = 3) -> gpf.models.SVGP:
     """
     Returns a Gaussian process with a Convolutional kernel as the covariance function.
 
@@ -190,7 +191,7 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     inp_dim (Tuple[int, int]): The dimensions of the input images.
     num_inducing_patches (int): The number of inducing patches to use in the Gaussian process.
     patch_shape (List[int]=[3, 3]): The shape of the patches.
-    kern_type (str='se'): The type of the inner kernel to use in the Convolutional kernel. 
+    kern_type (str='se'): The type of the inner kernel to use in the Convolutional kernel.
                            Can be 'se' for SquaredExponential, 'matern52' for Matern52, or 'rbf' for RBF.
 
     Returns:
@@ -205,7 +206,7 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     elif kern_type == "matern52":
         inner_kern = gpf.kernels.Matern52()
     elif kern_type == "rbf":
-        inner_kern = gpf.kernels.RBF()
+        inner_kern = gpf.kernels.RBF(lengthscales=([base_kern_ls] * (patch_shape[0]*patch_shape[1])))
     else:
         raise ValueError("Invalid kernel type. Try 'se', 'matern', or 'rbf'.")
 
@@ -215,11 +216,12 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
             inner_kern, inp_dim, patch_shape
         )
         conv_k.base_kernel.lengthscales = gpf.Parameter(
-            1.0, transform=positive_with_min()
+            [base_kern_ls] * int(patch_shape[0]*patch_shape[1]), transform=positive_with_min()
         )
 
         # Weight scale and variance are non-identifiable. We also need to prevent variance from shooting off crazily.
-        conv_k.base_kernel.variance = gpf.Parameter(1.0, transform=constrained())
+        conv_k.base_kernel.variance = gpf.Parameter(
+            base_kern_var, transform=constrained())
         conv_k.weights = gpf.Parameter(conv_k.weights.numpy(), transform=max_abs_1())
         convs_k.append(conv_k)
 
@@ -230,7 +232,7 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     # centered around the label (Y) of each patch. The variance of the Gaussian should be a hyperparameter
     # we can experiment with, since we need to have some distant blank patches too.
 
-    inducing_patches = get_inducing_patches(X, Y, inp_dim, patch_shape, num_inducing_patches, std=4)
+    inducing_patches = get_inducing_patches(X, Y, inp_dim, patch_shape, num_inducing_patches, std=inducing_sample_var)
 
     conv_f_i = gpf.inducing_variables.InducingPatches(inducing_patches)
 
@@ -254,7 +256,8 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     # )
 
     # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
-    conv_m = gpf.models.SVGP(kernel, gpf.likelihoods.Gaussian(), inducing_variable=iv, q_mu=q_mu, q_sqrt=q_sqrt)
+    conv_m = gpf.models.SVGP(kernel, gpf.likelihoods.Gaussian(), inducing_variable=iv,
+                             q_mu=q_mu, q_sqrt=q_sqrt, num_latent_gps=2)
 
     # q_mu = np.zeros((num_inducing_points, 2))
     # # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
@@ -264,68 +267,68 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     return conv_m
 
 
-@Kuf.register(SharedIndependentInducingVariables, SeparateIndependent, object)
-@check_shapes(
-    "inducing_variable: [M, D, P]",
-    "Xnew: [batch..., N, D2]",
-    "return: [L, M, batch..., N]",
-)
-def Kuf_conv_shared_separate(
-    inducing_variable: SharedIndependentInducingVariables,
-    kernel: SeparateIndependent,
-    Xnew: tf.Tensor,
-) -> tf.Tensor:
-    Kzxs = []
-    for k in kernel.kernels:
-        Xp = k.get_patches(Xnew)  # [N, num_patches, patch_len]
-        bigKzx = k.base_kernel.K(
-            inducing_variable.inducing_variable.Z, Xp
-        )  # [M, N, P] -- thanks to broadcasting of kernels
-        Kzx = tf.reduce_sum(bigKzx * k.weights if hasattr(k, "weights") else bigKzx, [2])
-        Kzxs.append(Kzx / k.num_patches)
-    return tf.stack(Kzxs, axis=0)
+# @Kuf.register(SharedIndependentInducingVariables, SeparateIndependent, object)
+# @check_shapes(
+#     "inducing_variable: [M, D, P]",
+#     "Xnew: [batch..., N, D2]",
+#     "return: [L, M, batch..., N]",
+# )
+# def Kuf_conv_shared_separate(
+#     inducing_variable: SharedIndependentInducingVariables,
+#     kernel: SeparateIndependent,
+#     Xnew: tf.Tensor,
+# ) -> tf.Tensor:
+#     Kzxs = []
+#     for k in kernel.kernels:
+#         Xp = k.get_patches(Xnew)  # [N, num_patches, patch_len]
+#         bigKzx = k.base_kernel.K(
+#             inducing_variable.inducing_variable.Z, Xp
+#         )  # [M, N, P] -- thanks to broadcasting of kernels
+#         Kzx = tf.reduce_sum(bigKzx * k.weights if hasattr(k, "weights") else bigKzx, [2])
+#         Kzxs.append(Kzx / k.num_patches)
+#     return tf.stack(Kzxs, axis=0)
 
 
-@Kuf.register(SharedIndependentInducingVariables, SharedIndependent, object)
-@check_shapes(
-    "inducing_variable: [M, D, P]",
-    "Xnew: [batch..., N, D2]",
-    "return: [M, batch..., N]",
-)
-def Kuf_conv_shared_shared(
-    inducing_variable: SharedIndependentInducingVariables,
-    kernel: SharedIndependent,
-    Xnew: tf.Tensor,
-) -> tf.Tensor:
-    Xp = kernel.kernel.get_patches(Xnew)  # [N, num_patches, patch_len]
-    bigKzx = kernel.kernel.base_kernel.K(
-        inducing_variable.inducing_variable.Z, Xp
-    )  # [M, N, P] -- thanks to broadcasting of kernels
-    Kzx = tf.reduce_sum(bigKzx * kernel.kernel.weights if hasattr(kernel.kernel, "weights") else bigKzx, [2])
-    return Kzx / kernel.kernel.num_patches
+# @Kuf.register(SharedIndependentInducingVariables, SharedIndependent, object)
+# @check_shapes(
+#     "inducing_variable: [M, D, P]",
+#     "Xnew: [batch..., N, D2]",
+#     "return: [M, batch..., N]",
+# )
+# def Kuf_conv_shared_shared(
+#     inducing_variable: SharedIndependentInducingVariables,
+#     kernel: SharedIndependent,
+#     Xnew: tf.Tensor,
+# ) -> tf.Tensor:
+#     Xp = kernel.kernel.get_patches(Xnew)  # [N, num_patches, patch_len]
+#     bigKzx = kernel.kernel.base_kernel.K(
+#         inducing_variable.inducing_variable.Z, Xp
+#     )  # [M, N, P] -- thanks to broadcasting of kernels
+#     Kzx = tf.reduce_sum(bigKzx * kernel.kernel.weights if hasattr(kernel.kernel, "weights") else bigKzx, [2])
+#     return Kzx / kernel.kernel.num_patches
 
 
-@Kuf.register(SharedIndependentInducingVariables, LinearCoregionalization, object)
-@check_shapes(
-    "inducing_variable: [M, D, L]",
-    "kernel.W: [P, L]",
-    "Xnew: [batch..., N, D2]",
-    "return: [L, M, batch..., N]",
-)
-def Kuf_conv_shared_linear_coregionalization(
-    inducing_variable: SharedIndependentInducingVariables,
-    kernel: LinearCoregionalization,
-    Xnew: tf.Tensor,
-) -> tf.Tensor:
-    Kzxs = []
-    for k in kernel.kernels:
-        Xp = k.get_patches(Xnew)  # [N, num_patches, patch_len]
-        bigKzx = k.base_kernel.K(
-            inducing_variable.inducing_variable.Z, Xp
-        )  # [M, N, P] -- thanks to broadcasting of kernels
-        Kzx = tf.reduce_sum(bigKzx * k.weights if hasattr(k, "weights") else bigKzx, [2])
-        Kzxs.append(Kzx / k.num_patches)
-    return tf.stack(Kzxs, axis=0)
+# @Kuf.register(SharedIndependentInducingVariables, LinearCoregionalization, object)
+# @check_shapes(
+#     "inducing_variable: [M, D, L]",
+#     "kernel.W: [P, L]",
+#     "Xnew: [batch..., N, D2]",
+#     "return: [L, M, batch..., N]",
+# )
+# def Kuf_conv_shared_linear_coregionalization(
+#     inducing_variable: SharedIndependentInducingVariables,
+#     kernel: LinearCoregionalization,
+#     Xnew: tf.Tensor,
+# ) -> tf.Tensor:
+#     Kzxs = []
+#     for k in kernel.kernels:
+#         Xp = k.get_patches(Xnew)  # [N, num_patches, patch_len]
+#         bigKzx = k.base_kernel.K(
+#             inducing_variable.inducing_variable.Z, Xp
+#         )  # [M, N, P] -- thanks to broadcasting of kernels
+#         Kzx = tf.reduce_sum(bigKzx * k.weights if hasattr(k, "weights") else bigKzx, [2])
+#         Kzxs.append(Kzx / k.num_patches)
+#     return tf.stack(Kzxs, axis=0)
 
 # assert np.array([x.shape.ndims == 2 for x in X]).all(), "X must be a list of 2D arrays i.e. images"
 # Define functions for constraints

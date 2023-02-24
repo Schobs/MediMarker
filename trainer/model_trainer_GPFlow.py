@@ -27,12 +27,12 @@ from gpflow.utilities import print_summary
 from torch.utils.data import DataLoader
 from utils.im_utils.visualisation import multi_variate_hm
 from utils.setup.argument_utils import checkpoint_loading_checking
+from models.gp_models.register import *
 from models.gp_models.tf_gpmodels import conv_sgp_rbf_fix, get_SVGP_model, get_conv_SVGP, get_conv_SVGP_linear_coreg, toms
-
 
 gpf.config.set_default_float(np.float64)
 gpf.config.set_default_summary_fmt("notebook")
-gpf.config.set_default_jitter(1e-4)
+gpf.config.set_default_jitter(1e-3)
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
 
 
@@ -71,6 +71,9 @@ class GPFlowTrainer(NetworkTrainer):
 
         self.kern = self.trainer_config.MODEL.GPFLOW.KERN
         self.kern_stride = self.trainer_config.MODEL.GPFLOW.CONV_KERN_STRIDE
+        self.ip_sample_var = self.trainer_config.MODEL.GPFLOW.INDUCING_SAMPLE_VAR
+        self.conv_kern_ls = self.trainer_config.MODEL.GPFLOW.CONV_KERN_LS  # base kernel lengthscale
+        self.conv_kern_var = self.trainer_config.MODEL.GPFLOW.CONV_KERN_V  # base kernel variance
 
         self.training_data = None
         self.all_training_input = None
@@ -104,13 +107,19 @@ class GPFlowTrainer(NetworkTrainer):
             #                              self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
             #                              self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
 
-            self.network = conv_sgp_rbf_fix(all_train_image, all_train_label,
-                                            self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-                                            self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, kern_stride=self.kern_stride)
+            # self.network = conv_sgp_rbf_fix(all_train_image, all_train_label,
+            #                                 self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+            #                                 self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, kern_stride=self.kern_stride)
 
-            # self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
-            #                                           self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-            #                                           self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
+            self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
+                                                      self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
+                                                      self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, inducing_sample_var=self.ip_sample_var,
+                                                      base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var)
+
+            # TODO set this false. add config for #epochs to turn back on try 10,50,100
+
+            # gpf.set_trainable(self.network.likelihood.variance, False)
+            # gpf.set_trainable(self.network.inducing_variable, False)
 
             del all_train_image
             del all_train_label
@@ -629,3 +638,20 @@ class GPFlowTrainer(NetworkTrainer):
             self.save_heatmaps(evaluation_logs)
 
         return summary_results, ind_results
+
+    # def maybe_update_lr(self, epoch=None, exponent=0.9):
+    #     """
+    #     if epoch is not None we overwrite epoch. Else we use epoch = self.epoch + 1
+
+    #     (maybe_update_lr is called in on_epoch_end which is called before epoch is incremented.
+    #     Therefore we need to do +1 here)
+
+    #     """
+
+    #     if self.lr_policy == "schedule":
+    #         if ep in self.lr_schedule:
+    #             self.optimizer.param_groups[0]["lr"] = self.lr_schedule[ep]
+    #     elif self.lr_policy == "poly
+    #     poly_lr_update = self.initial_lr * (1 - ep / self.max_num_epochs) ** exponent
+
+    #     self.optimizer.param_groups[0]["lr"] = poly_lr_update
