@@ -70,5 +70,9 @@ def comet_log_yaml_parameters(writer, yaml_parameters):
 
     for key, value in yaml_parameters.items():
         for key2, value2 in value.items():
-            writer.log_parameters({key+"_"+key2: value2})
+            if isinstance(value2, dict):
+                for key3, value3 in value2.items():
+                    writer.log_parameters({key+"."+key2+"."+key3: value3})
+            else:
+                writer.log_parameters({key+"."+key2: value2})
         # logger.info("Logged yaml parameters to CometML.")
