@@ -1,6 +1,6 @@
 OUTPUT:
-  OUTPUT_DIR: "/Users/oscargavin/Documents/AICS 3/dissertatione/LaNNU-Net/results" #Where to save models and results
-
+  OUTPUT_DIR: "../results" #Where to save models and results
+  # /Users/oscargavin/Documents/AICS 3/dissertatione/LaNNU-Net/results
   #Logging stuff. HIGHLY RECOMMENDED. CHECK THE DOCS FOR INFO. Please use it, it will help you a LOT.
   # If not using set USE_COMETML_LOGGING to False.
   USE_COMETML_LOGGING: True
