@@ -72,7 +72,7 @@ def main():
 
     ############ Set up model trainer, indicating if we are training or testing ############
     if not cfg.TRAINER.INFERENCE_ONLY:
-        logger.info("TRAINING PHASE")
+        # logger.info("TRAINING PHASE")
 
         if writer is not None:
             writer.add_tag("training")
@@ -135,10 +135,10 @@ def main():
         writer.add_tag("single_inference")
 
         if cfg.MODEL.CHECKPOINT:
-            logger.info("loading provided checkpoint %s", cfg.MODEL.CHECKPOINT)
+            # logger.info("loading provided checkpoint %s", cfg.MODEL.CHECKPOINT)
 
             model_name = cfg.MODEL.CHECKPOINT.split("/")[-1].split(".model")[0]
-            logger.info("model name: %s", model_name)
+            # logger.info("model name: %s", model_name)
 
             trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
             summary_results, ind_results = trainer.run_inference(
@@ -158,8 +158,8 @@ def main():
                 "model_latest",
             ]
 
-            logger.info(
-                "Loading MODELS that match substrings in: %s", models_to_test)
+            # logger.info(
+            #     "Loading MODELS that match substrings in: %s", models_to_test)
 
             for fname in os.listdir(cfg.OUTPUT.OUTPUT_DIR):
                 if ("fold" + fold in fname and ".model" in fname) and any(
@@ -173,7 +173,7 @@ def main():
                 )
 
             for i, model_p in enumerate(model_paths):
-                logger.info("loading %s", model_p)
+                # logger.info("loading %s", model_p)
                 trainer.load_checkpoint(model_p, training_bool=False)
                 summary_results, ind_results = trainer.run_inference(
                     split=inference_split, debug=cfg.INFERENCE.DEBUG)
@@ -188,17 +188,17 @@ def main():
             output_append = ""
 
     ########### Now Save all model results to a spreadsheet #############
-    if writer is not None:
-        html_to_log = save_comet_html(
-            all_model_summaries, all_model_individuals)
-        writer.log_html(html_to_log)
-        logger.info("Logged all results to CometML.")
+    # if writer is not None:
+    #     html_to_log = save_comet_html(
+    #         all_model_summaries, all_model_individuals)
+    #     writer.log_html(html_to_log)
+    #     logger.info("Logged all results to CometML.")
 
-    logger.info(
-        "saving summary of results locally to: %s",
-        os.path.join(cfg.OUTPUT.OUTPUT_DIR,
-                     "summary_results_fold" + fold + ".xlsx"),
-    )
+    # logger.info(
+    #     "saving summary of results locally to: %s",
+    #     os.path.join(cfg.OUTPUT.OUTPUT_DIR,
+    #                  "summary_results_fold" + fold + ".xlsx"),
+    # )
     with ExcelWriter(  # pylint: disable=abstract-class-instantiated
         os.path.join(
             cfg.OUTPUT.OUTPUT_DIR,
@@ -212,13 +212,13 @@ def main():
                 n = n[-31:]
             df.to_excel(writer_, n)
 
-    logger.info(
-        "saving individual sample results locally to: %s",
-        os.path.join(
-            cfg.OUTPUT.OUTPUT_DIR,
-            "individual_results_fold" + fold + output_append + ".xlsx",
-        ),
-    )
+    # logger.info(
+    #     "saving individual sample results locally to: %s",
+    #     os.path.join(
+    #         cfg.OUTPUT.OUTPUT_DIR,
+    #         "individual_results_fold" + fold + output_append + ".xlsx",
+    #     ),
+    # )
     with ExcelWriter(  # pylint: disable=abstract-class-instantiated
         os.path.join(
             cfg.OUTPUT.OUTPUT_DIR,
