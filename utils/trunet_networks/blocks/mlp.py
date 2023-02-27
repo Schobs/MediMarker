@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import torch.nn as nn
 
-from models.trunet_networks.layers import get_act_layer
-from models.trunet_networks.utils.module import look_up_option
+from trunet_networks.layers import get_act_layer
+from trunet_networks.utils.module import look_up_option
 
 SUPPORTED_DROPOUT_MODE = {"vit", "swin"}
 

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import torch.nn as nn
 
-from models.trunet_networks.layers.utils import get_act_layer, get_dropout_layer, get_norm_layer
+from trunet_networks.layers.utils import get_act_layer, get_dropout_layer, get_norm_layer
 
 
 class ADN(nn.Sequential):

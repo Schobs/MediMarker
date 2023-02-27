@@ -17,7 +17,7 @@ import torch
 import torch.nn as nn
 from torch.nn.functional import interpolate
 
-from networks.blocks.dynunet_block import UnetBasicBlock, UnetOutBlock, UnetResBlock, UnetUpBlock
+from blocks.dynunet_block import UnetBasicBlock, UnetOutBlock, UnetResBlock, UnetUpBlock
 
 __all__ = ["DynUNet", "DynUnet", "Dynunet"]
 

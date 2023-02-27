@@ -14,7 +14,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
-from models.trunet_networks.utils.module import optional_import
+from trunet_networks.utils.module import optional_import
 
 Rearrange, _ = optional_import("einops.layers.torch", name="Rearrange")
 

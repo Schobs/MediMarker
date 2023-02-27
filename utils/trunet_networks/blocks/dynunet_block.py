@@ -18,8 +18,8 @@ import torch
 import torch.nn as nn
 
 from .convolutions import Convolution
-from models.trunet_networks.layers.factories import Act, Norm
-from models.trunet_networks.layers.utils import get_act_layer, get_norm_layer
+from trunet_networks.layers.factories import Act, Norm
+from trunet_networks.layers.utils import get_act_layer, get_norm_layer
 
 
 class UnetResBlock(nn.Module):

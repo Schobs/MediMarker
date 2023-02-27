@@ -16,8 +16,8 @@ from collections.abc import Sequence
 import torch
 import torch.nn as nn
 
-from models.trunet_networks.blocks.patchembedding import PatchEmbeddingBlock
-from models.trunet_networks.blocks.transformerblock import TransformerBlock
+from trunet_networks.blocks.patchembedding import PatchEmbeddingBlock
+from trunet_networks.blocks.transformerblock import TransformerBlock
 
 __all__ = ["ViT"]
 
