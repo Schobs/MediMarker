@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/T" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/T|" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
@@ -19,7 +19,7 @@ SOLVER:
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
   DATA_LOADER_BATCH_SIZE_EVAL: 12
-  BASE_LR: 0.01
+  BASE_LR: 0.091
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 500 # epochs for validation coord error not improving before stopping training
   DECAY_POLICY: None
