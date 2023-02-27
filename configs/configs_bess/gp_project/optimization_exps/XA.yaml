@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/D" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/XA" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
@@ -19,11 +19,10 @@ SOLVER:
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
   DATA_LOADER_BATCH_SIZE_EVAL: 12
-  BASE_LR: 0.01
+  BASE_LR: 0.001
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 500 # epochs for validation coord error not improving before stopping training
   DECAY_POLICY: None
-
 
 DATASET:
   ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
@@ -73,6 +72,9 @@ MODEL:
     CONV_KERN_STRIDE: 1  #stride of convolutional kernel
     CONV_KERN_LS: 5  # base kernel lengthscale
     CONV_KERN_V: 5  # base kernel variance
+    FIX_NOISE_UNTIL_EPOCH: 500 
+    MODEL_NOISE_INIT: 0.01
+    TRAIN_IP: False
     
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]

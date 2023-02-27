@@ -79,3 +79,7 @@ INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
+
+SSH:
+  AUTO_AMEND_PATHS: False
+
