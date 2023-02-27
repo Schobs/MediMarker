@@ -627,13 +627,14 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
             # add intersection over the landmark
             x_min = max(0, int(landmark[0] - cross_size / 2))
             x_max = min(heatmap_shape[0], int(landmark[0] + (cross_size / 2)+1))
+
             y_min = max(0, int(landmark[1] - cross_size / 2))
             y_max = min(heatmap_shape[1], int(landmark[1] + (cross_size / 2)+1))
-            image[x_min:x_max, int(landmark[1]), 1] = 255  # green line
-            image[int(landmark[0]), y_min:y_max, 1] = 255  # green line
+            # image[x_min:x_max, int(landmark[1]), 1] = 255  # green line
+            # image[int(landmark[0]), y_min:y_max, 1] = 255  # green line
 
-            image[x_min:x_max, int(landmark[1]), 1] = 255  # green line
-            image[int(landmark[0]), y_min:y_max, 1] = 255  # green line
+            image[y_min:y_max, int(landmark[0]), 1] = 255  # green line
+            image[int(landmark[1]), x_min:x_max, 1] = 255  # green line
 
         all_hms.append(np.expand_dims(image, axis=0))
 
