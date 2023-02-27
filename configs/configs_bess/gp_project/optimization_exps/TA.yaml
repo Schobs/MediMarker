@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/T" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/TA" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
@@ -19,7 +19,8 @@ SOLVER:
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
   DATA_LOADER_BATCH_SIZE_EVAL: 12
-  BASE_LR: 0.01
+  BASE_LR: 0.001
+
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 500 # epochs for validation coord error not improving before stopping training
   DECAY_POLICY: None
@@ -79,3 +80,10 @@ INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
+<<<<<<< HEAD
+
+SSH:
+  AUTO_AMEND_PATHS: False
+
+=======
+>>>>>>> 651b2a2c43e31295a7b56bfa4026a347d3f1911d

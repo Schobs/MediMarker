@@ -120,9 +120,14 @@ class GPFlowTrainer(NetworkTrainer):
                                                       base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var, init_likelihood_noise=self.initial_likelihood_noise,)
 
             if self.fix_inducing_points:
+                self.logger.info("Fixing inducing points...")
                 gpf.set_trainable(self.network.inducing_variable, False)
+            else:
+                self.logger.info("Not fixing inducing points...")
 
             if self.fix_noise_until > 0:
+                self.logger.info("Fixing likelihood variance until Epoch %s" % self.fix_noise_until)
+
                 gpf.set_trainable(self.network.likelihood.variance, False)
             # TODO set this false. add config for #epochs to turn back on try 10,50,100
 
@@ -515,7 +520,8 @@ class GPFlowTrainer(NetworkTrainer):
         self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
         self.maybe_update_lr()
 
-        if (self.fix_noise_until > 0) and (self.epoch > self.fix_noise_until):
+        if (self.fix_noise_until > 0) and (self.epoch == self.fix_noise_until):
+            self.logger.info("Unfixing noise. Now trains")
             gpf.set_trainable(self.network.likelihood.variance, True)
 
         return continue_training
@@ -691,5 +697,7 @@ class GPFlowTrainer(NetworkTrainer):
         Update the learning rate if the learning rate policy is set to "scheduled_10".
 
         """
-        if self.lr_policy == "scheduled_10" and self.epoch > 10:
+        if self.lr_policy == "scheduled_10" and self.epoch == 10:
+            self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
+
             self.optimizer.lr.assign(self.initial_lr / 10)
