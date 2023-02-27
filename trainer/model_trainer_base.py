@@ -4,6 +4,7 @@ from inference.ensemble_inference_helper import EnsembleUncertainties
 import torch
 import numpy as np
 from time import time
+from utils.logging.comet_logging import comet_log_yaml_parameters
 
 # import multiprocessing as mp
 from utils.logging.dict_logger import DictLogger
@@ -191,7 +192,8 @@ class NetworkTrainer(ABC):
         self._maybe_init_amp()
 
         if self.comet_logger:
-            self.comet_logger.log_parameters(self.trainer_config)
+            # self.comet_logger.log_parameters(self.trainer_config)
+            comet_log_yaml_parameters(self.comet_logger, self.trainer_config)
 
         # This is the logger that will save epoch results to log & log variables at inference, extend this for any extra
         # stuff you want to log/save at evaluation!

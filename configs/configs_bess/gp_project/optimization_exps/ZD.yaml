@@ -18,8 +18,9 @@ SOLVER:
   MAX_EPOCHS: 10000
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
+
   DATA_LOADER_BATCH_SIZE_EVAL: 6
-  BASE_LR: 0.01
+  BASE_LR: 0.001
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 500 # epochs for validation coord error not improving before stopping training
   DECAY_POLICY: None
@@ -64,6 +65,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/ZD/model_latest_fold0.model"
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     INDUCING_SAMPLE_VAR: 5
