@@ -22,8 +22,8 @@ from torch.nn import LayerNorm
 from models.trunet_networks.layers.weight_init import trunc_normal_
 from models.trunet_networks.layers.factories import Conv
 
-# from utils import ensure_tuple_rep, optional_import
-# from utils.module import look_up_option
+from models.trunet_networks.utils.misc import ensure_tuple_rep
+from models.trunet_networks.utils.module import look_up_option
 
 # Rearrange, _ = optional_import("einops.layers.torch", name="Rearrange")
 SUPPORTED_EMBEDDING_TYPES = {"conv", "perceptron"}

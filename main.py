@@ -1,17 +1,17 @@
 # from __future__ import print_function, absolute_import
+from utils.setup.argument_utils import arg_parse
+from trainer.model_trainer_index import MODEL_TRAINER_INDEX
+from datasets.dataset_index import DATASET_INDEX
 import os
 from datetime import datetime
 from comet_ml import Experiment
 import torch
 from pandas import ExcelWriter
 from pytorch_lightning.utilities.seed import seed_everything
+import lightning_fabric as lf
 
-from datasets.dataset_index import DATASET_INDEX
 
-
-from trainer.model_trainer_index import MODEL_TRAINER_INDEX
 # from utils.logging.comet_logging import save_comet_html
-from utils.setup.argument_utils import arg_parse
 
 # from utils.logging.python_logger import get_logger, initialize_logging
 
@@ -28,7 +28,7 @@ def main():
 
     seed = cfg.SOLVER.SEED
     if seed is not None:
-        seed_everything(seed)
+        lf.seed_everything(seed)
 
     os.makedirs(cfg.OUTPUT.OUTPUT_DIR, exist_ok=True)
     time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -36,9 +36,9 @@ def main():
 
     # ---- setup logger ----
     # initialize_logging()
-    logger = get_logger(cfg.OUTPUT.LOGGER_OUTPUT)
-    logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
-    logger.info("Config \n %s ", cfg)
+    # logger = get_logger(cfg.OUTPUT.LOGGER_OUTPUT)
+    # logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
+    # logger.info("Config \n %s ", cfg)
 
     exp_name = '_'.join(cfg.OUTPUT.OUTPUT_DIR.split(
         "/")[-2:]) + "_Fold" + fold + "_" + str(time)
@@ -58,7 +58,7 @@ def main():
         for tag_ in cfg.OUTPUT.COMET_TAGS:
             writer.add_tag(str(tag_))
 
-        logger.info("The comet.ml experiment HTML is %s ", writer.url)
+        # logger.info("The comet.ml experiment HTML is %s ", writer.url)
 
     else:
         writer = None
@@ -103,7 +103,7 @@ def main():
         trainer.initialize(training_bool=False)
 
     ########### TESTING ##############
-    logger.info("TESTING PHASE")
+    # logger.info("TESTING PHASE")
 
     inference_split = cfg.INFERENCE.SPLIT
     all_model_summaries = {}
@@ -234,9 +234,9 @@ def main():
 
     if writer is not None:
         writer.add_tag("completed inference")
-        logger.info("Experiment found:at %s" % writer.url)
+        # logger.info("Experiment found:at %s" % writer.url)
 
-    logger.info("Done!")
+    # logger.info("Done!")
 
 
 if __name__ == "__main__":

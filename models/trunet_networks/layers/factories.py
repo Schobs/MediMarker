@@ -68,7 +68,7 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-# from utils import look_up_option, optional_import
+from models.trunet_networks.utils.module import look_up_option
 
 # InstanceNorm3dNVFuser, has_nvfuser = optional_import(
 #     "apex.normalization", name="InstanceNorm3dNVFuser")

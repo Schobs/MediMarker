@@ -25,9 +25,9 @@ from typing import Any
 import torch
 import torch.nn as nn
 
-# from utils.misc import ensure_tuple, save_obj, set_determinism
-# from utils.module import look_up_option, pytorch_after
-# from utils.type_conversion import convert_to_tensor, PathLike
+from .misc import ensure_tuple, save_obj, set_determinism
+from .module import look_up_option, pytorch_after
+from .type_conversion import convert_to_tensor
 
 __all__ = [
     "one_hot",

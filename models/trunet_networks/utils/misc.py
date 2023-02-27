@@ -28,8 +28,8 @@ from typing import Any, TypeVar, cast, overload
 import numpy as np
 import torch
 
-from type_definitions import NdarrayOrTensor, NdarrayTensor, PathLike
-from utils.module import version_leq
+from .type_definitions import NdarrayOrTensor, NdarrayTensor, PathLike
+from .module import version_leq
 
 __all__ = [
     "zip_with",

@@ -18,11 +18,11 @@ from typing import Any
 import numpy as np
 import torch
 
-from type_definitions import DtypeLike, NdarrayTensor
-from utils import optional_import
+from .type_definitions import DtypeLike, NdarrayTensor
+# from .utils import optional_import
 
-cp, has_cp = optional_import("cupy")
-cp_ndarray, _ = optional_import("cupy", name="ndarray")
+# cp, has_cp = optional_import("cupy")
+# cp_ndarray, _ = optional_import("cupy", name="ndarray")
 
 __all__ = [
     "get_numpy_dtype_from_string",

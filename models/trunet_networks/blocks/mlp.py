@@ -14,7 +14,7 @@ from __future__ import annotations
 import torch.nn as nn
 
 from models.trunet_networks.layers import get_act_layer
-# from utils import look_up_option
+from models.trunet_networks.utils.module import look_up_option
 
 SUPPORTED_DROPOUT_MODE = {"vit", "swin"}
 

@@ -35,9 +35,9 @@ class TrUNetTrainer(NetworkTrainer):
 
         # get model config parameters
         self.num_out_heatmaps = len(self.trainer_config.DATASET.LANDMARKS)
-        self.base_num_features = self.trainer_config.MODEL.TRUNET.INIT_FEATURES
-        self.min_feature_res = self.trainer_config.MODEL.TRUNET.MIN_FEATURE_RESOLUTION
-        self.max_features = self.trainer_config.MODEL.TRUNET.MAX_FEATURES
+        self.base_num_features = self.trainer_config.MODEL.UNET.INIT_FEATURES
+        self.min_feature_res = self.trainer_config.MODEL.UNET.MIN_FEATURE_RESOLUTION
+        self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
         self.input_size = (
             self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE
             if self.sampler_mode == "patch"
