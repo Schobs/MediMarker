@@ -2,7 +2,7 @@ from torch import nn
 import os
 from utils.setup.initialization import InitWeights_KaimingUniform
 from losses.losses import MultiBranchPatchLoss
-from models.PHD_Net import PHDNet
+from models.PHD_Net_Res import PHD_Net_Res as PHDNet
 import torch
 import numpy as np
 from utils.im_utils.heatmap_manipulation import get_coords, candidate_smoothing
@@ -76,7 +76,7 @@ class PHDNetTrainer(NetworkTrainer):
         }
 
         ################# Settings for saving checkpoints ##################################
-        self.save_every = 25
+        # self.save_every = 25
 
     def initialize_network(self):
 
@@ -117,10 +117,7 @@ class PHDNetTrainer(NetworkTrainer):
                 self.trainer_config.MODEL.PHDNET.WEIGHT_DISP_LOSS_BY_HEATMAP,
             )
         else:
-            raise ValueError(
-                'the loss function %s is not implemented for PHD-Net. Try "mse".'
-                % (loss_str)
-            )
+            raise ValueError(f'the loss function {loss_str} is not implemented for PHD-Net. Try \"mse\".')
 
         print("initialized Loss function.")
 
@@ -154,7 +151,6 @@ class PHDNetTrainer(NetworkTrainer):
                 sample_og_size,
                 self.maxpool_factor,
                 log_displacement_bool=self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS,
-                debug=self.trainer_config.INFERENCE.DEBUG,
             )
             if self.resize_first:
                 csm = Resize(sample_og_size, interpolation=InterpolationMode.BICUBIC)(
@@ -194,8 +190,8 @@ class PHDNetTrainer(NetworkTrainer):
 
         for idx, patch in enumerate(patch_predictions):
             full_heatmap[
-                stitching_info[idx][1] : stitching_info[idx][1] + patch_size_y,
-                stitching_info[idx][0] : stitching_info[idx][0] + patch_size_x,
+                stitching_info[idx][1]: stitching_info[idx][1] + patch_size_y,
+                stitching_info[idx][0]: stitching_info[idx][0] + patch_size_x,
             ] += patch.detach.cpu().numpy()
 
         plt.imshow(full_heatmap)

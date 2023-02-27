@@ -1,8 +1,31 @@
 import imgaug.augmenters as iaa
-
+import imgaug
 import albumentations as A
 import albumentations.augmentations.functional as F
 from albumentations.pytorch import ToTensorV2
+import numpy as np
+import torch
+import matplotlib.pyplot as plt
+
+
+def custom_flatten(iaaa_return):
+    """Customn transformation to flatten an image and turn it into a tensor.
+
+    Args:
+        image (_type_): _description_
+        keypoints (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    image, keypoints = iaaa_return
+    # plt.imshow(image)
+    # plt.show()
+    images_reshape = image[:, :]
+    flattened_image = images_reshape.flatten()
+    # flattened_image = flattened_image.reshape(1,flattened_image.shape[0], flattened_image.shape[1], 1)
+    # flattened_image = torch.from_numpy(flattened_image)
+    return flattened_image, keypoints
 
 
 def get_aug_package_loader(aug_package):
@@ -41,7 +64,13 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
     Returns:
         transform: sequence of transforms
     """
-    if data_augmentation == "AffineSimple":
+
+    if data_augmentation == "Flatten":
+
+        def transform(image, keypoints): return custom_flatten(
+            iaa.CenterCropToFixedSize(final_im_size[0], final_im_size[1])(image=image, keypoints=keypoints))
+
+    elif data_augmentation == "AffineSimple":
 
         transform = iaa.Sequential(
             [

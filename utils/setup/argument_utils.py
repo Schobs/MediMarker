@@ -1,5 +1,8 @@
 import warnings
-
+import logging
+import os
+from pathlib import Path
+from datetime import datetime
 import argparse
 from config import get_cfg_defaults  # pylint: disable=import-error
 from yacs.config import CfgNode as CN
@@ -46,11 +49,13 @@ def infer_additional_arguments(yaml_args):
         yaml_args (.yaml): _description_
 
     Raises:
+
         NotImplementedError: _description_
 
     Returns:
         _type_: _description_
     """
+
     yaml_args.INFERRED_ARGS = CN()
     yaml_args.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD = False
 
@@ -72,6 +77,41 @@ def infer_additional_arguments(yaml_args):
         raise NotImplementedError(
             "Only input_size is supported for now for SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM, not full"
         )
+
+    # If set in config, autodetect if NOT running on SSH and running locally,
+    # we amend paths to where the SSH is mounted locally
+    if yaml_args.SSH.AUTO_AMEND_PATHS:
+
+        if "SSH_CONNECTION" not in os.environ:
+            if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.DATASET.ROOT:
+                yaml_args.DATASET.ROOT = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                             Path(yaml_args.DATASET.ROOT).relative_to(Path(yaml_args.DATASET.ROOT).anchor))
+
+            if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.DATASET.SRC_TARGETS:
+                yaml_args.DATASET.SRC_TARGETS = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                    Path(yaml_args.DATASET.SRC_TARGETS).relative_to(Path(yaml_args.DATASET.SRC_TARGETS).anchor))
+
+            if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.OUTPUT.OUTPUT_DIR:
+
+                yaml_args.OUTPUT.OUTPUT_DIR = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                  Path(yaml_args.OUTPUT.OUTPUT_DIR).relative_to(Path(yaml_args.OUTPUT.OUTPUT_DIR).anchor))
+
+            if yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH is not None:
+                if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH:
+
+                    yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                                                Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).relative_to(Path(yaml_args.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH).anchor))
+
+            if yaml_args.MODEL.CHECKPOINT is not None:
+                if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.MODEL.CHECKPOINT:
+
+                    yaml_args.MODEL.CHECKPOINT = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                     Path(yaml_args.MODEL.CHECKPOINT).relative_to(Path(yaml_args.MODEL.CHECKPOINT).anchor))
+
+    # Set logger path
+
+    yaml_args.OUTPUT.LOGGER_OUTPUT = os.path.join(yaml_args.OUTPUT.OUTPUT_DIR,  "_Fold" + str(
+        yaml_args.TRAINER.FOLD) + "_" + str(datetime.now().strftime("%Y-%m-%d_%H:%M:%S")) + "_log.txt")
 
     return yaml_args
 
@@ -110,7 +150,7 @@ def argument_checking(yaml_args):
         all_errors.append(e)
 
     try:
-        accepted_samplers = ["patch", "full"]
+        accepted_samplers = ["patch_bias", "patch_centred", "full"]
         if yaml_args.SAMPLER.SAMPLE_MODE not in accepted_samplers:
             raise ValueError(
                 "SAMPLER.SAMPLE_MODE %s not recognised. Choose from %s"
@@ -124,6 +164,7 @@ def argument_checking(yaml_args):
     #   a) ensure SAMPLER.PATCH.SAMPLE_PATCH_SIZE !=  DATASET.INPUT_SIZE if resizing images to input_size
     #   b) ensure SAMPLER.PATCH.SAMPLE_PATCH_SIZE < DATASET.INPUT_SIZE if resizing images to input_size
     #   c) If user is sampling from full resolution, provide a warning that the patch size should be smaller than the image size
+    #   d) cannot regress sigma in patch mode yet due to multi-threading issue. Need to fix dataset method x_y_patch corner being hardcoded [0,0]
 
     if yaml_args.MODEL.ARCHITECTURE == "PHD-Net":
         try:
@@ -135,7 +176,7 @@ def argument_checking(yaml_args):
         except ValueError as er_msg:
             all_errors.append(er_msg)
 
-    if yaml_args.SAMPLER.SAMPLE_MODE == "patch":
+    if yaml_args.SAMPLER.SAMPLE_MODE in ["patch_bias", "patch_centred"]:
 
         # 1a
         try:
@@ -145,7 +186,7 @@ def argument_checking(yaml_args):
                 == yaml_args.SAMPLER.INPUT_SIZE
             ):
                 raise ValueError(
-                    """You want to train the model by sampling patches (SAMPLER.SAMPLE_MODE == "patch") from the image resized to input size defined by """
+                    """You want to train the model by sampling patches (SAMPLER.SAMPLE_MODE == "patch_bias" or "patch_centred") from the image resized to input size defined by """
                     """SAMPLER.INPUT_SIZE, indicated by SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM == "input_size"""
                     """However, your SAMPLER.SAMPLE_PATCH_SIZE (%s) is the same as your input size SAMPLER.INPUT_SIZE (%s). You are doing "full" sampling, """
                     """ unintentionally running the wrong scheme."""
@@ -179,6 +220,15 @@ def argument_checking(yaml_args):
                 "Make sure the SAMPLER.PATCH.SAMPLE_PATCH_SIZE is smaller than ALL of your input images! Future: make a pre-processing check for this. ",
                 stacklevel=2,
             )
+        # 1d
+        try:
+            if yaml_args.SOLVER.REGRESS_SIGMA:
+                raise ValueError(
+                    "Cannot regress sigma in patch mode yet due to multi-threading issue. Need to fix dataset method x_y_patch corner being hardcoded [0,0]"
+                )
+
+        except ValueError as e:
+            all_errors.append(e)
 
     # deep supervision cases to cover:
     try:
@@ -236,9 +286,59 @@ def argument_checking(yaml_args):
             stacklevel=2,
         )
 
+    # Some GP checking
+
+    if yaml_args.MODEL.ARCHITECTURE == "GP":
+        # 1) the batch size should be -1 i.e. the size of the dataset!
+
+        # 1)
+        try:
+            if yaml_args.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN != -1:
+                raise ValueError(
+                    "You are using a GP model (MODEL.ARCHITECTURE = GP) but your SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN is not -1. "
+                    "Minibatching not supported for GP so all data needs to be in one batch. Set this by setting SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN = -1."
+                )
+        except ValueError as val_error:
+            all_errors.append(val_error)
+
     if all_errors:
         print("I have identified some issues with your .yaml config file:")
         raise ValueError(all_errors)
+
+
+def checkpoint_loading_checking(trainer_config, sampler_mode, training_resolution):
+    """Checks that the loaded checkpoint is compatible with the current model and training settings.
+
+    Raises:
+        ValueError: _description_
+        ValueError: _description_
+    """
+
+    # Check the sampler in config is the same as the one in the checkpoint.
+    if sampler_mode != trainer_config.SAMPLER.SAMPLE_MODE:
+        raise ValueError(
+            f"model was trained using SAMPLER.SAMPLE_MODE {sampler_mode} but attempting to load with SAMPLER.SAMPLE_MODE {trainer_config.SAMPLER.SAMPLE_MODE}. \
+            Please amend this in config file."
+        )
+
+    # check if the training resolution from config is the same as the one in the checkpoint.
+    if sampler_mode in ["patch_bias", "patch_centred"]:
+        if (
+            training_resolution
+            != trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
+        ):
+            raise ValueError(
+                "model was trained using SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM %s but attempting to load with self.training_resolution %s. \
+                Please amend this in config file."
+                % (training_resolution, trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM)
+            )
+    else:
+        if training_resolution != trainer_config.SAMPLER.INPUT_SIZE:
+            raise ValueError(
+                "model was trained using SAMPLER.INPUT_SIZE %s but attempting to load with self.training_resolution %s. \
+                Please amend this in config file."
+                % (training_resolution, trainer_config.SAMPLER.INPUT_SIZE)
+            )
 
 
 def arg_parse():
@@ -265,8 +365,6 @@ def arg_parse():
         cfg.TRAINER.FOLD = args.fold
     # cfg.freeze()
     cfg = infer_additional_arguments(cfg)
-
-    print("Config: \n ", cfg)
 
     argument_checking(cfg)
     return cfg

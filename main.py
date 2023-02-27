@@ -13,7 +13,12 @@ import lightning_fabric as lf
 
 # from utils.logging.comet_logging import save_comet_html
 
-# from utils.logging.python_logger import get_logger, initialize_logging
+
+from trainer.model_trainer_index import MODEL_TRAINER_INDEX
+from utils.logging.comet_logging import save_comet_html
+from utils.setup.argument_utils import arg_parse
+
+from utils.logging.python_logger import get_logger, initialize_logging
 
 
 def main():
@@ -28,7 +33,7 @@ def main():
 
     seed = cfg.SOLVER.SEED
     if seed is not None:
-        lf.seed_everything(seed)
+        seed_everything(seed)
 
     os.makedirs(cfg.OUTPUT.OUTPUT_DIR, exist_ok=True)
     time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
@@ -36,9 +41,15 @@ def main():
 
     # ---- setup logger ----
     # initialize_logging()
-    # logger = get_logger(cfg.OUTPUT.LOGGER_OUTPUT)
-    # logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
-    # logger.info("Config \n %s ", cfg)
+    logger = get_logger(cfg.OUTPUT.LOGGER_OUTPUT)
+    logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
+    logger.info("Config \n %s ", cfg)
+
+    # ---- setup logger ----
+    # initialize_logging()
+    logger = get_logger(cfg.OUTPUT.LOGGER_OUTPUT)
+    logger.info("Set logger output path: %s ", cfg.OUTPUT.LOGGER_OUTPUT)
+    logger.info("Config \n %s ", cfg)
 
     exp_name = '_'.join(cfg.OUTPUT.OUTPUT_DIR.split(
         "/")[-2:]) + "_Fold" + fold + "_" + str(time)
@@ -58,7 +69,7 @@ def main():
         for tag_ in cfg.OUTPUT.COMET_TAGS:
             writer.add_tag(str(tag_))
 
-        # logger.info("The comet.ml experiment HTML is %s ", writer.url)
+        logger.info("The comet.ml experiment name is %s ", exp_name)
 
     else:
         writer = None
@@ -72,7 +83,7 @@ def main():
 
     ############ Set up model trainer, indicating if we are training or testing ############
     if not cfg.TRAINER.INFERENCE_ONLY:
-        # logger.info("TRAINING PHASE")
+        logger.info("TRAINING PHASE")
 
         if writer is not None:
             writer.add_tag("training")
@@ -103,7 +114,7 @@ def main():
         trainer.initialize(training_bool=False)
 
     ########### TESTING ##############
-    # logger.info("TESTING PHASE")
+    logger.info("TESTING PHASE")
 
     inference_split = cfg.INFERENCE.SPLIT
     all_model_summaries = {}
@@ -135,10 +146,10 @@ def main():
         writer.add_tag("single_inference")
 
         if cfg.MODEL.CHECKPOINT:
-            # logger.info("loading provided checkpoint %s", cfg.MODEL.CHECKPOINT)
+            logger.info("loading provided checkpoint %s", cfg.MODEL.CHECKPOINT)
 
             model_name = cfg.MODEL.CHECKPOINT.split("/")[-1].split(".model")[0]
-            # logger.info("model name: %s", model_name)
+            logger.info("model name: %s", model_name)
 
             trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
             summary_results, ind_results = trainer.run_inference(
@@ -158,8 +169,7 @@ def main():
                 "model_latest",
             ]
 
-            # logger.info(
-            #     "Loading MODELS that match substrings in: %s", models_to_test)
+            logger.info("Loading MODELS that match substrings in: %s", models_to_test)
 
             for fname in os.listdir(cfg.OUTPUT.OUTPUT_DIR):
                 if ("fold" + fold in fname and ".model" in fname) and any(
@@ -173,10 +183,9 @@ def main():
                 )
 
             for i, model_p in enumerate(model_paths):
-                # logger.info("loading %s", model_p)
+                logger.info("loading %s", model_p)
                 trainer.load_checkpoint(model_p, training_bool=False)
-                summary_results, ind_results = trainer.run_inference(
-                    split=inference_split, debug=cfg.INFERENCE.DEBUG)
+                summary_results, ind_results = trainer.run_inference(split=inference_split, debug=cfg.INFERENCE.DEBUG)
 
                 all_model_summaries[model_names[i]] = summary_results
                 all_model_individuals[model_names[i]] = ind_results
@@ -188,17 +197,15 @@ def main():
             output_append = ""
 
     ########### Now Save all model results to a spreadsheet #############
-    # if writer is not None:
-    #     html_to_log = save_comet_html(
-    #         all_model_summaries, all_model_individuals)
-    #     writer.log_html(html_to_log)
-    #     logger.info("Logged all results to CometML.")
+    if writer is not None:
+        html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
+        writer.log_html(html_to_log)
+        logger.info("Logged all results to CometML.")
 
-    # logger.info(
-    #     "saving summary of results locally to: %s",
-    #     os.path.join(cfg.OUTPUT.OUTPUT_DIR,
-    #                  "summary_results_fold" + fold + ".xlsx"),
-    # )
+    logger.info(
+        "saving summary of results locally to: %s",
+        os.path.join(cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold" + fold + ".xlsx"),
+    )
     with ExcelWriter(  # pylint: disable=abstract-class-instantiated
         os.path.join(
             cfg.OUTPUT.OUTPUT_DIR,
@@ -212,13 +219,13 @@ def main():
                 n = n[-31:]
             df.to_excel(writer_, n)
 
-    # logger.info(
-    #     "saving individual sample results locally to: %s",
-    #     os.path.join(
-    #         cfg.OUTPUT.OUTPUT_DIR,
-    #         "individual_results_fold" + fold + output_append + ".xlsx",
-    #     ),
-    # )
+    logger.info(
+        "saving individual sample results locally to: %s",
+        os.path.join(
+            cfg.OUTPUT.OUTPUT_DIR,
+            "individual_results_fold" + fold + output_append + ".xlsx",
+        ),
+    )
     with ExcelWriter(  # pylint: disable=abstract-class-instantiated
         os.path.join(
             cfg.OUTPUT.OUTPUT_DIR,

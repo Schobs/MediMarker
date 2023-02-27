@@ -1,3 +1,4 @@
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.patches as patches
@@ -287,10 +288,11 @@ def visualize_patch(
 
     """
     assert len(full_lm) == len(landmarks) == 2
+    logger = logging.getLogger()
 
     fig, ax = plt.subplots(nrows=1, ncols=3, squeeze=False)
 
-    print("full im shape and patch shape: ", full_im.shape, image_patch.shape)
+    logger.info("full im shape: %s, patch shape: %s ", full_im.shape, image_patch.shape)
 
     ax[0, 0].imshow(full_im, cmap="gray")
     rect1 = patches.Rectangle(
@@ -339,6 +341,90 @@ def visualize_patch(
     plt.close()
 
 
+def visualize_centre_patch(
+    full_im, full_landmarks, image_patch, patch_landmarks
+):
+    """
+    visualize a full image with a landmark, and the image patch along with the same landmark.
+    full_landmarks include: original center, jittered center, full groundtruth
+    patch_landmarks include :  norm og center, norm, jittered center, norm groundtruth
+
+    """
+    assert len(patch_landmarks) == len(full_landmarks) == 3
+
+    logger = logging.getLogger()
+
+    fig, ax = plt.subplots(nrows=1, ncols=2, squeeze=False)
+
+    logger.info("full image shape: %s, patch shape: %s ",
+                full_im.shape, image_patch.shape)
+    logger.info("MAGENTA = original centre, ORANGE = jittered centre, GREEN = ground Truth")
+
+    # Original Image
+    ax[0, 0].imshow(full_im, cmap="gray")
+    rect1 = patches.Rectangle(
+        (int(full_landmarks[0][0]), int(full_landmarks[0][1])),
+        3,
+        3,
+        linewidth=2,
+        edgecolor="m",
+        facecolor="none",
+    )
+    ax[0, 0].add_patch(rect1)
+    rect11 = patches.Rectangle(
+        (int(full_landmarks[1][0]), int(full_landmarks[1][1])),
+        3,
+        3,
+        linewidth=2,
+        edgecolor="green",
+        facecolor="none",
+    )
+    ax[0, 0].add_patch(rect11)
+
+    rect13 = patches.Rectangle(
+        (int(full_landmarks[2][0]), int(full_landmarks[2][1])),
+        3,
+        3,
+        linewidth=2,
+        edgecolor="orange",
+        facecolor="none",
+    )
+    ax[0, 0].add_patch(rect13)
+
+
+    ax[0, 1].imshow(image_patch, cmap="gray")
+    rect20 = patches.Rectangle(
+        (int(patch_landmarks[0][0]), int(patch_landmarks[0][1])),
+        3,
+        3,
+        linewidth=2,
+        edgecolor="m",
+        facecolor="none",
+    )
+    ax[0, 1].add_patch(rect20)
+
+    rect2 = patches.Rectangle(
+        (int(patch_landmarks[1][0]), int(patch_landmarks[1][1])),
+        3,
+        3,
+        linewidth=2,
+        edgecolor="green",
+        facecolor="none",
+    )
+    ax[0, 1].add_patch(rect2)
+    rect22 = patches.Rectangle(
+        (int(patch_landmarks[2][0]), int(patch_landmarks[2][1])),
+        3,
+        3,
+        linewidth=2,
+        edgecolor="orange",
+        facecolor="none",
+    )
+    ax[0, 1].add_patch(rect22)
+    plt.show()
+    plt.close()
+
+
 def visualize_imageNcoords_cropped_imgNnormcoords(
     og_image, cropped_im, og_coords, norm_coords, lm_indicators
 ):
@@ -377,27 +463,23 @@ def visualize_image_trans_target(og_image, trans_image, target):
 
     """
     fig, ax = plt.subplots(nrows=1, ncols=target.shape[0] + 3, squeeze=False)
-
-    print(
-        "mean and std of OG image:",
+    logger = logging.getLogger()
+    logger.info(
+        "mean and std of OG image %s +/- %s.And the image size %s ",
         np.round(np.mean(og_image), 5),
         np.round(np.std(og_image)),
-        "and the image size@ ",
         og_image.shape,
     )
-    print(
-        "mean and std of trans image:",
+    logger.info(
+        "mean and std of trans image: %s +/- %s. And the image size: %s",
         np.round(np.mean(trans_image.cpu().numpy()), 5),
         np.round(np.std(trans_image.cpu().numpy())),
-        "and the image size@ ",
         trans_image.shape,
     )
-    print(
-        "mean and std of target landmark:",
-        target.shape,
+    logger.info(
+        "mean and std of target landmark: %s +/- %s.And the target shape: %s ",
         np.round(np.mean(target.cpu().numpy()), 5),
         np.round(np.std(target.cpu().numpy())),
-        "and the image size@ ",
         target.shape,
     )
 
