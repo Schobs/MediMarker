@@ -594,7 +594,13 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
         m1 = y_mean[sample_idx]
         s1 = cov_matr[sample_idx, :, sample_idx, :]
         if noise is not None:
-            s1 += [[noise, 0], [0, noise]]
+            if noise.ndim == 1:
+                s1 += [[noise[0], 0], [0, noise]]
+            elif noise.ndim == 0:
+                s1 += [[noise, 0], [0, noise]]
+            else:
+                raise ValueError("Noise must be a scalar or a vector of length 2")
+
         k1 = multivariate_normal(mean=m1, cov=s1)
 
         # create a grid of (x,y) coordinates at which to evaluate the kernels

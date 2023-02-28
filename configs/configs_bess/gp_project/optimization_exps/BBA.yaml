@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/TA" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/BBA" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
@@ -19,8 +19,7 @@ SOLVER:
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
   DATA_LOADER_BATCH_SIZE_EVAL: 12
-  BASE_LR: 0.001
-
+  BASE_LR: 0.01
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 500 # epochs for validation coord error not improving before stopping training
   DECAY_POLICY: None
@@ -56,26 +55,27 @@ SAMPLER:
   PATCH:
     SAMPLER_BIAS: 1.0 #irrelevent for patch_centred
     RESOLUTION_TO_SAMPLE_FROM:  "input_size" #means it samples from 512,512 not the original resolution
-    SAMPLE_PATCH_SIZE: [64,64] #patch size
+    SAMPLE_PATCH_SIZE: [32,32] #patch size
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_all/individual_results_fold0.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error_f0"
     CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
-    CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
+    CENTRED_PATCH_DETERMINISTIC: True  #if True, will always sample the same patch for a given image i.e. same jitter applied.
 
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
-    INDUCING_SAMPLE_VAR: 1
+    INDUCING_SAMPLE_VAR: 3
     KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
     CONV_KERN_SIZE: [5,5]  # size of kernel for convolutional kernel
-    CONV_KERN_STRIDE: 5  #stride of convolutional kernel
-    CONV_KERN_LS: 7  # base kernel lengthscale
-    CONV_KERN_V: 7  # base kernel variance
+    CONV_KERN_STRIDE: 1  #stride of convolutional kernel
+    CONV_KERN_LS: 5  # base kernel lengthscale
+    CONV_KERN_V: 5  # base kernel variance
     FIX_NOISE_UNTIL_EPOCH: 500 
     MODEL_NOISE_INIT: 0.01
-
+    TRAIN_IP: False
+    
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
@@ -83,3 +83,9 @@ INFERENCE:
 
 SSH:
   AUTO_AMEND_PATHS: False
+
+
+SSH:
+  AUTO_AMEND_PATHS: False
+
+

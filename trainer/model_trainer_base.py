@@ -81,10 +81,13 @@ class NetworkTrainer(ABC):
                                      "dataset_split_size": self.trainer_config.DATASET.TRAINSET_SIZE}
 
         self.data_aug_args_training = {"data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
-                                       "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
+                                       "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
+                                       "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
                                        }
         self.data_aug_args_evaluation = {"data_augmentation_strategy": None,
-                                         "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
+                                         "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
+                                         "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
+
                                          }
         self.label_generator_args = {
             "generate_heatmaps_here": not self.gen_hms_in_mainthread,

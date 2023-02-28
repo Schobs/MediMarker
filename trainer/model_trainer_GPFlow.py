@@ -63,10 +63,14 @@ class GPFlowTrainer(NetworkTrainer):
         self.likelihood = None
 
         self.data_aug_args_training = {"data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
-                                       "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
+                                       "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
+                                        "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
+
                                        }
         self.data_aug_args_evaluation = {"data_augmentation_strategy":  self.trainer_config.SAMPLER.DATA_AUG,
-                                         "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE
+                                         "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
+                                        "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
+
                                          }
 
         self.kern = self.trainer_config.MODEL.GPFLOW.KERN
@@ -77,6 +81,7 @@ class GPFlowTrainer(NetworkTrainer):
         self.fix_noise_until = self.trainer_config.MODEL.GPFLOW.FIX_NOISE_UNTIL_EPOCH
         self.fix_inducing_points = self.trainer_config.MODEL.GPFLOW.TRAIN_IP
         self.initial_likelihood_noise = self.trainer_config.MODEL.GPFLOW.MODEL_NOISE_INIT
+        self.independent_likelihoods = self.trainer_config.MODEL.GPFLOW.INDEPENDENT_LIKELIHOODS
 
         self.training_data = None
         self.all_training_input = None
@@ -117,7 +122,8 @@ class GPFlowTrainer(NetworkTrainer):
             self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
                                                       self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
                                                       self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, inducing_sample_var=self.ip_sample_var,
-                                                      base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var, init_likelihood_noise=self.initial_likelihood_noise,)
+                                                      base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var,
+                                                      init_likelihood_noise=self.initial_likelihood_noise, independent_likelihoods=self.independent_likelihoods)
 
             if self.fix_inducing_points:
                 self.logger.info("Fixing inducing points...")
@@ -125,10 +131,13 @@ class GPFlowTrainer(NetworkTrainer):
             else:
                 self.logger.info("Not fixing inducing points...")
 
-            if self.fix_noise_until > 0:
+            if self.fix_noise_until > self.epoch:
                 self.logger.info("Fixing likelihood variance until Epoch %s" % self.fix_noise_until)
 
-                gpf.set_trainable(self.network.likelihood.variance, False)
+                if self.independent_likelihoods:
+                    [gpf.set_trainable(x.variance, False) for x in self.network.likelihood.likelihoods]
+                else:
+                    gpf.set_trainable(self.network.likelihood.variance, False)
             # TODO set this false. add config for #epochs to turn back on try 10,50,100
 
             # gpf.set_trainable(self.network.likelihood.variance, False)
@@ -294,7 +303,12 @@ class GPFlowTrainer(NetworkTrainer):
         # Only attempts loss if annotations avaliable for entire batch
         if all(data_dict["annotation_available"]):
             l = self.optimization_step((data, target), backprop)
-            loss_dict = {"all_loss_all": l.numpy(), "noise": self.network.likelihood.variance.numpy()}
+            loss_dict = {"all_loss_all": l.numpy()}
+            if self.independent_likelihoods:
+                loss_dict["x_noise"] = self.network.likelihood.likelihoods[0].variance.numpy()
+                loss_dict["y_noise"] = self.network.likelihood.likelihoods[1].variance.numpy()
+            else:
+                loss_dict["noise"]: self.network.likelihood.variance.numpy()
         else:
             l = 0
             loss_dict = {}
@@ -400,7 +414,11 @@ class GPFlowTrainer(NetworkTrainer):
         y_mean, cov_matr = self.network.posterior().predict_f(data_dict["image"], full_cov=True, full_output_cov=True)
 
         # get noise
-        noise = self.network.likelihood.variance.numpy()
+
+        if self.independent_likelihoods:
+            noise = [x.variance.numpy() for x in self.network.likelihood.likelihoods]
+        else:
+            noise = self.network.likelihood.variance.numpy()
 
         prediction = np.expand_dims(np.round(y_mean), axis=1)
         # lower = y_mean - 1.96 * np.array([np.sqrt(cov_matr[x, 0, x, 0]) for x in range(y_mean.shape[0])])
@@ -511,20 +529,44 @@ class GPFlowTrainer(NetworkTrainer):
         else:
             self.epochs_wo_val_improv += 1
 
-        if self.epochs_wo_val_improv == self.early_stop_patience:
-            continue_training = False
-            self.logger.info(
-                "EARLY STOPPING. Validation Coord Error did not reduce for %s epochs. ", self.early_stop_patience
-            )
+        self.check_early_stop()
 
         self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
         self.maybe_update_lr()
 
         if (self.fix_noise_until > 0) and (self.epoch == self.fix_noise_until):
             self.logger.info("Unfixing noise. Now trains")
-            gpf.set_trainable(self.network.likelihood.variance, True)
+            self.unfix_noise()
 
         return continue_training
+
+    def check_early_stop(self):
+        """Checks if early stopping should be triggered and updates model accordingly."""
+        if self.epochs_wo_val_improv == self.early_stop_patience:
+            is_variance_trainable = True
+            if self.independent_likelihoods:
+                is_variance_trainable = all([x.variance.trainable for x in self.network.likelihood.likelihoods])
+            else:
+                is_variance_trainable = self.network.likelihood.variance.trainable
+
+            if not is_variance_trainable:
+                self.unfix_noise()
+                self.logger.info(
+                    "No improvement in %s epochs with fixed noise. Unfixing noise and restarting early stopping.", self.early_stop_patience
+                )
+
+                self.epochs_wo_val_improv = 0
+            else:
+                self.logger.info(
+                    "Early stopping triggered. Validation Coord Error did not reduce for %s epochs.", self.early_stop_patience
+                )
+                self.continue_training = False
+
+    def unfix_noise(self):
+        if self.independent_likelihoods:
+            [gpf.set_trainable(x.variance, True) for x in self.network.likelihood.likelihoods]
+        else:
+            gpf.set_trainable(self.network.likelihood.variance, True)
 
     def save_checkpoint(self, path: str):
         """Save model checkpoint to `path`.

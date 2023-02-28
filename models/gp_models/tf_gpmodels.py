@@ -19,6 +19,10 @@ from gpflow.inducing_variables import SharedIndependentInducingVariables
 from gpflow.kernels import SharedIndependent, SeparateIndependent, LinearCoregionalization
 from check_shapes import check_shapes
 from gpflow.covariances.dispatch import Kuf
+from gpflow.base import MeanAndVariance
+from gpflow.likelihoods import ScalarLikelihood
+from typing import Iterable, Sequence, Any
+from check_shapes import inherit_check_shapes
 
 
 def affine_scalar_bijector(shift: Optional[float] = None, scale: Optional[float] = None) -> tfp.bijectors.Bijector:
@@ -181,7 +185,8 @@ def get_conv_SVGP(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, 
 
 def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
                                patch_shape: List[int] = [3, 3], kern_type: str = "rbf", inducing_sample_var: int = 1,
-                               base_kern_ls: int = 3, base_kern_var: int = 3, init_likelihood_noise: float = 1.0) -> gpf.models.SVGP:
+                               base_kern_ls: int = 3, base_kern_var: int = 3, init_likelihood_noise: float = 1.0,
+                               independent_likelihoods: bool = False) -> gpf.models.SVGP:
     """
     Returns a Gaussian process with a Convolutional kernel as the covariance function.
 
@@ -228,9 +233,6 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     kernel = gpf.kernels.LinearCoregionalization(
         convs_k, W=np.random.randn(2, 2)
     )
-    # TODO: Write a new get_patches function that samples patches according to a Gaussian distribution
-    # centered around the label (Y) of each patch. The variance of the Gaussian should be a hyperparameter
-    # we can experiment with, since we need to have some distant blank patches too.
 
     inducing_patches = get_inducing_patches(X, Y, inp_dim, patch_shape, num_inducing_patches, std=inducing_sample_var)
 
@@ -240,98 +242,117 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
         conv_f_i
     )
 
-    # @TOM: idk, seemed like it may be useful.
-    # iv = gpf.inducing_variables.FallbackSharedIndependentInducingVariables(
-    #     conv_f_i
-    # )
-
     # initialize mean of variational posterior to be of shape MxL
     q_mu = np.zeros(((num_inducing_patches), 2))
     # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
     q_sqrt = np.repeat(np.eye(num_inducing_patches)[None, ...], 2, axis=0) * 1.0
 
-    # conv_f = gpf.inducing_variables.InducingPatches(
-    #     np.unique(conv_k.get_patches((np.array(X).reshape(len(X), inp_dim[0] * inp_dim[1]))).numpy().reshape(-1,
-    #               (patch_shape[0]*patch_shape[1])), axis=0)[:num_inducing_patches, :]
-    # )
+    if independent_likelihoods:
+        likelihood = MOGaussian([gpf.likelihoods.Gaussian(variance=init_likelihood_noise),
+                                gpf.likelihoods.Gaussian(variance=init_likelihood_noise)])
+    else:
+        likelihood = gpf.likelihoods.Gaussian(variance=init_likelihood_noise)
 
-    # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
-    conv_m = gpf.models.SVGP(kernel, gpf.likelihoods.Gaussian(variance=init_likelihood_noise), inducing_variable=iv,
+    conv_m = gpf.models.SVGP(kernel, likelihood, inducing_variable=iv,
                              q_mu=q_mu, q_sqrt=q_sqrt, num_latent_gps=2)
-
-    # q_mu = np.zeros((num_inducing_points, 2))
-    # # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
-    # q_sqrt = np.repeat(np.eye(num_inducing_points)[None, ...], 2, axis=0) * 1.0
-    # create SVGP model as usual and optimize
 
     return conv_m
 
 
-# @Kuf.register(SharedIndependentInducingVariables, SeparateIndependent, object)
-# @check_shapes(
-#     "inducing_variable: [M, D, P]",
-#     "Xnew: [batch..., N, D2]",
-#     "return: [L, M, batch..., N]",
-# )
-# def Kuf_conv_shared_separate(
-#     inducing_variable: SharedIndependentInducingVariables,
-#     kernel: SeparateIndependent,
-#     Xnew: tf.Tensor,
-# ) -> tf.Tensor:
-#     Kzxs = []
-#     for k in kernel.kernels:
-#         Xp = k.get_patches(Xnew)  # [N, num_patches, patch_len]
-#         bigKzx = k.base_kernel.K(
-#             inducing_variable.inducing_variable.Z, Xp
-#         )  # [M, N, P] -- thanks to broadcasting of kernels
-#         Kzx = tf.reduce_sum(bigKzx * k.weights if hasattr(k, "weights") else bigKzx, [2])
-#         Kzxs.append(Kzx / k.num_patches)
-#     return tf.stack(Kzxs, axis=0)
+def affine_scalar_bijector(shift=None, scale=None):
+    scale_bijector = (
+        tfp.bijectors.Scale(scale) if scale else tfp.bijectors.Identity()
+    )
+    shift_bijector = (
+        tfp.bijectors.Shift(shift) if shift else tfp.bijectors.Identity()
+    )
+    return shift_bijector(scale_bijector)
 
 
-# @Kuf.register(SharedIndependentInducingVariables, SharedIndependent, object)
-# @check_shapes(
-#     "inducing_variable: [M, D, P]",
-#     "Xnew: [batch..., N, D2]",
-#     "return: [M, batch..., N]",
-# )
-# def Kuf_conv_shared_shared(
-#     inducing_variable: SharedIndependentInducingVariables,
-#     kernel: SharedIndependent,
-#     Xnew: tf.Tensor,
-# ) -> tf.Tensor:
-#     Xp = kernel.kernel.get_patches(Xnew)  # [N, num_patches, patch_len]
-#     bigKzx = kernel.kernel.base_kernel.K(
-#         inducing_variable.inducing_variable.Z, Xp
-#     )  # [M, N, P] -- thanks to broadcasting of kernels
-#     Kzx = tf.reduce_sum(bigKzx * kernel.kernel.weights if hasattr(kernel.kernel, "weights") else bigKzx, [2])
-#     return Kzx / kernel.kernel.num_patches
+def f64(x): return np.array(x, dtype=np.float64)
 
 
-# @Kuf.register(SharedIndependentInducingVariables, LinearCoregionalization, object)
-# @check_shapes(
-#     "inducing_variable: [M, D, L]",
-#     "kernel.W: [P, L]",
-#     "Xnew: [batch..., N, D2]",
-#     "return: [L, M, batch..., N]",
-# )
-# def Kuf_conv_shared_linear_coregionalization(
-#     inducing_variable: SharedIndependentInducingVariables,
-#     kernel: LinearCoregionalization,
-#     Xnew: tf.Tensor,
-# ) -> tf.Tensor:
-#     Kzxs = []
-#     for k in kernel.kernels:
-#         Xp = k.get_patches(Xnew)  # [N, num_patches, patch_len]
-#         bigKzx = k.base_kernel.K(
-#             inducing_variable.inducing_variable.Z, Xp
-#         )  # [M, N, P] -- thanks to broadcasting of kernels
-#         Kzx = tf.reduce_sum(bigKzx * k.weights if hasattr(k, "weights") else bigKzx, [2])
-#         Kzxs.append(Kzx / k.num_patches)
-#     return tf.stack(Kzxs, axis=0)
+def positive_with_min(): return affine_scalar_bijector(shift=f64(1e-4))(
+    tfp.bijectors.Softplus()
+)
 
-# assert np.array([x.shape.ndims == 2 for x in X]).all(), "X must be a list of 2D arrays i.e. images"
-# Define functions for constraints
+
+def constrained(): return affine_scalar_bijector(shift=f64(1e-4), scale=f64(100.0))(
+    tfp.bijectors.Sigmoid()
+)
+
+
+def max_abs_1(): return affine_scalar_bijector(shift=f64(-2.0), scale=f64(4.0))(
+    tfp.bijectors.Sigmoid()
+)
+
+
+class MOGaussian(ScalarLikelihood):
+    def __init__(self, likelihood_list: Iterable[ScalarLikelihood], **kwargs: Any) -> None:
+        """
+        In this likelihood, we allow independent noise for each output.
+        """
+        super().__init__()
+        self.likelihoods = list(likelihood_list)
+
+    def _partition_and_stitch(self, args: Sequence[tf.Tensor], func_name: str) -> tf.Tensor:
+        """
+        args is a list of tensors, to be passed to self.likelihoods.<func_name>
+        args[-1] is the 'Y' argument, which contains the indexes to self.likelihoods.
+        This function splits up the args using dynamic_partition, calls the
+        relevant function on the likelihoods, and re-combines the result.
+        """
+        # get the index from Y
+        args_list = list(args)
+        Y = args_list[-1]
+        D = Y.shape[-1]
+
+        # Apply likelihood function to each dimension/output in data
+        results = []
+        X = args_list[0]
+        F_mu, F_var = args_list[1], args_list[2]
+        for d in range(D):
+            func = getattr(self.likelihoods[d], func_name)
+            results.append(func(X, np.expand_dims(F_mu[:, d], axis=-1), np.expand_dims(
+                F_var[:, d], axis=-1), np.expand_dims(Y[:, d], axis=-1)))
+
+        results = tf.add_n(results)
+
+        return results
+
+    @inherit_check_shapes
+    def _scalar_log_prob(self, X: tf.Tensor, F: tf.Tensor, Y: tf.Tensor) -> tf.Tensor:
+        return self._partition_and_stitch([X, F, Y], "_scalar_log_prob")
+
+    @inherit_check_shapes
+    def _predict_log_density(
+        self, X: tf.Tensor, Fmu: tf.Tensor, Fvar: tf.Tensor, Y: tf.Tensor
+    ) -> tf.Tensor:
+        return self._partition_and_stitch([X, Fmu, Fvar, Y], "predict_log_density")
+
+    @inherit_check_shapes
+    def _variational_expectations(
+        self, X: tf.Tensor, Fmu: tf.Tensor, Fvar: tf.Tensor, Y: tf.Tensor
+    ) -> tf.Tensor:
+        return self._partition_and_stitch([X, Fmu, Fvar, Y], "variational_expectations")
+
+    @inherit_check_shapes
+    def _predict_mean_and_var(
+        self, X: tf.Tensor, Fmu: tf.Tensor, Fvar: tf.Tensor
+    ) -> MeanAndVariance:
+        mvs = [lik.predict_mean_and_var(X, Fmu, Fvar) for lik in self.likelihoods]
+        mu_list, var_list = zip(*mvs)
+        mu = tf.concat(mu_list, axis=1)
+        var = tf.concat(var_list, axis=1)
+        return mu, var
+
+    @inherit_check_shapes
+    def _conditional_mean(self, X: tf.Tensor, F: tf.Tensor) -> tf.Tensor:
+        raise NotImplementedError
+
+    @inherit_check_shapes
+    def _conditional_variance(self, X: tf.Tensor, F: tf.Tensor) -> tf.Tensor:
+        raise NotImplementedError
 
 
 def affine_scalar_bijector(shift=None, scale=None):

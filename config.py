@@ -39,6 +39,8 @@ _C.SAMPLER.EVALUATION_SAMPLE_MODE = "full"
 
 _C.SAMPLER.DATA_AUG = "AffineComplex"  # None
 _C.SAMPLER.DATA_AUG_PACKAGE = "imgaug"  # ['imgaug', 'albumentations']
+_C.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE = False  # ['imgaug', 'albumentations']
+
 _C.SAMPLER.NUM_WORKERS = 0
 
 
@@ -135,6 +137,7 @@ _C.MODEL.GPFLOW.CONV_KERN_V = 5  # Size of kernel for convolutional kernel gauss
 _C.MODEL.GPFLOW.MODEL_NOISE_INIT = 1.0
 _C.MODEL.GPFLOW.FIX_NOISE_UNTIL_EPOCH = 0
 _C.MODEL.GPFLOW.TRAIN_IP = True
+_C.MODEL.GPFLOW.INDEPENDENT_LIKELIHOODS = False
 
 _C.MODEL.GPFLOW.INDUCING_SAMPLE_VAR = 1
 
