@@ -17,9 +17,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from trunet_networks.blocks import ADN
-from trunet_networks.layers.convutils import same_padding, stride_minus_kernel_padding
-from trunet_networks.layers.factories import Conv
+from utils.trunet_networks.blocks.acti_norm import ADN
+from utils.trunet_networks.layers.convutils import same_padding, stride_minus_kernel_padding
+from utils.trunet_networks.layers.factories import Conv
 
 
 class Convolution(nn.Sequential):

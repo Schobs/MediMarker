@@ -15,7 +15,7 @@ import torch.nn
 
 from .factories import Act, Conv, Dropout, Norm, Pool
 from .factories import split_args
-from models.trunet_networks.utils.misc import has_option
+from utils.trunet_networks.utils.misc import has_option
 
 __all__ = ["get_norm_layer", "get_act_layer",
            "get_dropout_layer", "get_pool_layer"]

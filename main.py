@@ -11,7 +11,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 import lightning_fabric as lf
 
 
-# from utils.logging.comet_logging import save_comet_html
+from utils.logging.comet_logging import save_comet_html
 
 
 from trainer.model_trainer_index import MODEL_TRAINER_INDEX
@@ -169,7 +169,8 @@ def main():
                 "model_latest",
             ]
 
-            logger.info("Loading MODELS that match substrings in: %s", models_to_test)
+            logger.info(
+                "Loading MODELS that match substrings in: %s", models_to_test)
 
             for fname in os.listdir(cfg.OUTPUT.OUTPUT_DIR):
                 if ("fold" + fold in fname and ".model" in fname) and any(
@@ -185,7 +186,8 @@ def main():
             for i, model_p in enumerate(model_paths):
                 logger.info("loading %s", model_p)
                 trainer.load_checkpoint(model_p, training_bool=False)
-                summary_results, ind_results = trainer.run_inference(split=inference_split, debug=cfg.INFERENCE.DEBUG)
+                summary_results, ind_results = trainer.run_inference(
+                    split=inference_split, debug=cfg.INFERENCE.DEBUG)
 
                 all_model_summaries[model_names[i]] = summary_results
                 all_model_individuals[model_names[i]] = ind_results
@@ -198,13 +200,15 @@ def main():
 
     ########### Now Save all model results to a spreadsheet #############
     if writer is not None:
-        html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
+        html_to_log = save_comet_html(
+            all_model_summaries, all_model_individuals)
         writer.log_html(html_to_log)
         logger.info("Logged all results to CometML.")
 
     logger.info(
         "saving summary of results locally to: %s",
-        os.path.join(cfg.OUTPUT.OUTPUT_DIR, "summary_results_fold" + fold + ".xlsx"),
+        os.path.join(cfg.OUTPUT.OUTPUT_DIR,
+                     "summary_results_fold" + fold + ".xlsx"),
     )
     with ExcelWriter(  # pylint: disable=abstract-class-instantiated
         os.path.join(
