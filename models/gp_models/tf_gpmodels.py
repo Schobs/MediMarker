@@ -155,30 +155,14 @@ def get_conv_SVGP(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, 
         1.0, transform=positive_with_min()
     )
 
-    # Weight scale and variance are non-identifiable. We also need to prevent variance from shooting off crazily.
     conv_k.base_kernel.variance = gpf.Parameter(1.0, transform=constrained())
     conv_k.weights = gpf.Parameter(conv_k.weights.numpy(), transform=max_abs_1())
-
-    # TODO: Write a new get_patches function that samples patches according to a Gaussian distribution
-    # centered around the label (Y) of each patch. The variance of the Gaussian should be a hyperparameter
-    # we can experiment with, since we need to have some distant blank patches too.
 
     inducing_patches = get_inducing_patches(X, Y, inp_dim, patch_shape, num_inducing_patches, std=4)
 
     conv_f_i = gpf.inducing_variables.InducingPatches(inducing_patches)
 
-    # conv_f = gpf.inducing_variables.InducingPatches(
-    #     np.unique(conv_k.get_patches((np.array(X).reshape(len(X), inp_dim[0] * inp_dim[1]))).numpy().reshape(-1,
-    #               (patch_shape[0]*patch_shape[1])), axis=0)[:num_inducing_patches, :]
-    # )
-
-    # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
     conv_m = gpf.models.SVGP(conv_k, gpf.likelihoods.Gaussian(), conv_f_i,  num_latent_gps=2)
-
-    # q_mu = np.zeros((num_inducing_points, 2))
-    # # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
-    # q_sqrt = np.repeat(np.eye(num_inducing_points)[None, ...], 2, axis=0) * 1.0
-    # create SVGP model as usual and optimize
 
     return conv_m
 
@@ -257,16 +241,6 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
                              q_mu=q_mu, q_sqrt=q_sqrt, num_latent_gps=2)
 
     return conv_m
-
-
-def affine_scalar_bijector(shift=None, scale=None):
-    scale_bijector = (
-        tfp.bijectors.Scale(scale) if scale else tfp.bijectors.Identity()
-    )
-    shift_bijector = (
-        tfp.bijectors.Shift(shift) if shift else tfp.bijectors.Identity()
-    )
-    return shift_bijector(scale_bijector)
 
 
 def f64(x): return np.array(x, dtype=np.float64)
@@ -363,24 +337,6 @@ def affine_scalar_bijector(shift=None, scale=None):
         tfp.bijectors.Shift(shift) if shift else tfp.bijectors.Identity()
     )
     return shift_bijector(scale_bijector)
-
-
-def f64(x): return np.array(x, dtype=np.float64)
-
-
-def positive_with_min(): return affine_scalar_bijector(shift=f64(1e-4))(
-    tfp.bijectors.Softplus()
-)
-
-
-def constrained(): return affine_scalar_bijector(shift=f64(1e-4), scale=f64(100.0))(
-    tfp.bijectors.Sigmoid()
-)
-
-
-def max_abs_1(): return affine_scalar_bijector(shift=f64(-2.0), scale=f64(4.0))(
-    tfp.bijectors.Sigmoid()
-)
 
 
 def toms(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
@@ -486,24 +442,10 @@ def conv_sgp_rbf_fix(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[in
     conv_k.base_kernel.variance = gpf.Parameter(patch_shape[0], transform=constrained())
     conv_k.weights = gpf.Parameter(conv_k.weights.numpy(), transform=max_abs_1())
 
-    # TODO: Write a new get_patches function that samples patches according to a Gaussian distribution
-    # centered around the label (Y) of each patch. The variance of the Gaussian should be a hyperparameter
-    # we can experiment with, since we need to have some distant blank patches too.
-
     inducing_patches = get_inducing_patches(X, Y, inp_dim, patch_shape, num_inducing_patches, std=4)
 
     conv_f_i = gpf.inducing_variables.InducingPatches(inducing_patches)
 
-    # conv_f = gpf.inducing_variables.InducingPatches(
-    #     np.unique(conv_k.get_patches((np.array(X).reshape(len(X), inp_dim[0] * inp_dim[1]))).numpy().reshape(-1,
-    #               (patch_shape[0]*patch_shape[1])), axis=0)[:num_inducing_patches, :]
-    # )
-
-    # @Tom how to set a mean prior as the center of the image?. Is it set q_mu to INPUT_SIZE/2?
-    # # np.zeros((NUM_INDUCING_PATCHES, NUM_LATENT_GPS))
-    # q_mu = np.full((num_inducing_patches, 2), int(inp_dim[0]//2))
-    # # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
-    # q_sqrt = np.repeat(np.eye(num_inducing_patches)[None, ...], 2, axis=0) * 1.0
     conv_m = gpf.models.SVGP(conv_k, gpf.likelihoods.Gaussian(), conv_f_i,  num_latent_gps=2)
 
     return conv_m

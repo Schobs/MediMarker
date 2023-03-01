@@ -1,0 +1,88 @@
+
+ 
+OUTPUT: 
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/BBM" #Change this to where you want to save model checkpoints/results
+
+
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
+  COMET_WORKSPACE: "schobs"
+  VERBOSE: True #whether to print results every epoch
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "3rd_round", "64"]
+
+SOLVER:
+  DEEP_SUPERVISION: False  # Leave this.
+  NUM_RES_SUPERVISIONS: 1 # Leave this.
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE_TRAIN: 6 # indicates entire dataset for batch (needed for ExactGP)
+  MAX_EPOCHS: 10000
+  MINI_BATCH_SIZE: 1 # Leave this.
+  # REGRESS_SIGMA: True
+  DATA_LOADER_BATCH_SIZE_EVAL: 6
+  BASE_LR: 0.01
+  AUTO_MIXED_PRECISION: False
+  EARLY_STOPPING_PATIENCE: 2500 # epochs for validation coord error not improving before stopping training
+  DECAY_POLICY: "scheduled_1000"
+
+DATASET:
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  NAME:  "ISBI 2015 Junior"
+  IMAGE_MODALITY: 'Cephalometric'
+  LANDMARKS : [11] #Choose landmark (between 0-17)
+  # TRAINSET_SIZE: 10 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
+  TO_PYTORCH_TENSOR: False  # True if using pytorch, False if using tensorflow
+
+ 
+TRAINER:
+  PERFORM_VALIDATION: True
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: True # Kind of irrelevant for ExactGP
+  INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
+  SAVE_EVERY: 100 # Saves checkpoint every X epochs
+  VALIDATE_EVERY: 25 #validation every X epochs
+  VALIDATION_LOG_HEATMAPS: True
+
+
+SAMPLER:
+  DATA_AUG: "Flatten" #the data aug scheme, currently flattens, but can change this to other schemes.
+  INPUT_SIZE : [512,512] #resizes data to this size, then gets patches of SAMPLER.PATCH.SAMPLE_PATCH_SIZE
+  SAMPLE_MODE: 'patch_centred' # ['patch_bias', 'full', "patch_centred"] (patch_centred gets centre from stage 1 preds)
+  EVALUATION_SAMPLE_MODE: "patch_centred"  # ['patch_bias', 'full', "patch_centred"] (evaluate from stage 1 preds)
+  DATA_AUG_GUARANTEE_LMS_IN_IMAGE: True
+
+  NUM_WORKERS: 0
+  DEBUG: False # Set True for nice visualizations and logging. recomended for understanding.
+  PATCH:
+    SAMPLER_BIAS: 1.0 #irrelevent for patch_centred
+    RESOLUTION_TO_SAMPLE_FROM:  "input_size" #means it samples from 512,512 not the original resolution
+    SAMPLE_PATCH_SIZE: [64,64] #patch size
+    CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_all/individual_results_fold0.xlsx"
+    CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error_f0"
+    CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
+    CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
+
+MODEL:
+  GAUSS_SIGMA: 2 #irrelevant
+  ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
+  GPFLOW:
+    NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
+    INDUCING_SAMPLE_VAR: 2
+    KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
+    CONV_KERN_SIZE: [5,5]  # size of kernel for convolutional kernel
+    CONV_KERN_STRIDE: 5  #stride of convolutional kernel
+    CONV_KERN_LS: 3  # base kernel lengthscale
+    CONV_KERN_V: 20  # base kernel variance
+    FIX_NOISE_UNTIL_EPOCH: 9000 
+    MODEL_NOISE_INIT: 0.01
+    TRAIN_IP: True
+    INDEPENDENT_LIKELIHOODS: False
+
+INFERENCE:
+  EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: False #Set True for plot of predictions with covariances plotted.
+  SPLIT: "testing"
+
+SSH:
+  AUTO_AMEND_PATHS: False
+
