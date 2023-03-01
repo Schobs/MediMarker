@@ -170,7 +170,7 @@ def get_conv_SVGP(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, 
 def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_patches: int,
                                patch_shape: List[int] = [3, 3], kern_type: str = "rbf", inducing_sample_var: int = 1,
                                base_kern_ls: int = 3, base_kern_var: int = 3, init_likelihood_noise: float = 1.0,
-                               independent_likelihoods: bool = False) -> gpf.models.SVGP:
+                               independent_likelihoods: bool = False, likelihood_upper_bound: float = None) -> gpf.models.SVGP:
     """
     Returns a Gaussian process with a Convolutional kernel as the covariance function.
 
@@ -192,8 +192,10 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
 
     if kern_type == "se":
         inner_kern = gpf.kernels.SquaredExponential()
-    elif kern_type == "matern52":
-        inner_kern = gpf.kernels.Matern52()
+    elif kern_type == "matern12":
+        inner_kern = gpf.kernels.Matern12(lengthscales=([base_kern_ls] * (patch_shape[0]*patch_shape[1])))
+    elif kern_type == "matern32":
+        inner_kern = gpf.kernels.Matern32(lengthscales=([base_kern_ls] * (patch_shape[0]*patch_shape[1])))
     elif kern_type == "rbf":
         inner_kern = gpf.kernels.RBF(lengthscales=([base_kern_ls] * (patch_shape[0]*patch_shape[1])))
     else:
@@ -231,17 +233,7 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     # initialize \sqrt(Σ) of variational posterior to be of shape LxMxM
     q_sqrt = np.repeat(np.eye(num_inducing_patches)[None, ...], 2, axis=0) * 1.0
 
-    if independent_likelihoods:
-        list_likelihoods = [gpf.likelihoods.Gaussian(variance=init_likelihood_noise),
-                            gpf.likelihoods.Gaussian(variance=init_likelihood_noise)]
-        likelihood = MOGaussian(list_likelihoods)
-    else:
-        likelihood = gpf.likelihoods.Gaussian(variance=init_likelihood_noise)
-
-    # likelihood = gpf.likelihoods.HeteroskedasticTFPConditional(
-    #     distribution_class=tfp.distributions.Normal,  # Gaussian Likelihood
-    #     scale_transform=tfp.bijectors.Exp(),  # Exponential Transform
-    # )
+    likelihood = create_likelihood(independent_likelihoods, init_likelihood_noise, likelihood_upper_bound)
 
     conv_m = gpf.models.SVGP(kernel, likelihood, inducing_variable=iv,
                              q_mu=q_mu, q_sqrt=q_sqrt, num_latent_gps=2)
@@ -249,11 +241,55 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     return conv_m
 
 
+def create_likelihood(independent_likelihoods, init_likelihood_noise, likelihood_upper_bound):
+    """
+    This function creates a Gaussian likelihood object for a Gaussian process regression model.
+
+    Args:
+    independent_likelihoods (bool): Whether to use independent likelihoods for each output dimension.
+    init_likelihood_noise (float): The initial value for the variance parameter of the Gaussian likelihood.
+    likelihood_upper_bound (float or None): The upper bound for the variance parameter of the Gaussian likelihood. If None, no upper bound is applied.
+
+    Returns:
+    Gaussian likelihood object: The likelihood object for the Gaussian process regression model.
+
+    """
+
+    if independent_likelihoods:
+        num_likelihoods = 2
+    else:
+        num_likelihoods = 1
+
+    likelihoods = []
+    clip_transform = None
+    if likelihood_upper_bound is not None:
+        clip_transform = tfp.bijectors.SoftClip(
+            gpf.utilities.to_default_float(0.0001),
+            gpf.utilities.to_default_float(likelihood_upper_bound),
+        )
+
+    for i in range(num_likelihoods):
+        likelihood = gpf.likelihoods.Gaussian()
+        if clip_transform is not None:
+            likelihood.variance = gpf.Parameter(init_likelihood_noise, transform=clip_transform)
+        else:
+            likelihood.variance = gpf.Parameter(init_likelihood_noise)
+
+        likelihoods.append(likelihood)
+
+    if independent_likelihoods:
+        return MOGaussian(likelihoods)
+    else:
+        return likelihoods[0]
+
+
 def f64(x): return np.array(x, dtype=np.float64)
 
 
 def positive_with_min(): return affine_scalar_bijector(shift=f64(1e-4))(
     tfp.bijectors.Softplus()
+
+
 )
 
 
@@ -300,11 +336,11 @@ class MOGaussian(ScalarLikelihood):
 
         return results
 
-    @inherit_check_shapes
+    @ inherit_check_shapes
     def _scalar_log_prob(self, X: tf.Tensor, F: tf.Tensor, Y: tf.Tensor) -> tf.Tensor:
         return self._partition_and_stitch([X, F, Y], "_scalar_log_prob")
 
-    @inherit_check_shapes
+    @ inherit_check_shapes
     def _predict_log_density(
         self, X: tf.Tensor, Fmu: tf.Tensor, Fvar: tf.Tensor, Y: tf.Tensor
     ) -> tf.Tensor:

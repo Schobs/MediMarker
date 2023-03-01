@@ -1,36 +1,36 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/hetero_test" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/CCJ" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
   VERBOSE: True #whether to print results every epoch
-  COMET_TAGS: ["gp", "conv_gp", "gp_optimization"]
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "3rd_round", "64"]
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
   NUM_RES_SUPERVISIONS: 1 # Leave this.
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE_TRAIN: 2 # indicates entire dataset for batch (needed for ExactGP)
+  DATA_LOADER_BATCH_SIZE_TRAIN: 6 # indicates entire dataset for batch (needed for ExactGP)
   MAX_EPOCHS: 10000
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
-  DATA_LOADER_BATCH_SIZE_EVAL: 2
+  DATA_LOADER_BATCH_SIZE_EVAL: 6
   BASE_LR: 0.01
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 2500 # epochs for validation coord error not improving before stopping training
-  DECAY_POLICY: "scheduled_100_2000"
+  DECAY_POLICY: "scheduled_1000"
 
 DATASET:
-  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/'
-  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid'
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [11] #Choose landmark (between 0-17)
-  TRAINSET_SIZE: 10 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
+  # TRAINSET_SIZE: 10 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
   TO_PYTORCH_TENSOR: False  # True if using pytorch, False if using tensorflow
 
  
@@ -40,7 +40,7 @@ TRAINER:
   CACHE_DATA: True # Kind of irrelevant for ExactGP
   INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
   SAVE_EVERY: 100 # Saves checkpoint every X epochs
-  VALIDATE_EVERY: 1 #validation every X epochs
+  VALIDATE_EVERY: 25 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
 
 
@@ -60,35 +60,32 @@ SAMPLER:
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_all/individual_results_fold0.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error_f0"
     CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
-    CENTRED_PATCH_DETERMINISTIC: True  #if True, will always sample the same patch for a given image i.e. same jitter applied.
+    CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
 
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/hetero_test/model_latest_fold0.model"
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
-    INDUCING_SAMPLE_VAR: 3
+    INDUCING_SAMPLE_VAR: 1
     KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
     CONV_KERN_SIZE: [5,5]  # size of kernel for convolutional kernel
     CONV_KERN_STRIDE: 5  #stride of convolutional kernel
-    CONV_KERN_LS: 5  # base kernel lengthscale
-    CONV_KERN_V: 5  # base kernel variance
-    CONV_KERN_TYPE: "matern32"
-    FIX_NOISE_UNTIL_EPOCH: 0 
+    CONV_KERN_LS: 2  # base kernel lengthscale
+    CONV_KERN_V: 15  # base kernel variance
+    CONV_KERN_TYPE: "rbf"
+    FIX_NOISE_UNTIL_EPOCH: 1000
     MODEL_NOISE_INIT: 0.01
     TRAIN_IP: False
     INDEPENDENT_LIKELIHOODS: True
-    LIKELIHOOD_NOISE_UPPER_BOUND: 3.0
-    LIKELIHOOD_NOISE_TRAINING_INTERVALS: 2
-
+    LIKELIHOOD_NOISE_UPPER_BOUND: 8.0
+    LIKELIHOOD_NOISE_TRAINING_INTERVALS: 150
 
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
-  DEBUG: True #Set True for plot of predictions with covariances plotted.
+  DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
 
 SSH:
-  AUTO_AMEND_PATHS: True
-
+  AUTO_AMEND_PATHS: False
 

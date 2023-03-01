@@ -78,10 +78,13 @@ class GPFlowTrainer(NetworkTrainer):
         self.ip_sample_var = self.trainer_config.MODEL.GPFLOW.INDUCING_SAMPLE_VAR
         self.conv_kern_ls = self.trainer_config.MODEL.GPFLOW.CONV_KERN_LS  # base kernel lengthscale
         self.conv_kern_var = self.trainer_config.MODEL.GPFLOW.CONV_KERN_V  # base kernel variance
+        self.conv_kern_type = self.trainer_config.MODEL.GPFLOW.CONV_KERN_TYPE
         self.fix_noise_until = self.trainer_config.MODEL.GPFLOW.FIX_NOISE_UNTIL_EPOCH
         self.train_inducing_points = self.trainer_config.MODEL.GPFLOW.TRAIN_IP
         self.initial_likelihood_noise = self.trainer_config.MODEL.GPFLOW.MODEL_NOISE_INIT
         self.independent_likelihoods = self.trainer_config.MODEL.GPFLOW.INDEPENDENT_LIKELIHOODS
+        self.likelihood_noise_upper_bound = self.trainer_config.MODEL.GPFLOW.LIKELIHOOD_NOISE_UPPER_BOUND
+        self.likelihood_training_intervals = self.trainer_config.MODEL.GPFLOW.LIKELIHOOD_NOISE_TRAINING_INTERVALS
 
         self.training_data = None
         self.all_training_input = None
@@ -123,7 +126,8 @@ class GPFlowTrainer(NetworkTrainer):
                                                       self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
                                                       self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, inducing_sample_var=self.ip_sample_var,
                                                       base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var,
-                                                      init_likelihood_noise=self.initial_likelihood_noise, independent_likelihoods=self.independent_likelihoods)
+                                                      init_likelihood_noise=self.initial_likelihood_noise, independent_likelihoods=self.independent_likelihoods,
+                                                      likelihood_upper_bound=self.likelihood_noise_upper_bound, kern_type=self.conv_kern_type,)
 
             if not self.train_inducing_points:
                 self.logger.info("Fixing inducing points...")
@@ -133,19 +137,21 @@ class GPFlowTrainer(NetworkTrainer):
 
             if self.fix_noise_until > self.epoch:
                 self.logger.info("Fixing likelihood variance until Epoch %s" % self.fix_noise_until)
-
-                if self.independent_likelihoods:
-                    [gpf.set_trainable(x.variance, False) for x in self.network.likelihood.likelihoods]
-                else:
-                    gpf.set_trainable(self.network.likelihood.variance, False)
+                self._toggle_likelihood_noise_trainable()
+                # if self.independent_likelihoods:
+                #     [gpf.set_trainable(x.variance, False) for x in self.network.likelihood.likelihoods]
+                # else:
+                #     gpf.set_trainable(self.network.likelihood.variance, False)
             else:
                 self.logger.info(
-                    "Not Fixing likelihood variance. Training. Learning independent likelihoods is %s." % self.independent_likelihoods)
+                    "Not Fixing likelihood variance. Training. Learning independent likelihoods is %s." % self.independent_likelihoods
+                )
+                self._set_likelihood_noise_trainable()
 
-                if self.independent_likelihoods:
-                    [gpf.set_trainable(x.variance, True) for x in self.network.likelihood.likelihoods]
-                else:
-                    gpf.set_trainable(self.network.likelihood.variance, False)
+                # if self.independent_likelihoods:
+                #     [gpf.set_trainable(x.variance, True) for x in self.network.likelihood.likelihoods]
+                # else:
+                #     gpf.set_trainable(self.network.likelihood.variance, True)
 
             # TODO set this false. add config for #epochs to turn back on try 10,50,100
 
@@ -543,9 +549,9 @@ class GPFlowTrainer(NetworkTrainer):
         self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
         self.maybe_update_lr()
 
-        if (self.fix_noise_until > 0) and (self.epoch == self.fix_noise_until):
-            self.logger.info("Unfixing noise. Now trains")
-            self.unfix_noise()
+        self.fix_unfix_noise()
+
+        # self.maybe_clip_noise()
 
         return continue_training
 
@@ -558,8 +564,8 @@ class GPFlowTrainer(NetworkTrainer):
             else:
                 is_variance_trainable = self.network.likelihood.variance.trainable
 
-            if not is_variance_trainable:
-                self.unfix_noise()
+            if not is_variance_trainable and self.likelihood_noise_upper_bound is not None:
+                self._set_likelihood_noise_trainable()
                 self.logger.info(
                     "No improvement in %s epochs with fixed noise. Unfixing noise and restarting early stopping.", self.early_stop_patience
                 )
@@ -571,11 +577,56 @@ class GPFlowTrainer(NetworkTrainer):
                 )
                 self.continue_training = False
 
-    def unfix_noise(self):
+    def fix_unfix_noise(self):
+        """
+        Make the noise parameter(s) trainable.
+
+        If the likelihood noise parameter is currently fixed, this method makes it trainable
+        so that it can be optimized during training.
+
+        If the model has independent likelihoods, it will make all of their noise parameters trainable.
+        Otherwise, it will make the noise parameter of the overall likelihood trainable.
+
+        """
+        self._maybe_unfix_noise()
+        self._maybe_train_likelihood_noise()
+
+    def _maybe_unfix_noise(self):
+        """Unfix the noise parameter(s) if the fix_noise_until epoch has been reached."""
+        if self.epoch == self.fix_noise_until:
+            self.logger.info("Unfixing noise. Now training.")
+            self._set_likelihood_noise_trainable()
+
+    def _maybe_train_likelihood_noise(self):
+        """Train the likelihood noise parameter(s) if the epoch is in a training interval."""
+        if self.epoch > self.fix_noise_until and self.likelihood_training_intervals is not None:
+            if self.epoch % self.likelihood_training_intervals == 0:
+                self.logger.info("Toggling likelihood noise parameter training.")
+                self._toggle_likelihood_noise_trainable()
+
+    def _set_likelihood_noise_trainable(self):
+        """Set the noise parameter(s) of the likelihood to trainable."""
         if self.independent_likelihoods:
-            [gpf.set_trainable(x.variance, True) for x in self.network.likelihood.likelihoods]
+            for likelihood in self.network.likelihood.likelihoods:
+                gpf.set_trainable(likelihood.variance, True)
+
         else:
             gpf.set_trainable(self.network.likelihood.variance, True)
+        self.logger.info("Likelihood noise parameter(s) set to trainable.")
+
+    def _toggle_likelihood_noise_trainable(self):
+        """Toggle the training status of the noise parameter(s) of the likelihood."""
+        if self.independent_likelihoods:
+            is_variance_trainable = all(
+                [likelihood.variance.trainable for likelihood in self.network.likelihood.likelihoods])
+            for likelihood in self.network.likelihood.likelihoods:
+                gpf.set_trainable(likelihood.variance, not is_variance_trainable)
+        else:
+            is_variance_trainable = self.network.likelihood.variance.trainable
+            gpf.set_trainable(self.network.likelihood.variance.trainable, not is_variance_trainable)
+
+        self.logger.info("Toggled likelihood noise parameter training. New trainable status: %s",
+                         not is_variance_trainable)
 
     def save_checkpoint(self, path: str):
         """Save model checkpoint to `path`.
@@ -756,3 +807,25 @@ class GPFlowTrainer(NetworkTrainer):
             self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
 
             self.optimizer.lr.assign(self.initial_lr / 10)
+
+        elif self.lr_policy == "scheduled_2000" and self.epoch == 2000:
+            self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
+
+            self.optimizer.lr.assign(self.initial_lr / 10)
+        elif self.lr_policy == "scheduled_100_2000":
+            if self.epoch == 100:
+                self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
+
+                self.optimizer.lr.assign(self.initial_lr / 10)
+            elif self.epoch == 2000:
+                self.logger.info("Reducing LR from %s to %s", self.initial_lr / 10, (self.initial_lr / 100))
+                self.optimizer.lr.assign(self.initial_lr / 100)
+
+        elif self.lr_policy == "scheduled_500_3000":
+            if self.epoch == 100:
+                self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
+
+                self.optimizer.lr.assign(self.initial_lr / 10)
+            elif self.epoch == 2000:
+                self.logger.info("Reducing LR from %s to %s", self.initial_lr / 10, (self.initial_lr / 100))
+                self.optimizer.lr.assign(self.initial_lr / 100)
