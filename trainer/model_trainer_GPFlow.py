@@ -64,12 +64,12 @@ class GPFlowTrainer(NetworkTrainer):
 
         self.data_aug_args_training = {"data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
                                        "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
-                                        "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
+                                       "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
 
                                        }
         self.data_aug_args_evaluation = {"data_augmentation_strategy":  self.trainer_config.SAMPLER.DATA_AUG,
                                          "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
-                                        "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
+                                         "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
 
                                          }
 
@@ -138,6 +138,15 @@ class GPFlowTrainer(NetworkTrainer):
                     [gpf.set_trainable(x.variance, False) for x in self.network.likelihood.likelihoods]
                 else:
                     gpf.set_trainable(self.network.likelihood.variance, False)
+            else:
+                self.logger.info(
+                    "Not Fixing likelihood variance. Training. Learning independent likelihoods is %s." % self.independent_likelihoods)
+
+                if self.independent_likelihoods:
+                    [gpf.set_trainable(x.variance, True) for x in self.network.likelihood.likelihoods]
+                else:
+                    gpf.set_trainable(self.network.likelihood.variance, False)
+
             # TODO set this false. add config for #epochs to turn back on try 10,50,100
 
             # gpf.set_trainable(self.network.likelihood.variance, False)

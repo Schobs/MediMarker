@@ -594,8 +594,8 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
         m1 = y_mean[sample_idx]
         s1 = cov_matr[sample_idx, :, sample_idx, :]
         if noise is not None:
-            if noise.ndim == 1:
-                s1 += [[noise[0], 0], [0, noise]]
+            if isinstance(noise, list):
+                s1 += [[noise[0], 0], [0, noise[1]]]
             elif noise.ndim == 0:
                 s1 += [[noise, 0], [0, noise]]
             else:

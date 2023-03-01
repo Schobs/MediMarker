@@ -248,10 +248,16 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
     q_sqrt = np.repeat(np.eye(num_inducing_patches)[None, ...], 2, axis=0) * 1.0
 
     if independent_likelihoods:
-        likelihood = MOGaussian([gpf.likelihoods.Gaussian(variance=init_likelihood_noise),
-                                gpf.likelihoods.Gaussian(variance=init_likelihood_noise)])
+        list_likelihoods = [gpf.likelihoods.Gaussian(variance=init_likelihood_noise),
+                            gpf.likelihoods.Gaussian(variance=init_likelihood_noise)]
+        likelihood = MOGaussian(list_likelihoods)
     else:
         likelihood = gpf.likelihoods.Gaussian(variance=init_likelihood_noise)
+
+    # likelihood = gpf.likelihoods.HeteroskedasticTFPConditional(
+    #     distribution_class=tfp.distributions.Normal,  # Gaussian Likelihood
+    #     scale_transform=tfp.bijectors.Exp(),  # Exponential Transform
+    # )
 
     conv_m = gpf.models.SVGP(kernel, likelihood, inducing_variable=iv,
                              q_mu=q_mu, q_sqrt=q_sqrt, num_latent_gps=2)
@@ -313,8 +319,8 @@ class MOGaussian(ScalarLikelihood):
         F_mu, F_var = args_list[1], args_list[2]
         for d in range(D):
             func = getattr(self.likelihoods[d], func_name)
-            results.append(func(X, np.expand_dims(F_mu[:, d], axis=-1), np.expand_dims(
-                F_var[:, d], axis=-1), np.expand_dims(Y[:, d], axis=-1)))
+            results.append(func(X, tf.expand_dims(F_mu[:, d], axis=-1), tf.expand_dims(
+                F_var[:, d], axis=-1), tf.expand_dims(Y[:, d], axis=-1)))
 
         results = tf.add_n(results)
 
