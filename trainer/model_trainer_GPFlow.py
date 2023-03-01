@@ -79,7 +79,7 @@ class GPFlowTrainer(NetworkTrainer):
         self.conv_kern_ls = self.trainer_config.MODEL.GPFLOW.CONV_KERN_LS  # base kernel lengthscale
         self.conv_kern_var = self.trainer_config.MODEL.GPFLOW.CONV_KERN_V  # base kernel variance
         self.fix_noise_until = self.trainer_config.MODEL.GPFLOW.FIX_NOISE_UNTIL_EPOCH
-        self.fix_inducing_points = self.trainer_config.MODEL.GPFLOW.TRAIN_IP
+        self.train_inducing_points = self.trainer_config.MODEL.GPFLOW.TRAIN_IP
         self.initial_likelihood_noise = self.trainer_config.MODEL.GPFLOW.MODEL_NOISE_INIT
         self.independent_likelihoods = self.trainer_config.MODEL.GPFLOW.INDEPENDENT_LIKELIHOODS
 
@@ -125,11 +125,11 @@ class GPFlowTrainer(NetworkTrainer):
                                                       base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var,
                                                       init_likelihood_noise=self.initial_likelihood_noise, independent_likelihoods=self.independent_likelihoods)
 
-            if self.fix_inducing_points:
+            if not self.train_inducing_points:
                 self.logger.info("Fixing inducing points...")
                 gpf.set_trainable(self.network.inducing_variable, False)
             else:
-                self.logger.info("Not fixing inducing points...")
+                self.logger.info("Not fixing inducing points, they will train..")
 
             if self.fix_noise_until > self.epoch:
                 self.logger.info("Fixing likelihood variance until Epoch %s" % self.fix_noise_until)
@@ -317,7 +317,7 @@ class GPFlowTrainer(NetworkTrainer):
                 loss_dict["x_noise"] = self.network.likelihood.likelihoods[0].variance.numpy()
                 loss_dict["y_noise"] = self.network.likelihood.likelihoods[1].variance.numpy()
             else:
-                loss_dict["noise"]: self.network.likelihood.variance.numpy()
+                loss_dict["noise"] = self.network.likelihood.variance.numpy()
         else:
             l = 0
             loss_dict = {}
@@ -749,6 +749,10 @@ class GPFlowTrainer(NetworkTrainer):
 
         """
         if self.lr_policy == "scheduled_10" and self.epoch == 10:
+            self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
+
+            self.optimizer.lr.assign(self.initial_lr / 10)
+        elif self.lr_policy == "scheduled_1000" and self.epoch == 1000:
             self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
 
             self.optimizer.lr.assign(self.initial_lr / 10)
