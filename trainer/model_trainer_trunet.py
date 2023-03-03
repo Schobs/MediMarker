@@ -108,7 +108,7 @@ class TrUNetTrainer(NetworkTrainer):
         self.network = TrUNet(
             in_channels=self.num_input_channels,
             out_channels=1,
-            img_size=96,
+            img_size=512,
             feature_size=self.base_num_features,
             norm_name='batch',
             spatial_dims=2)
