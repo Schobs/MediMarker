@@ -278,9 +278,10 @@ def create_likelihood(independent_likelihoods, init_likelihood_noise, likelihood
     for i in range(num_likelihoods):
         likelihood = gpf.likelihoods.Gaussian()
         if clip_transform is not None:
-            likelihood.variance = gpf.Parameter(init_likelihood_noise, transform=clip_transform)
+            likelihood.variance = gpf.Parameter(
+                init_likelihood_noise, transform=clip_transform, name="like_var"+str(i))
         else:
-            likelihood.variance = gpf.Parameter(init_likelihood_noise)
+            likelihood.variance = gpf.Parameter(init_likelihood_noise, name="like_var"+str(i))
 
         likelihoods.append(likelihood)
 

@@ -614,7 +614,7 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
 
         # evaluate kernels at grid points
         xxyy = np.c_[xx.ravel(), yy.ravel()]
-        zz = k1.pdf(xxyy)
+        zz = (k1.pdf(xxyy))
 
         # reshape heatmap
         heatmap = np.array(zz.reshape((xres, yres)), dtype=np.float32)
@@ -626,6 +626,10 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
         image = np.zeros((heatmap_shape[0], heatmap_shape[1], 3), dtype=np.uint8)
         image[:, :, 0] = heatmap
 
+#         data = distr.k1(size = 5000)
+#      
+#     # Plotting the generated samples
+#         plt.plot(data[:,0],data[:,1], 'o')
         if plot_targ:
             # add green cross at landmark location
             landmark = data_dict["label"]["landmarks"][sample_idx]

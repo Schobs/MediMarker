@@ -144,25 +144,14 @@ class GPFlowTrainer(NetworkTrainer):
             if self.fix_noise_until > self.epoch:
                 self.logger.info("Fixing likelihood variance until Epoch %s" % self.fix_noise_until)
                 self._toggle_likelihood_noise_trainable()
-                # if self.independent_likelihoods:
-                #     [gpf.set_trainable(x.variance, False) for x in self.network.likelihood.likelihoods]
-                # else:
-                #     gpf.set_trainable(self.network.likelihood.variance, False)
+                self.noise_fixed = True
+
             else:
                 self.logger.info(
                     "Not Fixing likelihood variance. Training. Learning independent likelihoods is %s." % self.independent_likelihoods
                 )
                 self._set_likelihood_noise_trainable()
-
-                # if self.independent_likelihoods:
-                #     [gpf.set_trainable(x.variance, True) for x in self.network.likelihood.likelihoods]
-                # else:
-                #     gpf.set_trainable(self.network.likelihood.variance, True)
-
-            # TODO set this false. add config for #epochs to turn back on try 10,50,100
-
-            # gpf.set_trainable(self.network.likelihood.variance, False)
-            # gpf.set_trainable(self.network.inducing_variable, False)
+                self.noise_fixed = False
 
             del all_train_image
             del all_train_label
@@ -388,7 +377,7 @@ class GPFlowTrainer(NetworkTrainer):
         Returns:
             The value of the loss function.
         """
-        if self.likelihood_seperate_optim:
+        if self.likelihood_seperate_optim and not self.noise_fixed:
             if self.independent_likelihoods:
                 assert len(
                     self.network.trainable_variables) == 9, "to index the noise params, the network must have 9 trainable variables"
@@ -409,12 +398,15 @@ class GPFlowTrainer(NetworkTrainer):
             tape.watch(self.network.trainable_variables)
             loss = self.network.training_loss(batch)
         if backprop:
-            grads = tape.gradient(loss, train_vars_normal_optim)
-            self.optimizer.apply_gradients(zip(grads, train_vars_normal_optim))
 
-            if self.likelihood_seperate_optim:
-                grads = tape.gradient(loss, train_vars_noise_optim)
-                self.likelihood_optimizer.apply_gradients(zip(grads, train_vars_noise_optim))
+            if self.likelihood_seperate_optim and not self.noise_fixed:
+                grads_norm, grads_noise = tape.gradient(loss, [train_vars_normal_optim, train_vars_noise_optim])
+                self.likelihood_optimizer.apply_gradients(zip(grads_noise, train_vars_noise_optim))
+                self.optimizer.apply_gradients(zip(grads_norm, train_vars_normal_optim))
+
+            else:
+                grads = tape.gradient(loss, train_vars_normal_optim)
+                self.optimizer.apply_gradients(zip(grads, train_vars_normal_optim))
 
         return loss
 
@@ -468,7 +460,7 @@ class GPFlowTrainer(NetworkTrainer):
         extra_info = {"cov_matr": cov_matr}
         if log_heatmaps:
             extra_info["final_heatmaps"] = multi_variate_hm(
-                data_dict, y_mean, cov_matr, self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, noise=noise, plot_targ=self.is_train)
+                data_dict, y_mean, cov_matr, self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, noise=noise, plot_targ=True)
 
         return prediction,  extra_info
 
@@ -639,6 +631,7 @@ class GPFlowTrainer(NetworkTrainer):
         else:
             gpf.set_trainable(self.network.likelihood.variance, True)
         self.logger.info("Likelihood noise parameter(s) set to trainable.")
+        self.noise_fixed = False
 
     def _toggle_likelihood_noise_trainable(self):
         """Toggle the training status of the noise parameter(s) of the likelihood."""
@@ -653,6 +646,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         self.logger.info("Toggled likelihood noise parameter training. New trainable status: %s",
                          not is_variance_trainable)
+        self.noise_fixed = not is_variance_trainable
 
     def save_checkpoint(self, path: str):
         """Save model checkpoint to `path`.
