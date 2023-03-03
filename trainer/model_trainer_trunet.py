@@ -106,10 +106,10 @@ class TrUNetTrainer(NetworkTrainer):
         """Initialise the network."""
 
         self.network = TrUNet(
-            in_channels=1,
-            out_channels=4,
+            in_channels=self.num_input_channels,
+            out_channels=1,
             img_size=96,
-            feature_size=32,
+            feature_size=self.base_num_features,
             norm_name='batch',
             spatial_dims=2)
         self.network.to(self.device)
