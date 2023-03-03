@@ -73,9 +73,9 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/main.py",
-            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/BBA.yaml"],
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/KKA.yaml"],
             "console": "integratedTerminal",
-            "justMyCode": true,
+            "justMyCode": false,
             "env": {
                 "PYTHONPATH": "${workspaceFolder}"
             },

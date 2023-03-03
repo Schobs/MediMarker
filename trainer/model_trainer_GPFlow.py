@@ -85,10 +85,15 @@ class GPFlowTrainer(NetworkTrainer):
         self.independent_likelihoods = self.trainer_config.MODEL.GPFLOW.INDEPENDENT_LIKELIHOODS
         self.likelihood_noise_upper_bound = self.trainer_config.MODEL.GPFLOW.LIKELIHOOD_NOISE_UPPER_BOUND
         self.likelihood_training_intervals = self.trainer_config.MODEL.GPFLOW.LIKELIHOOD_NOISE_TRAINING_INTERVALS
+        self.likelihood_seperate_optim = self.trainer_config.MODEL.GPFLOW.LIKELIHOOD_NOISE_SEPERATE_OPTIM
+        self.kl_scale = self.trainer_config.MODEL.GPFLOW.KL_SCALE
 
         self.training_data = None
         self.all_training_input = None
         self.all_training_labels = None
+
+        if self.likelihood_seperate_optim:
+            self.likelihood_optimizer = tf.keras.optimizers.Adam(learning_rate=self.initial_lr/100)
 
     def initialize_network(self):
         """
@@ -127,13 +132,14 @@ class GPFlowTrainer(NetworkTrainer):
                                                       self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, inducing_sample_var=self.ip_sample_var,
                                                       base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var,
                                                       init_likelihood_noise=self.initial_likelihood_noise, independent_likelihoods=self.independent_likelihoods,
-                                                      likelihood_upper_bound=self.likelihood_noise_upper_bound, kern_type=self.conv_kern_type,)
+                                                      likelihood_upper_bound=self.likelihood_noise_upper_bound, kern_type=self.conv_kern_type,
+                                                      kl_scale=self.kl_scale)
 
             if not self.train_inducing_points:
-                self.logger.info("Fixing inducing points...")
+                self.logger.info("Fixing inducing points. They will not train.")
                 gpf.set_trainable(self.network.inducing_variable, False)
             else:
-                self.logger.info("Not fixing inducing points, they will train..")
+                self.logger.info("Not fixing inducing points, they will train.")
 
             if self.fix_noise_until > self.epoch:
                 self.logger.info("Fixing likelihood variance until Epoch %s" % self.fix_noise_until)
@@ -382,14 +388,34 @@ class GPFlowTrainer(NetworkTrainer):
         Returns:
             The value of the loss function.
         """
+        if self.likelihood_seperate_optim:
+            if self.independent_likelihoods:
+                assert len(
+                    self.network.trainable_variables) == 9, "to index the noise params, the network must have 9 trainable variables"
+                train_vars_normal_optim = self.network.trainable_variables[:7]
+                train_vars_noise_optim = self.network.trainable_variables[7:]
+            else:
+                assert len(
+                    self.network.trainable_variables) == 8, "to index the noise param, the network must have 8 trainable variables"
+                train_vars_normal_optim = self.network.trainable_variables[:7]
+                train_vars_noise_optim = self.network.trainable_variables[7:]
+        else:
+            train_vars_normal_optim = self.network.trainable_variables
+            train_vars_noise_optim = []
 
-        with tf.GradientTape(watch_accessed_variables=False) as tape:
+        # else:
+
+        with tf.GradientTape(watch_accessed_variables=False, persistent=True) as tape:
             tape.watch(self.network.trainable_variables)
-
             loss = self.network.training_loss(batch)
         if backprop:
-            grads = tape.gradient(loss, self.network.trainable_variables)
-            self.optimizer.apply_gradients(zip(grads, self.network.trainable_variables))
+            grads = tape.gradient(loss, train_vars_normal_optim)
+            self.optimizer.apply_gradients(zip(grads, train_vars_normal_optim))
+
+            if self.likelihood_seperate_optim:
+                grads = tape.gradient(loss, train_vars_noise_optim)
+                self.likelihood_optimizer.apply_gradients(zip(grads, train_vars_noise_optim))
+
         return loss
 
     def maybe_get_coords(self, log_coords: bool, log_heatmaps: bool, data_dict: Dict) -> Tuple:
@@ -593,7 +619,7 @@ class GPFlowTrainer(NetworkTrainer):
 
     def _maybe_unfix_noise(self):
         """Unfix the noise parameter(s) if the fix_noise_until epoch has been reached."""
-        if self.epoch == self.fix_noise_until:
+        if self.epoch == self.fix_noise_until and self.epoch > 0:
             self.logger.info("Unfixing noise. Now training.")
             self._set_likelihood_noise_trainable()
 
@@ -623,7 +649,7 @@ class GPFlowTrainer(NetworkTrainer):
                 gpf.set_trainable(likelihood.variance, not is_variance_trainable)
         else:
             is_variance_trainable = self.network.likelihood.variance.trainable
-            gpf.set_trainable(self.network.likelihood.variance.trainable, not is_variance_trainable)
+            gpf.set_trainable(self.network.likelihood.variance, not is_variance_trainable)
 
         self.logger.info("Toggled likelihood noise parameter training. New trainable status: %s",
                          not is_variance_trainable)
@@ -651,7 +677,11 @@ class GPFlowTrainer(NetworkTrainer):
         }
 
         log_dir = path
-        ckpt = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer)
+        if self.likelihood_seperate_optim:
+            ckpt = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer,
+                                       likelihood_optimizer=self.likelihood_optimizer)
+        else:
+            ckpt = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer)
         manager = tf.train.CheckpointManager(ckpt, log_dir, max_to_keep=5)
         manager.save()
 
@@ -669,7 +699,12 @@ class GPFlowTrainer(NetworkTrainer):
         if not self.was_initialized:
             self.initialize(training_bool)
 
-        checkpoint = tf.train.Checkpoint(optimizer=self.optimizer, model=self.network)
+        if self.likelihood_seperate_optim:
+            checkpoint = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer,
+                                             likelihood_optimizer=self.likelihood_optimizer)
+        else:
+            checkpoint = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer)
+
         manager = tf.train.CheckpointManager(
             checkpoint, model_path, max_to_keep=5)
         status = checkpoint.restore(manager.latest_checkpoint)
@@ -684,6 +719,15 @@ class GPFlowTrainer(NetworkTrainer):
             self.best_valid_coord_error = checkpoint_info["best_valid_coord_error"]
             self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
             self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
+
+        # For some reason it loads in as the log of the variance, so we need to convert it back
+        if self.independent_likelihoods:
+            for likelihood in self.network.likelihood.likelihoods:
+                if likelihood.variance.numpy() < 0:
+                    likelihood.variance = gpf.Parameter(tf.exp(likelihood.variance.numpy()))
+        else:
+            if self.network.likelihood.variance.numpy() < 0:
+                self.network.likelihood.variance = gpf.Parameter(tf.exp(self.network.likelihood.variance.numpy()))
 
         # Allow legacy models to be loaded (they didn't use to save sigmas)
         if "sigmas" in checkpoint_info:
