@@ -28,7 +28,7 @@ class DatasetGeneric(DatasetBase):
         # super(DatasetBase, self).__init__()
         super(DatasetGeneric, self).__init__(**kwargs)
 
-    # def add_additional_sample_attributes(self, data):
-    #     return
-    # Extended dataset class can add more attributes to each sample here
-    # return data
+    def add_additional_sample_attributes(self, data):
+
+        # Extended dataset class can add more attributes to each sample here
+        return data

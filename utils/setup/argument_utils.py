@@ -346,8 +346,10 @@ def arg_parse():
     Returns:
         config: config for the programme
     """
-    parser = argparse.ArgumentParser(description="PyTorch Landmark Localization U-Net")
-    parser.add_argument("--cfg", required=True, help="path to config file", type=str)
+    parser = argparse.ArgumentParser(
+        description="PyTorch Landmark Localization U-Net")
+    parser.add_argument("--cfg", required=True,
+                        help="path to config file", type=str)
     parser.add_argument(
         "--gpus",
         default=1,

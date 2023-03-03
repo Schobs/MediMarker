@@ -1,5 +1,5 @@
 OUTPUT:
-  OUTPUT_DIR: "/shared/ai4h/Shared/oscar/results/" #Where to save models and results
+  OUTPUT_DIR: "../results/starter_experiments" #Where to save models and results
 
   #Logging stuff. HIGHLY RECOMMENDED. CHECK THE DOCS FOR INFO. Please use it, it will help you a LOT.
   # If not using set USE_COMETML_LOGGING to False.
@@ -12,8 +12,8 @@ SOLVER:
   DEEP_SUPERVISION: True
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE_TRAIN: 12  #As high as will fit in gpu memory
-  MAX_EPOCHS: 25 #How long you want to train? ideal is at least 150-250. 
+  DATA_LOADER_BATCH_SIZE_TRAIN: 12 #As high as will fit in gpu memory
+  MAX_EPOCHS: 25 #How long you want to train? ideal is at least 150-250.
 
 MODEL:
   GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.

@@ -26,7 +26,8 @@ def main():
 
     # Read and infer arguments from yaml file
     cfg = arg_parse()
-
+    path = "../datasets/lann_folds/"
+    path1 = "../datasets/"
     # ---- setup device ----
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print("==> Using device " + device)
