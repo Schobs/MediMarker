@@ -155,7 +155,7 @@ _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first"  # ["scale_heatmap_first", 
 _C.INFERENCE.FIT_GAUSS = (
     False  # If false, uses max, if true, first fits gaussian to output heatmap.
 )
-_C.INFERENCE.LOG_HEATMAPS = True
+_C.INFERENCE.LOG_HEATMAPS = False
 
 _C.INFERENCE.ENSEMBLE_INFERENCE = False  # average predictions from multiple models
 _C.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS = [
