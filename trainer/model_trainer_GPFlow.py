@@ -221,7 +221,7 @@ class GPFlowTrainer(NetworkTrainer):
             self.epoch_start_time = time()
             epoch_loss = 0
             mb_step = 0
-            per_epoch_logs = self.dict_logger.get_epoch_logger()
+            per_epoch_logs = self.dict_logger.get_epoch_logger(log_final_heatmaps=True)
 
             generator = iter(self.train_dataloader)
             for data_dict in iter(generator):
