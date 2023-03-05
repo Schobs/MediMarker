@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patchesplt
 import time
 import scipy.optimize as opt
+from scipy.stats import multivariate_normal
 
 # from inference.fit
 
@@ -24,6 +25,42 @@ def twoD_Gaussian(xdata_tuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offse
     g = offset + amplitude * np.exp(
         -(a * ((x - xo) ** 2) + 2 * b * (x - xo) * (y - yo) + c * ((y - yo) ** 2))
     )
+
+    # a11 = ((sigma_x**2)*(np.cos(theta)*np.cos(theta)))+((sigma_y**2)*(np.sin(theta)*np.sin(theta)))
+    # a12 = ((sigma_x**2)*(np.sin(-theta)*np.cos(-theta)))-((sigma_y**2)*(np.sin(-theta)*np.cos(-theta)))
+    # a21 = a12
+    # a22 = ((sigma_x**2)*(np.sin(theta)*np.sin(theta)))+((sigma_y**2)*(np.cos(theta)*np.cos(theta)))
+
+    # cov = [[a11, a12], [a21, a22]]
+
+    # k1 = multivariate_normal(mean=[xo, yo], cov=cov)
+
+    # # create a grid of (x,y) coordinates at which to evaluate the kernels
+    # heatmap_shape = [512, 512]
+    # xlim = (0, heatmap_shape[0])
+    # ylim = (0, heatmap_shape[1])
+    # xres = int(heatmap_shape[0])
+    # yres = int(heatmap_shape[1])
+    # x = np.linspace(xlim[0], xlim[1], xres)
+    # y = np.linspace(ylim[0], ylim[1], yres)
+    # xx, yy = np.meshgrid(x, y)
+
+    # # evaluate kernels at grid points
+    # xxyy = np.c_[xx.ravel(), yy.ravel()]
+    # zz = (k1.pdf(xxyy))
+
+    # # reshape heatmap
+    # heatmap = np.array(zz.reshape((xres, yres)), dtype=np.float32)
+    # heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min()) * 255.0
+    # heatmap = np.clip(heatmap, 0, 255)
+    # heatmap = heatmap.astype(np.uint8)
+
+    # # create 3-channel image with heatmap in channel 0
+    # image = np.zeros((heatmap_shape[0], heatmap_shape[1], 3), dtype=np.uint8)
+    # image[:, :, 0] = heatmap
+
+    ###
+
     return g.ravel()
 
 
@@ -73,6 +110,16 @@ def get_coords_fit_gauss(images, predicted_coords_all, visualize=False):
                 bounds=bounds,
             )
             data_fitted = twoD_Gaussian((x, y), *popt)
+            sigma_x = popt[3]
+            sigma_y = popt[4]
+            theta = popt[5]
+
+            a11 = ((sigma_x**2)*(np.cos(theta)*np.cos(theta)))+((sigma_y**2)*(np.sin(theta)*np.sin(theta)))
+            a12 = ((sigma_x**2)*(np.sin(-theta)*np.cos(-theta)))-((sigma_y**2)*(np.sin(-theta)*np.cos(-theta)))
+            a21 = a12
+            a22 = ((sigma_x**2)*(np.sin(theta)*np.sin(theta)))+((sigma_y**2)*(np.cos(theta)*np.cos(theta)))
+
+            cov = [[a11, a12], [a21, a22]]
 
             sigma_prod = popt[3] * popt[4]
             sigma_ratio = max(popt[3], popt[4]) / min(popt[3], popt[4])
@@ -162,6 +209,9 @@ def get_coords_fit_gauss(images, predicted_coords_all, visualize=False):
                     "sigma": [popt[3], popt[4]],
                     "theta": np.degrees(popt[5]),
                     "offset": popt[6],
+                    "covariance": cov,
+                    "sigma_prod": sigma_prod,
+                    "sigma_ratio": sigma_ratio,
                 }
             )
         all_fitted_dicts.append(fitted_dicts)

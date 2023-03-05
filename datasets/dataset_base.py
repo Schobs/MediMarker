@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import time
 from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_centred, get_patch_stitching_info
 
 import numpy as np
@@ -329,7 +330,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
 
         """
-
+        # t = time.time()
         hm_sigmas = self.sigmas
         coords = self.target_coordinates[index]
         full_res_coods = self.full_res_coordinates[index]
@@ -472,6 +473,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             self.LabelGenerator.debug_sample(
                 sample, untransformed_im, untransformed_coords
             )
+        # print(time.time()-t)
         return sample
 
     def generate_labels(self, landmarks, sigmas):

@@ -19,6 +19,7 @@ SOLVER:
 
 INFERENCE:
   SPLIT: "validation"
+  FIT_GAUSS: True
 
 
 DATASET:

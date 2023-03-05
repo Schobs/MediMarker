@@ -20,6 +20,7 @@ SOLVER:
 
 INFERENCE:
   SPLIT: "testing"
+  FIT_GAUSS: True
 
 
 DATASET:

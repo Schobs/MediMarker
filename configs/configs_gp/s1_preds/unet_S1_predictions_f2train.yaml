@@ -19,6 +19,7 @@ SOLVER:
 
 INFERENCE:
   SPLIT: "training"
+  FIT_GAUSS: True
 
 
 DATASET:
