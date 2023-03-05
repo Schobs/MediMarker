@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/LLHA_test_nojitter" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/LLHA_test_nojitter_scaled" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
@@ -18,7 +18,7 @@ SOLVER:
   MAX_EPOCHS: 5000
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
-  DATA_LOADER_BATCH_SIZE_EVAL: 2
+  DATA_LOADER_BATCH_SIZE_EVAL: 3
   BASE_LR: 0.01
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 250 # epochs for validation loss not improving before stopping training
@@ -85,7 +85,7 @@ MODEL:
     KL_SCALE: 0.01
 
 INFERENCE:
-  EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  EVALUATION_MODE: "scale_pred_coords"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
   LOG_HEATMAPS: True

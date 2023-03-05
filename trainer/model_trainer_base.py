@@ -45,6 +45,7 @@ class NetworkTrainer(ABC):
         self.validation_log_heatmaps = trainer_config.TRAINER.VALIDATION_LOG_HEATMAPS
         self.inference_log_heatmaps = trainer_config.INFERENCE.LOG_HEATMAPS
         self.inference_log_heatmap_wo_noise = self.trainer_config.INFERENCE.LOG_HEATMAPS_WO_NOISE
+        self.inference_eval_mode = self.trainer_config.INFERENCE.EVALUATION_MODE
 
         # Dataset class to use
         self.dataset_class = dataset_class
@@ -502,9 +503,9 @@ class NetworkTrainer(ABC):
         return l.detach().cpu().numpy(), generator
 
     def maybe_get_coords(self, output, log_coords, data_dict):
-        """ 
-        From output gets coordinates and extra info for logging. If log_coords is false, 
-        returns None for all. It also decides whether to resize heatmap, rescale coords 
+        """
+        From output gets coordinates and extra info for logging. If log_coords is false,
+        returns None for all. It also decides whether to resize heatmap, rescale coords
         depending on config settings.
 
         Args:
@@ -556,6 +557,8 @@ class NetworkTrainer(ABC):
         # Delete big data in logs for printing and memory
         per_epoch_logs.pop("individual_results", None)
         per_epoch_logs.pop("final_heatmaps", None)
+        per_epoch_logs.pop("final_heatmaps_wo_like_noise", None)
+
         per_epoch_logs.pop("individual_results_extra_keys", None)
 
         if self.verbose_logging:
@@ -656,10 +659,13 @@ class NetworkTrainer(ABC):
 
         # C3
         if self.use_full_res_coords and not self.resize_first:
-            upscale_factor = torch.tensor(
-                [data_dict["resizing_factor"][0], data_dict["resizing_factor"][1]]
-            ).to(self.device)
+            # upscale_factor = torch.tensor(
+            #     [data_dict["resizing_factor"][0], data_dict["resizing_factor"][1]]
+            # ).to(self.device)
             # upscaled_coords = torch.tensor([pred_coords[x]*upscale_factor[x] for x in range(len(pred_coords))]).to(self.device)
+            upscale_factor = data_dict["resizing_factor"]
+            if not torch.is_tensor(pred_coords):
+                pred_coords = torch.tensor(pred_coords)
             upscaled_coords = torch.mul(pred_coords, upscale_factor)
             pred_coords = torch.round(upscaled_coords)
             # pred_coords = pred_coords * upscale_factor
@@ -754,6 +760,7 @@ class NetworkTrainer(ABC):
 
                 for idx, results_dict in enumerate(evaluation_logs['individual_results']):
                     results_dict.pop("final_heatmaps", None)
+                    results_dict.pop("final_heatmaps_wo_like_noise", None)
 
             del generator
             print()
@@ -779,6 +786,8 @@ class NetworkTrainer(ABC):
         summary_results = generate_summary_df(landmark_errors, outlier_results)
         ind_results = pd.DataFrame(individual_results)
         ind_results = ind_results.drop(columns="final_heatmaps", errors='ignore')
+        ind_results = ind_results.drop(columns="final_heatmaps_wo_like_noise", errors='ignore')
+
 
         return summary_results, ind_results
 
@@ -1139,7 +1148,7 @@ class NetworkTrainer(ABC):
 
         return batch_hms
 
-    @staticmethod
+    @ staticmethod
     def worker_init_fn(worker_id):
         """Function to set the seed for each worker. This is used to ensure that each worker has a different seed,
         so that the random sampling is different for each worker.

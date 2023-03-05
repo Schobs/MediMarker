@@ -461,6 +461,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             "annotation_available": is_annotation_available,
             "resizing_factor": resized_factor,
             "original_image_size": original_size,
+            "x_y_corner": x_y_corner,
         }
 
         # add additional sample attributes from child class.

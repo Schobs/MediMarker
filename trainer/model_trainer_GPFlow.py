@@ -475,7 +475,18 @@ class GPFlowTrainer(NetworkTrainer):
         else:
             noise = self.network.likelihood.variance.numpy()
 
-        prediction = np.expand_dims(np.round(y_mean), axis=1)
+        prediction = np.expand_dims((y_mean), axis=1)
+
+        # Need to add the corner point here before scaling. found in data_dict["x_y_corner"]
+        if self.inference_eval_mode == "scale_pred_coords" and not self.is_train:
+            # x_y_corner = np.expand_dims(np.stack(data_dict["x_y_corner"]), axis=1)
+            # x_y_corner =
+            x_y_corner = np.expand_dims(np.array(
+                [[data_dict["x_y_corner"][0][x], data_dict["x_y_corner"][1][x]] for x in range(len(data_dict["x_y_corner"][0]))]), axis=1)
+
+            # x_y_corner = np.expand_dims(np.stack([(np.flip(x.numpy())) for x in data_dict["x_y_corner"]]), axis=1)
+            prediction = np.add(prediction, x_y_corner)
+
         # lower = y_mean - 1.96 * np.array([np.sqrt(cov_matr[x, 0, x, 0]) for x in range(y_mean.shape[0])])
         # upper = y_mean - 1.96 * [np.sqrt(cov_matr[x, 1, x, 1]) for x in range(y_mean.shape[0])]
 
@@ -570,6 +581,8 @@ class GPFlowTrainer(NetworkTrainer):
         # Delete big data in logs for printing and memory
         per_epoch_logs.pop("individual_results", None)
         per_epoch_logs.pop("final_heatmaps", None)
+        per_epoch_logs.pop("final_heatmaps_wo_like_noise", None)
+
         per_epoch_logs.pop("individual_results_extra_keys", None)
 
         if self.verbose_logging:
