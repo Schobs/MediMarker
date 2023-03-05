@@ -120,7 +120,7 @@ class NetworkTrainer(ABC):
 
         # Set up directories
         self.output_folder = output_folder
-
+        self.local_logger_type = self.trainer_config.OUTPUT.LOCAL_LOGGER_TYPE
         # Trainer variables
         self.perform_validation = self.trainer_config.TRAINER.PERFORM_VALIDATION
         self.continue_checkpoint = self.trainer_config.MODEL.CHECKPOINT
@@ -220,6 +220,7 @@ class NetworkTrainer(ABC):
             log_inference_heatmap=self.inference_log_heatmaps,
             log_fitted_gauss=self.fit_gauss_inference,
             log_inference_heatmap_wo_like=self.inference_log_heatmap_wo_noise,
+            model_type=self.local_logger_type
         )
 
         self.was_initialized = True

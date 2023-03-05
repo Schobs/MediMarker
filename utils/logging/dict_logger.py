@@ -5,7 +5,7 @@ import copy
 class DictLogger():
     """ A dictionary based logger to save results. Extend this class to log any extra variables!
     """
-    def __init__(self, num_landmarks, is_regressing_sigma, multi_part_loss_keys, additional_sample_attribute_keys, log_valid_heatmap=False, log_inference_heatmap=False, log_fitted_gauss=False, log_inference_heatmap_wo_like=False):
+    def __init__(self, num_landmarks, is_regressing_sigma, multi_part_loss_keys, additional_sample_attribute_keys, log_valid_heatmap=False, log_inference_heatmap=False, log_fitted_gauss=False, log_inference_heatmap_wo_like=False, model_type="default"):
         #Device
 
         self.num_landmarks = num_landmarks
@@ -17,10 +17,11 @@ class DictLogger():
         self.add_sample_att_keys = additional_sample_attribute_keys
         self.standard_info_keys = ["uid", "full_res_coords", "annotation_available", "image_path", "target_coords",  "resizing_factor", "original_image_size"] 
         self.log_fitted_gauss = log_fitted_gauss
+        self.model_type = model_type
         self.per_epoch_logs = self.per_epoch_log_template()
-        self.evaluation_logged_vars = self.evaluation_log_template()
+        self.evaluation_logged_vars = self.evaluation_log_template(model_type)
         self.ensemble_inference_logs = self.ensemble_inference_log_template()
-
+        
         #also add the additional sample attributes to the standard info keys.
         self.standard_info_keys = self.standard_info_keys + self.add_sample_att_keys
 
@@ -44,23 +45,46 @@ class DictLogger():
 
         return logged_per_epoch
 
-    def evaluation_log_template(self):
-
+    def evaluation_log_template(self, model_type):
+        # if self.model_type == "default":       
 
         eval_logs = {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
             "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
-            "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['hm_max', 'coords_og_size']}
+            "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['hm_max', 'pred_coords_input_size', 'target_coords_input_size']}
 
         if self.is_log_inference_heatmap:
             eval_logs["individual_results_extra_keys"].append("final_heatmaps")
-            if self.log_inference_heatmap_wo_like:
-                eval_logs["individual_results_extra_keys"].append("final_heatmaps_wo_like_noise")
-
+            
 
         if self.log_fitted_gauss:
-             eval_logs["individual_results_extra_keys"].append("fitted_gauss")
+            eval_logs["individual_results_extra_keys"].append("fitted_gauss")
+
+        if model_type == "gp":       
+            if self.log_inference_heatmap_wo_like:
+                    eval_logs["individual_results_extra_keys"].append("final_heatmaps_wo_like_noise")
+            eval_logs["individual_results_extra_keys"].extend(['kernel_cov_matr','likelihood_noise','full_cov_matrix'])
+            
+        # else:
+        #     raise ValueError("Model type not recognised")
 
         return eval_logs
+    
+    # def evaluation_log_template_gp(self):        
+
+    #     eval_logs = {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
+    #         "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
+    #         "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['hm_max', 'pred_coords_input_size', 'target_coords_input_size', 'kernel_cov_matr',  'likelihood_noise',  'full_cov_matrix']}
+
+    #     if self.is_log_inference_heatmap:
+    #         eval_logs["individual_results_extra_keys"].append("final_heatmaps")
+    #         if self.log_inference_heatmap_wo_like:
+    #             eval_logs["individual_results_extra_keys"].append("final_heatmaps_wo_like_noise")
+
+
+    #     if self.log_fitted_gauss:
+    #          eval_logs["individual_results_extra_keys"].append("fitted_gauss")
+
+    #     return eval_logs
 
     def ensemble_inference_log_template(self):
 

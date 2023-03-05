@@ -177,6 +177,7 @@ _C.OUTPUT = CN()
 _C.OUTPUT.VERBOSE = True
 # _C.OUTPUT.FAST_DEV_RUN = False  # True for debug
 _C.OUTPUT.OUTPUT_DIR = "/output/"
+_C.OUTPUT.LOCAL_LOGGER_TYPE = "default"
 
 # _C.OUTPUT.TB_DIR = "./lightning_logs"
 

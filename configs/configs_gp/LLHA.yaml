@@ -3,7 +3,7 @@
 OUTPUT: 
   OUTPUT_DIR: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/LLHA_test_nojitter_scaled" #Change this to where you want to save model checkpoints/results
 
-
+  LOCAL_LOGGER_TYPE: "gp"
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"

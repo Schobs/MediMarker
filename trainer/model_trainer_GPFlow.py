@@ -446,6 +446,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         if log_coords:
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(data_dict, log_heatmaps)
+            extra_info["target_coords_input_size"] = data_dict["target_coords"]
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
             if torch.is_tensor(target_coords):
                 target_coords = target_coords.cpu().detach().numpy()
@@ -489,10 +490,14 @@ class GPFlowTrainer(NetworkTrainer):
 
         # lower = y_mean - 1.96 * np.array([np.sqrt(cov_matr[x, 0, x, 0]) for x in range(y_mean.shape[0])])
         # upper = y_mean - 1.96 * [np.sqrt(cov_matr[x, 1, x, 1]) for x in range(y_mean.shape[0])]
+        extra_info = {}
+        extra_info["kernel_cov_matr"] = np.array([cov_matr[x, :, x, :] for x in range(len(y_mean))])
+        extra_info["likelihood_noise"] = np.array([noise] * len(y_mean))
 
-        extra_info = {"cov_matr": cov_matr}
+        extra_info["pred_coords_input_size"] = y_mean.numpy()
+
         if log_heatmaps:
-            extra_info["final_heatmaps"], extra_info["final_heatmaps_wo_like_noise"] = multi_variate_hm(
+            extra_info["final_heatmaps"], extra_info["final_heatmaps_wo_like_noise"], extra_info["full_cov_matrix"] = multi_variate_hm(
                 data_dict,
                 y_mean,
                 cov_matr,

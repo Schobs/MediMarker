@@ -591,6 +591,7 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
     transformed_input_image = data_dict["image"]
     all_hms = []
     all_hms_wo_noise = []
+    all_full_covs = []
 
     for sample_idx, _ in enumerate(transformed_input_image):
         m1 = y_mean[sample_idx]
@@ -602,7 +603,7 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
                 s1 += [[noise, 0], [0, noise]]
             else:
                 raise ValueError("Noise must be a scalar or a vector of length 2")
-
+        all_full_covs.append(s1)
         covariances = [multivariate_normal(mean=m1, cov=s1)]
 
         if plot_wo_noise_extra:
@@ -655,4 +656,4 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
             else:
                 all_hms_wo_noise.append(np.expand_dims(image, axis=0))
 
-    return np.array(all_hms),  np.array(all_hms_wo_noise)
+    return np.array(all_hms),  np.array(all_hms_wo_noise), np.array(all_full_covs)
