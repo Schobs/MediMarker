@@ -1,14 +1,14 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/LLHA_test_nojitter" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/OME" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
   VERBOSE: True #whether to print results every epoch
-  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "64"]
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round", "64"]
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
@@ -18,15 +18,15 @@ SOLVER:
   MAX_EPOCHS: 5000
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
-  DATA_LOADER_BATCH_SIZE_EVAL: 2
-  BASE_LR: 0.01
+  DATA_LOADER_BATCH_SIZE_EVAL: 6
+  BASE_LR: 0.001
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 250 # epochs for validation loss not improving before stopping training
-  DECAY_POLICY: "scheduled_500"
+  DECAY_POLICY: None
 
 DATASET:
-  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/'
-  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid'
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [11] #Choose landmark (between 0-17)
@@ -37,8 +37,8 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: False # Kind of irrelevant for ExactGP
-  INFERENCE_ONLY: True # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
+  CACHE_DATA: True # Kind of irrelevant for ExactGP
+  INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
   SAVE_EVERY: 100 # Saves checkpoint every X epochs
   VALIDATE_EVERY: 25 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
@@ -59,13 +59,12 @@ SAMPLER:
     SAMPLE_PATCH_SIZE: [64,64] #patch size
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_all/individual_results_fold0.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error_f0"
-    CENTRED_PATCH_JITTER: 0.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
+    CENTRED_PATCH_JITTER: 0.5 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
     CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
 
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/LLHA/model_best_valid_loss_fold0.model" #Change this to where you
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     INDUCING_SAMPLE_VAR: 1
@@ -75,12 +74,12 @@ MODEL:
     CONV_KERN_LS: 1  # base kernel lengthscale
     CONV_KERN_V: 20  # base kernel variance
     CONV_KERN_TYPE: "matern12"
-    FIX_NOISE_UNTIL_EPOCH: 0 
+    FIX_NOISE_UNTIL_EPOCH: 500 
     MODEL_NOISE_INIT: 0.01
     TRAIN_IP: True
     INDEPENDENT_LIKELIHOODS: True
-    LIKELIHOOD_NOISE_UPPER_BOUND: 6.0
-    LIKELIHOOD_NOISE_TRAINING_INTERVALS: None
+    LIKELIHOOD_NOISE_UPPER_BOUND: None
+    LIKELIHOOD_NOISE_TRAINING_INTERVALS: 500
     LIKELIHOOD_NOISE_SEPERATE_OPTIM: False
     KL_SCALE: 0.01
 
@@ -88,8 +87,7 @@ INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
-  LOG_HEATMAPS: True
-  LOG_HEATMAPS_WO_NOISE: True
+
 SSH:
-  AUTO_AMEND_PATHS: True
+  AUTO_AMEND_PATHS: False
 

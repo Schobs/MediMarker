@@ -481,13 +481,14 @@ class GPFlowTrainer(NetworkTrainer):
 
         extra_info = {"cov_matr": cov_matr}
         if log_heatmaps:
-            extra_info["final_heatmaps"] = multi_variate_hm(
+            extra_info["final_heatmaps"], extra_info["final_heatmaps_wo_like_noise"] = multi_variate_hm(
                 data_dict,
                 y_mean,
                 cov_matr,
                 self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
                 noise=noise,
-                plot_targ=self.is_train,
+                plot_targ=True,
+                plot_wo_noise_extra=not self.is_train
             )
 
         return prediction, extra_info
@@ -901,3 +902,13 @@ class GPFlowTrainer(NetworkTrainer):
             elif self.epoch == 2000:
                 self.logger.info("Reducing LR from %s to %s", self.initial_lr / 10, (self.initial_lr / 100))
                 self.optimizer.lr.assign(self.initial_lr / 100)
+
+    def save_heatmaps(self, heatmaps):
+        hm_dict = {"final_heatmaps": [], "final_heatmaps_wo_like_noise": []}
+        for idx, results_dict in enumerate(heatmaps['individual_results']):
+            if "final_heatmaps" in results_dict.keys():
+                hm_dict["final_heatmaps"].append([results_dict["uid"]+"_eval_phase", results_dict["final_heatmaps"]])
+            if "final_heatmaps_wo_like_noise" in results_dict.keys():
+                hm_dict["final_heatmaps_wo_like_noise"].append(
+                    [results_dict["uid"]+"_eval_phase_nolike", results_dict["final_heatmaps_wo_like_noise"]])
+        self.dict_logger.log_dict_to_comet(self.comet_logger, hm_dict, -1)

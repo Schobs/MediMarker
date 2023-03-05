@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/VA" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/OMA" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
@@ -58,7 +58,7 @@ SAMPLER:
     SAMPLE_PATCH_SIZE: [64,64] #patch size
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/unet_s1_preds_all/individual_results_fold0.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "model_best_valid_coord_error_f0"
-    CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
+    CENTRED_PATCH_JITTER: 0.5 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
     CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
 
 MODEL:

@@ -5,13 +5,14 @@ import copy
 class DictLogger():
     """ A dictionary based logger to save results. Extend this class to log any extra variables!
     """
-    def __init__(self, num_landmarks, is_regressing_sigma, multi_part_loss_keys, additional_sample_attribute_keys, log_valid_heatmap=False, log_inference_heatmap=False, log_fitted_gauss=False):
+    def __init__(self, num_landmarks, is_regressing_sigma, multi_part_loss_keys, additional_sample_attribute_keys, log_valid_heatmap=False, log_inference_heatmap=False, log_fitted_gauss=False, log_inference_heatmap_wo_like=False):
         #Device
 
         self.num_landmarks = num_landmarks
         self.is_regressing_sigma = is_regressing_sigma
         self.is_log_valid_heatmap = log_valid_heatmap
         self.is_log_inference_heatmap = log_inference_heatmap
+        self.log_inference_heatmap_wo_like = log_inference_heatmap_wo_like
         self.multi_part_loss_keys = multi_part_loss_keys
         self.add_sample_att_keys = additional_sample_attribute_keys
         self.standard_info_keys = ["uid", "full_res_coords", "annotation_available", "image_path", "target_coords",  "resizing_factor", "original_image_size"] 
@@ -52,6 +53,9 @@ class DictLogger():
 
         if self.is_log_inference_heatmap:
             eval_logs["individual_results_extra_keys"].append("final_heatmaps")
+            if self.log_inference_heatmap_wo_like:
+                eval_logs["individual_results_extra_keys"].append("final_heatmaps_wo_like_noise")
+
 
         if self.log_fitted_gauss:
              eval_logs["individual_results_extra_keys"].append("fitted_gauss")
@@ -210,9 +214,11 @@ class DictLogger():
             #Handle heatmap logging
             if key == "individual_results" and "final_heatmaps" in list(per_epoch_logs.keys()):
                 [per_epoch_logs["final_heatmaps"].append([x["uid"]+"_training_phase", x["final_heatmaps"]]) for x in value]
+            elif key == "individual_results" and "final_heatmaps" in list(per_epoch_logs.keys()):
+                [per_epoch_logs["final_heatmaps_wo_like_noise"].append([x["uid"]+"_training_phase_nolikenoise", x["final_heatmaps_wo_like_noise"]]) for x in value]
             else:
                 #Don't worry about averaging these, we handled those above.
-                if key in ["individual_results_extra_keys", "final_heatmaps"]:
+                if key in ["individual_results_extra_keys", "final_heatmaps", "final_heatmaps_wo_like_noise"]:
                     continue
                 #get the mean of all the batches from the training/validations. 
                 if isinstance(value, list):
@@ -229,10 +235,10 @@ class DictLogger():
             if key in ["individual_results_extra_keys", "individual_results"]:
                 continue 
             #Log heatmaps during training to keep track.
-            if key == "final_heatmaps":
+            if key == "final_heatmaps" or key == "final_heatmaps_wo_like_noise":
                 for uid, heatmaps in value:
                     for l_idx, heatmap in enumerate(heatmaps):
-                        comet_logger.log_image(heatmap, name=uid+"L_"+str(l_idx), step=time_step)
+                        comet_logger.log_image(heatmap, name=uid+"L"+str(l_idx), step=time_step)
             #Log other metrics.
             else:
                 if not np.isnan(value): 

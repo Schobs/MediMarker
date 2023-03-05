@@ -44,6 +44,7 @@ class NetworkTrainer(ABC):
         self.is_train = is_train
         self.validation_log_heatmaps = trainer_config.TRAINER.VALIDATION_LOG_HEATMAPS
         self.inference_log_heatmaps = trainer_config.INFERENCE.LOG_HEATMAPS
+        self.inference_log_heatmap_wo_noise = self.trainer_config.INFERENCE.LOG_HEATMAPS_WO_NOISE
 
         # Dataset class to use
         self.dataset_class = dataset_class
@@ -216,7 +217,8 @@ class NetworkTrainer(ABC):
             self.dataset_class.additional_sample_attribute_keys,
             log_valid_heatmap=self.validation_log_heatmaps,
             log_inference_heatmap=self.inference_log_heatmaps,
-            log_fitted_gauss=self.fit_gauss_inference
+            log_fitted_gauss=self.fit_gauss_inference,
+            log_inference_heatmap_wo_like=self.inference_log_heatmap_wo_noise,
         )
 
         self.was_initialized = True

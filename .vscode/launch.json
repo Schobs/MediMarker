@@ -72,7 +72,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/main.py",
-            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/KKA.yaml"],
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/LLHA.yaml"],
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
