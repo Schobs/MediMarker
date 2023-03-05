@@ -1,14 +1,14 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/MMA" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/LLHA_test_jitter" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
   VERBOSE: True #whether to print results every epoch
-  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round","64"]
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "64"]
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
@@ -22,11 +22,11 @@ SOLVER:
   BASE_LR: 0.01
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 250 # epochs for validation loss not improving before stopping training
-  DECAY_POLICY: None
+  DECAY_POLICY: "scheduled_500"
 
 DATASET:
-  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
-  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/'
+  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [11] #Choose landmark (between 0-17)
@@ -38,7 +38,7 @@ TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
   CACHE_DATA: True # Kind of irrelevant for ExactGP
-  INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
+  INFERENCE_ONLY: True # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
   SAVE_EVERY: 100 # Saves checkpoint every X epochs
   VALIDATE_EVERY: 25 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
@@ -78,7 +78,7 @@ MODEL:
     MODEL_NOISE_INIT: 0.01
     TRAIN_IP: True
     INDEPENDENT_LIKELIHOODS: True
-    LIKELIHOOD_NOISE_UPPER_BOUND: None
+    LIKELIHOOD_NOISE_UPPER_BOUND: 6.0
     LIKELIHOOD_NOISE_TRAINING_INTERVALS: None
     LIKELIHOOD_NOISE_SEPERATE_OPTIM: False
     KL_SCALE: 0.01
@@ -87,7 +87,7 @@ INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
-
+  LOG_HEATMAPS: True
 SSH:
   AUTO_AMEND_PATHS: False
 

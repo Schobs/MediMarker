@@ -93,9 +93,7 @@ def load_aspire_datalist(
     with open(data_list_file_path) as json_file:
         json_data = json.load(json_file)
     if data_list_key not in json_data:
-        raise ValueError(
-            f"data list {data_list_key} not specified in '{data_list_file_path}'."
-        )
+        raise ValueError(f"data list {data_list_key} not specified in '{data_list_file_path}'.")
     expected_data = json_data[data_list_key]
 
     if base_dir is None:
@@ -104,7 +102,7 @@ def load_aspire_datalist(
     return _append_paths(base_dir, expected_data)
 
 
-def resize_coordinates(coords,  resizing_factor):
+def resize_coordinates(coords, resizing_factor, round=True):
     """Resize the coordinates by a resizing factor.
     Args:
         coords ([ints]): _description_
@@ -113,10 +111,13 @@ def resize_coordinates(coords,  resizing_factor):
         _type_: _description_
     """
 
-    return np.round(coords * [1 / resizing_factor[0], 1 / resizing_factor[1]])
+    if round:
+        return np.round(coords * [1 / resizing_factor[0], 1 / resizing_factor[1]])
+    else:
+        return coords * [1 / resizing_factor[0], 1 / resizing_factor[1]]
 
 
-def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
+def load_and_resize_image(image_path, coords, load_im_size, data_type_load, round=True):
     """Load image and resize it to the specified size. Also resize the coordinates to match the new image size.
 
     Args:
@@ -146,7 +147,7 @@ def load_and_resize_image(image_path, coords, load_im_size, data_type_load):
         resized_factor = np.expand_dims(np.array(resizing_factor), axis=0)
 
     # potentially resize the coords
-    coords = resize_coordinates(coords,  resizing_factor)
+    coords = resize_coordinates(coords, resizing_factor, round)
     image = normalize_cmr(original_image.resize(load_im_size))
 
     # logger.info("time im resize: %s", time.time()-s)
@@ -175,7 +176,7 @@ def maybe_get_coordinates_from_xlsx(datapath, uids, landmarks_to_return, sheet_n
     if sheet_name is None:
         sheet_name = 0
 
-    datafame = pd.read_excel(datapath, sheet_name=sheet_name,  dtype={"uid": 'string'})
+    datafame = pd.read_excel(datapath, sheet_name=sheet_name, dtype={"uid": "string"})
 
     # if isinstance(landmarks_to_return, int):
     #     cols_to_return = ["L"+str(landmarks_to_return)]
@@ -184,15 +185,24 @@ def maybe_get_coordinates_from_xlsx(datapath, uids, landmarks_to_return, sheet_n
     # else:
     #     return ValueError("landmarks_to_return must be int or list of ints")
 
-    filtered_df = datafame[datafame['uid'].isin(uids)]
+    filtered_df = datafame[datafame["uid"].isin(uids)]
     assert filtered_df.shape[0] == len(uids), "Not all uids found in csv file"
 
     return_data = filtered_df.loc[:, ["uid", "predicted_coords"]]
 
     # Parse the string to remove newlines and convert to numpy array. Only return columns requested. Create dict:
     # {'uid1': [landmark1, landmark2, ...], 'uid2': [landmark1, landmark2, ...]}
-    return_dict = dict(zip(return_data.uid, np.array([ast.literal_eval(
-        x.replace(".", ",").replace("\n", ",")) for x in return_data.predicted_coords.tolist()])[:, landmarks_to_return]))
-#
+    return_dict = dict(
+        zip(
+            return_data.uid,
+            np.array(
+                [
+                    ast.literal_eval(x.replace(".", ",").replace("\n", ","))
+                    for x in return_data.predicted_coords.tolist()
+                ]
+            )[:, landmarks_to_return],
+        )
+    )
+    #
 
     return return_dict

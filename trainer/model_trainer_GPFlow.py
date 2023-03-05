@@ -28,7 +28,13 @@ from torch.utils.data import DataLoader
 from utils.im_utils.visualisation import multi_variate_hm
 from utils.setup.argument_utils import checkpoint_loading_checking
 from models.gp_models.register import *
-from models.gp_models.tf_gpmodels import conv_sgp_rbf_fix, get_SVGP_model, get_conv_SVGP, get_conv_SVGP_linear_coreg, toms
+from models.gp_models.tf_gpmodels import (
+    conv_sgp_rbf_fix,
+    get_SVGP_model,
+    get_conv_SVGP,
+    get_conv_SVGP_linear_coreg,
+    toms,
+)
 
 gpf.config.set_default_float(np.float64)
 gpf.config.set_default_summary_fmt("notebook")
@@ -62,16 +68,16 @@ class GPFlowTrainer(NetworkTrainer):
 
         self.likelihood = None
 
-        self.data_aug_args_training = {"data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
-                                       "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
-                                       "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
-
-                                       }
-        self.data_aug_args_evaluation = {"data_augmentation_strategy":  self.trainer_config.SAMPLER.DATA_AUG,
-                                         "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
-                                         "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE
-
-                                         }
+        self.data_aug_args_training = {
+            "data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
+            "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
+            "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE,
+        }
+        self.data_aug_args_evaluation = {
+            "data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
+            "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
+            "guarantee_lms_image": self.trainer_config.SAMPLER.DATA_AUG_GUARANTEE_LMS_IN_IMAGE,
+        }
 
         self.kern = self.trainer_config.MODEL.GPFLOW.KERN
         self.kern_stride = self.trainer_config.MODEL.GPFLOW.CONV_KERN_STRIDE
@@ -94,7 +100,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         if self.likelihood_seperate_optim:
             self.logger.info("Using seperate optimiser for likelihood noise")
-            self.likelihood_optimizer = tf.keras.optimizers.Adam(learning_rate=self.initial_lr/100)
+            self.likelihood_optimizer = tf.keras.optimizers.Adam(learning_rate=self.initial_lr / 100)
 
     def initialize_network(self):
         """
@@ -115,10 +121,14 @@ class GPFlowTrainer(NetworkTrainer):
         self.logger.info("Initializing GP model...")
 
         if self.kern == "conv":
-            all_train_image = [tf.squeeze(tf.convert_to_tensor((x["image"]), dtype=tf.float64), axis=0)
-                               for x in self.train_dataloader.dataset]
-            all_train_label = [tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks"]),
-                                                               dtype=tf.float64), axis=0) for x in self.train_dataloader.dataset]
+            all_train_image = [
+                tf.squeeze(tf.convert_to_tensor((x["image"]), dtype=tf.float64), axis=0)
+                for x in self.train_dataloader.dataset
+            ]
+            all_train_label = [
+                tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks"]), dtype=tf.float64), axis=0)
+                for x in self.train_dataloader.dataset
+            ]
 
             # self.network = get_conv_SVGP(all_train_image, all_train_label,
             #                              self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
@@ -128,13 +138,21 @@ class GPFlowTrainer(NetworkTrainer):
             #                                 self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
             #                                 self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, kern_stride=self.kern_stride)
 
-            self.network = get_conv_SVGP_linear_coreg(all_train_image, all_train_label,
-                                                      self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-                                                      self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, inducing_sample_var=self.ip_sample_var,
-                                                      base_kern_ls=self.conv_kern_ls, base_kern_var=self.conv_kern_var,
-                                                      init_likelihood_noise=self.initial_likelihood_noise, independent_likelihoods=self.independent_likelihoods,
-                                                      likelihood_upper_bound=self.likelihood_noise_upper_bound, kern_type=self.conv_kern_type,
-                                                      kl_scale=self.kl_scale)
+            self.network = get_conv_SVGP_linear_coreg(
+                all_train_image,
+                all_train_label,
+                self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
+                self.num_inducing_points,
+                self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE,
+                inducing_sample_var=self.ip_sample_var,
+                base_kern_ls=self.conv_kern_ls,
+                base_kern_var=self.conv_kern_var,
+                init_likelihood_noise=self.initial_likelihood_noise,
+                independent_likelihoods=self.independent_likelihoods,
+                likelihood_upper_bound=self.likelihood_noise_upper_bound,
+                kern_type=self.conv_kern_type,
+                kl_scale=self.kl_scale,
+            )
 
             if not self.train_inducing_points:
                 self.logger.info("Fixing inducing points. They will not train.")
@@ -151,7 +169,8 @@ class GPFlowTrainer(NetworkTrainer):
                 #     gpf.set_trainable(self.network.likelihood.variance, False)
             else:
                 self.logger.info(
-                    "Not Fixing likelihood variance. Training. Learning independent likelihoods is %s." % self.independent_likelihoods
+                    "Not Fixing likelihood variance. Training. Learning independent likelihoods is %s."
+                    % self.independent_likelihoods
                 )
                 self._set_likelihood_noise_trainable()
 
@@ -170,26 +189,21 @@ class GPFlowTrainer(NetworkTrainer):
         else:
             if self.kern == "matern52":
                 # Mater52 kernel
-                kern_list = [
-                    gpf.kernels.Matern52() + gpf.kernels.Linear() for _ in range(2)
-                ]
+                kern_list = [gpf.kernels.Matern52() + gpf.kernels.Linear() for _ in range(2)]
             elif self.kern == "se":
                 # squared exponential
-                kern_list = [
-                    gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)
-                ]
+                kern_list = [gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)]
             elif self.kern == "rbf":
                 # Rbf kernel
-                kern_list = [
-                    gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)
-                ]
+                kern_list = [gpf.kernels.SquaredExponential() + gpf.kernels.Linear() for _ in range(2)]
             else:
                 raise ValueError("Kernel not implemented. Try 'matern52', 'se' or 'rbf")
 
             flattened_sample_size = next(iter(self.train_dataloader))["image"].shape[-1]
 
-            self.network = get_SVGP_model(flattened_sample_size, self.num_inducing_points,
-                                          kern_list, inducing_dist="uniform")
+            self.network = get_SVGP_model(
+                flattened_sample_size, self.num_inducing_points, kern_list, inducing_dist="uniform"
+            )
 
         # Log network and initial weights
         if self.comet_logger:
@@ -221,7 +235,7 @@ class GPFlowTrainer(NetworkTrainer):
             self.epoch_start_time = time()
             epoch_loss = 0
             mb_step = 0
-            per_epoch_logs = self.dict_logger.get_epoch_logger(log_final_heatmaps=True)
+            per_epoch_logs = self.dict_logger.get_epoch_logger()
 
             generator = iter(self.train_dataloader)
             for data_dict in iter(generator):
@@ -235,16 +249,16 @@ class GPFlowTrainer(NetworkTrainer):
                     log_heatmaps=False,
                     logged_vars=per_epoch_logs,
                     direct_data_dict=data_dict,
-                    restart_dataloader=False
+                    restart_dataloader=False,
                 )
                 epoch_loss += l
                 step += 1
                 mb_step += 1
                 if self.comet_logger:
-                    self.comet_logger.log_metric("training loss step",  l, step)
+                    self.comet_logger.log_metric("training loss step", l, step)
 
             if self.comet_logger:
-                self.comet_logger.log_metric("training loss epoch",  epoch_loss/mb_step, self.epoch)
+                self.comet_logger.log_metric("training loss epoch", epoch_loss / mb_step, self.epoch)
             # We validate every 200 epochs
             if self.epoch % self.validate_every == 0:
 
@@ -258,7 +272,7 @@ class GPFlowTrainer(NetworkTrainer):
                         log_coords=True,
                         log_heatmaps=self.validation_log_heatmaps,
                         logged_vars=per_epoch_logs,
-                        restart_dataloader=False
+                        restart_dataloader=False,
                     )
 
             self.epoch_end_time = time()
@@ -316,8 +330,9 @@ class GPFlowTrainer(NetworkTrainer):
             data_dict = direct_data_dict
 
         data_dict["image"] = tf.squeeze(tf.convert_to_tensor((data_dict["image"]), dtype=tf.float64), axis=1)
-        data_dict["label"]["landmarks"] = tf.squeeze(tf.convert_to_tensor(
-            (data_dict["label"]["landmarks"]), dtype=tf.float64), axis=1)
+        data_dict["label"]["landmarks"] = tf.squeeze(
+            tf.convert_to_tensor((data_dict["label"]["landmarks"]), dtype=tf.float64), axis=1
+        )
 
         data = data_dict["image"]
         target = data_dict["label"]["landmarks"]
@@ -361,11 +376,7 @@ class GPFlowTrainer(NetworkTrainer):
                     split,
                 )
                 if debug:
-                    debug_vars = [
-                        x
-                        for x in logged_vars["individual_results"]
-                        if x["uid"] in data_dict["uid"]
-                    ]
+                    debug_vars = [x for x in logged_vars["individual_results"] if x["uid"] in data_dict["uid"]]
                     self.eval_label_generator.debug_prediction_gpflow(
                         data_dict,
                         pred_coords,
@@ -391,13 +402,15 @@ class GPFlowTrainer(NetworkTrainer):
         """
         if self.likelihood_seperate_optim:
             if self.independent_likelihoods:
-                assert len(
-                    self.network.trainable_variables) == 9, "to index the noise params, the network must have 9 trainable variables"
+                assert (
+                    len(self.network.trainable_variables) == 9
+                ), "to index the noise params, the network must have 9 trainable variables"
                 train_vars_normal_optim = self.network.trainable_variables[:7]
                 train_vars_noise_optim = self.network.trainable_variables[7:]
             else:
-                assert len(
-                    self.network.trainable_variables) == 8, "to index the noise param, the network must have 8 trainable variables"
+                assert (
+                    len(self.network.trainable_variables) == 8
+                ), "to index the noise param, the network must have 8 trainable variables"
                 train_vars_normal_optim = self.network.trainable_variables[:7]
                 train_vars_noise_optim = self.network.trainable_variables[7:]
         else:
@@ -433,9 +446,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         if log_coords:
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(data_dict, log_heatmaps)
-            pred_coords, target_coords = self.maybe_rescale_coords(
-                pred_coords_input_size, data_dict
-            )
+            pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
             if torch.is_tensor(target_coords):
                 target_coords = target_coords.cpu().detach().numpy()
         else:
@@ -443,7 +454,9 @@ class GPFlowTrainer(NetworkTrainer):
 
         return pred_coords, pred_coords_input_size, extra_info, target_coords
 
-    def get_coords_from_heatmap(self, data_dict: Dict[str, Any], log_heatmaps: bool) -> Tuple[np.ndarray, Dict[str, Any]]:
+    def get_coords_from_heatmap(
+        self, data_dict: Dict[str, Any], log_heatmaps: bool
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
         """Gets x,y coordinates from a model's output.
 
         Args:
@@ -469,9 +482,15 @@ class GPFlowTrainer(NetworkTrainer):
         extra_info = {"cov_matr": cov_matr}
         if log_heatmaps:
             extra_info["final_heatmaps"] = multi_variate_hm(
-                data_dict, y_mean, cov_matr, self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, noise=noise, plot_targ=self.is_train)
+                data_dict,
+                y_mean,
+                cov_matr,
+                self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
+                noise=noise,
+                plot_targ=self.is_train,
+            )
 
-        return prediction,  extra_info
+        return prediction, extra_info
 
     # def maybe_rescale_coords(self, pred_coords, data_dict):
     #     """Maybe rescale coordinates based on evaluation parameters, and decide which target coords to evaluate against.
@@ -545,9 +564,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         # log them else they are lost!
         if self.comet_logger:
-            self.dict_logger.log_dict_to_comet(
-                self.comet_logger, per_epoch_logs, self.epoch
-            )
+            self.dict_logger.log_dict_to_comet(self.comet_logger, per_epoch_logs, self.epoch)
 
         # Delete big data in logs for printing and memory
         per_epoch_logs.pop("individual_results", None)
@@ -570,7 +587,6 @@ class GPFlowTrainer(NetworkTrainer):
             self.best_valid_coord_error = per_epoch_logs["valid_coord_error_mean"]
             self.best_valid_coords_epoch = self.epoch
             new_best_coord_valid = True
-
 
         self.check_early_stop()
 
@@ -595,13 +611,15 @@ class GPFlowTrainer(NetworkTrainer):
             if not is_variance_trainable and self.likelihood_noise_upper_bound is not None:
                 self._set_likelihood_noise_trainable()
                 self.logger.info(
-                    "No improvement in %s epochs with fixed noise. Unfixing noise and restarting early stopping.", self.early_stop_patience
+                    "No improvement in %s epochs with fixed noise. Unfixing noise and restarting early stopping.",
+                    self.early_stop_patience,
                 )
 
                 self.epochs_wo_val_improv = 0
             else:
                 self.logger.info(
-                    "Early stopping triggered. Validation Coord Error did not reduce for %s epochs.", self.early_stop_patience
+                    "Early stopping triggered. Validation Coord Error did not reduce for %s epochs.",
+                    self.early_stop_patience,
                 )
                 self.continue_training = False
 
@@ -646,15 +664,17 @@ class GPFlowTrainer(NetworkTrainer):
         """Toggle the training status of the noise parameter(s) of the likelihood."""
         if self.independent_likelihoods:
             is_variance_trainable = all(
-                [likelihood.variance.trainable for likelihood in self.network.likelihood.likelihoods])
+                [likelihood.variance.trainable for likelihood in self.network.likelihood.likelihoods]
+            )
             for likelihood in self.network.likelihood.likelihoods:
                 gpf.set_trainable(likelihood.variance, not is_variance_trainable)
         else:
             is_variance_trainable = self.network.likelihood.variance.trainable
             gpf.set_trainable(self.network.likelihood.variance, not is_variance_trainable)
 
-        self.logger.info("Toggled likelihood noise parameter training. New trainable status: %s",
-                         not is_variance_trainable)
+        self.logger.info(
+            "Toggled likelihood noise parameter training. New trainable status: %s", not is_variance_trainable
+        )
 
     def save_checkpoint(self, path: str):
         """Save model checkpoint to `path`.
@@ -680,14 +700,15 @@ class GPFlowTrainer(NetworkTrainer):
 
         log_dir = path
         if self.likelihood_seperate_optim:
-            ckpt = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer,
-                                       likelihood_optimizer=self.likelihood_optimizer)
+            ckpt = tf.train.Checkpoint(
+                model=self.network, optimizer=self.optimizer, likelihood_optimizer=self.likelihood_optimizer
+            )
         else:
             ckpt = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer)
         manager = tf.train.CheckpointManager(ckpt, log_dir, max_to_keep=5)
         manager.save()
 
-        with open(path + '/meta_state.pkl', 'wb') as f:
+        with open(path + "/meta_state.pkl", "wb") as f:
             pickle.dump(state, f)
 
     def load_checkpoint(self, model_path: str, training_bool: bool):
@@ -702,16 +723,16 @@ class GPFlowTrainer(NetworkTrainer):
             self.initialize(training_bool)
 
         if self.likelihood_seperate_optim:
-            checkpoint = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer,
-                                             likelihood_optimizer=self.likelihood_optimizer)
+            checkpoint = tf.train.Checkpoint(
+                model=self.network, optimizer=self.optimizer, likelihood_optimizer=self.likelihood_optimizer
+            )
         else:
             checkpoint = tf.train.Checkpoint(model=self.network, optimizer=self.optimizer)
 
-        manager = tf.train.CheckpointManager(
-            checkpoint, model_path, max_to_keep=5)
+        manager = tf.train.CheckpointManager(checkpoint, model_path, max_to_keep=5)
         status = checkpoint.restore(manager.latest_checkpoint)
 
-        with open(model_path + '/meta_state.pkl', 'rb') as f:
+        with open(model_path + "/meta_state.pkl", "rb") as f:
             checkpoint_info = pickle.load(f)
 
         self.epoch = checkpoint_info["epoch"]
@@ -779,10 +800,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
         if self.sampler_mode in ["patch_bias", "patch_centred"]:
-            if (
-                self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
-                == "patchify_and_stitch"
-            ):
+            if self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE == "patchify_and_stitch":
                 # In this case we are patchifying the image
                 inference_full_image = False
             else:
@@ -823,7 +841,7 @@ class GPFlowTrainer(NetworkTrainer):
                     log_heatmaps=self.inference_log_heatmaps,
                     logged_vars=evaluation_logs,
                     debug=debug,
-                    restart_dataloader=False
+                    restart_dataloader=False,
                 )
             del generator
             print()
@@ -849,7 +867,7 @@ class GPFlowTrainer(NetworkTrainer):
             self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
 
             self.optimizer.lr.assign(self.initial_lr / 10)
-              
+
         elif self.lr_policy == "scheduled_250" and self.epoch == 250:
             self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
 

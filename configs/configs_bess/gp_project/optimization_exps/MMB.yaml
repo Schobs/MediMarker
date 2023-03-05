@@ -8,7 +8,7 @@ OUTPUT:
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
   VERBOSE: True #whether to print results every epoch
-  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round" "64"]
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round", "64"]
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
