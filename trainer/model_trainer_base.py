@@ -215,7 +215,8 @@ class NetworkTrainer(ABC):
             self.loss.loss_seperated_keys,
             self.dataset_class.additional_sample_attribute_keys,
             log_valid_heatmap=self.validation_log_heatmaps,
-            log_inference_heatmap=self.inference_log_heatmaps
+            log_inference_heatmap=self.inference_log_heatmaps,
+            log_fitted_gauss=self.fit_gauss_inference
         )
 
         self.was_initialized = True

@@ -135,7 +135,8 @@ _C.MODEL.GPFLOW.CONV_KERN_SIZE = [3, 3]  # Size of kernel for convolutional kern
 _C.MODEL.GPFLOW.CONV_KERN_STRIDE = 1  # Size of kernel for convolutional kernel gaussian process
 _C.MODEL.GPFLOW.CONV_KERN_LS = 5  # Size of kernel for convolutional kernel gaussian process
 _C.MODEL.GPFLOW.CONV_KERN_V = 5  # Size of kernel for convolutional kernel gaussian process
-_C.MODEL.GPFLOW.CONV_KERN_TYPE= "rbf"  # ["rbf", "matern12", "matern32"] of kernel for convolutional kernel gaussian process
+# ["rbf", "matern12", "matern32"] of kernel for convolutional kernel gaussian process
+_C.MODEL.GPFLOW.CONV_KERN_TYPE = "rbf"
 _C.MODEL.GPFLOW.MODEL_NOISE_INIT = 1.0
 _C.MODEL.GPFLOW.FIX_NOISE_UNTIL_EPOCH = 0
 _C.MODEL.GPFLOW.LIKELIHOOD_NOISE_UPPER_BOUND = None

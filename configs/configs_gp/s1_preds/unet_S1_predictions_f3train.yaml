@@ -2,7 +2,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1/"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1/f3_train/"
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
@@ -19,6 +19,7 @@ SOLVER:
 
 INFERENCE:
   SPLIT: "training"
+  FIT_GAUSS: True
 
 
 DATASET:
@@ -34,7 +35,7 @@ TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
   CACHE_DATA: True
-  INFERENCE_ONLY: False
+  INFERENCE_ONLY: True
   FOLD: 3
   VALIDATION_LOG_HEATMAPS: False
 
@@ -46,7 +47,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 5
 
-  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAC_DS5//model_best_valid_coord_error_fold1.model"
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAC_DS5//model_best_valid_coord_error_fold3.model"
 
 
 SSH: 

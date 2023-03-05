@@ -236,13 +236,17 @@ class UnetTrainer(NetworkTrainer):
 
         # Maybe fit a gaussian to the output heatmap and get the coords from that
         if self.fit_gauss_inference:
-            pred_coords, max_values, fitted_dicts = get_coords_fit_gauss(
-                final_heatmap, pred_coords, visualize=False
+            _, _, fitted_dicts = get_coords_fit_gauss(
+                model_output, input_size_coords, visualize=self.trainer_config.INFERENCE.DEBUG
             )
 
         extra_info["hm_max"] = input_max_values
         extra_info["final_heatmaps"] = np.array(final_heatmap.cpu().detach(), dtype=np.float16)
-
+        extra_info["fitted_gauss"] = np.empty((input_max_values.shape[0], input_max_values.shape[1], 2, 2))
+        for si, sample in enumerate(fitted_dicts):
+            inner_covs = []
+            for li, lm in enumerate(sample):
+                extra_info["fitted_gauss"][si, li, :, :] = lm["covariance"]
         return pred_coords, extra_info
 
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
