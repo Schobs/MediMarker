@@ -657,3 +657,30 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
                 all_hms_wo_noise.append(np.expand_dims(image, axis=0))
 
     return np.array(all_hms),  np.array(all_hms_wo_noise), np.array(all_full_covs)
+
+
+def plot_target(heatmaps, targets):
+    assert heatmaps.shape[1] == 1, "Heatmaps must be of shape (batch_size, 1, height, width). 1 means 1 landmark training only. Can only plot one target currently."
+    heatmaps_with_target = []
+    for heatmap, target in zip(heatmaps, targets):
+        target = target[0]
+        heatmap_shape = heatmap.shape[-2:]
+        image = np.zeros((heatmap_shape[0], heatmap_shape[1], 3), dtype=np.uint8)
+        heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min()) * 255.0
+
+        image[:, :, 0] = heatmap
+        cross_size = 6
+        # add intersection over the landmark
+        x_min = max(0, int(target[0] - cross_size / 2))
+        x_max = min(heatmap_shape[0], int(target[0] + (cross_size / 2)+1))
+
+        y_min = max(0, int(target[1] - cross_size / 2))
+        y_max = min(heatmap_shape[1], int(target[1] + (cross_size / 2)+1))
+        # image[x_min:x_max, int(landmark[1]), 1] = 255  # green line
+        # image[int(landmark[0]), y_min:y_max, 1] = 255  # green line
+
+        image[y_min: y_max, int(target[0]), 1] = 255  # green line
+        image[int(target[1]), x_min: x_max, 1] = 255  # green line
+        heatmaps_with_target.append(np.expand_dims(image, axis=0))
+
+    return np.array(heatmaps_with_target)

@@ -4,6 +4,7 @@ from inference.ensemble_inference_helper import EnsembleUncertainties
 import torch
 import numpy as np
 from time import time
+from utils.im_utils.visualisation import plot_target
 from utils.logging.comet_logging import comet_log_yaml_parameters
 
 # import multiprocessing as mp
@@ -45,6 +46,7 @@ class NetworkTrainer(ABC):
         self.validation_log_heatmaps = trainer_config.TRAINER.VALIDATION_LOG_HEATMAPS
         self.inference_log_heatmaps = trainer_config.INFERENCE.LOG_HEATMAPS
         self.inference_log_heatmap_wo_noise = self.trainer_config.INFERENCE.LOG_HEATMAPS_WO_NOISE
+        self.log_targ_hm = self.trainer_config.INFERENCE.LOG_HEATMAP_PLOT_TARG
         self.inference_eval_mode = self.trainer_config.INFERENCE.EVALUATION_MODE
 
         # Dataset class to use
@@ -517,13 +519,21 @@ class NetworkTrainer(ABC):
         Returns:
             _type_: _description_
         """
+
         if log_coords:
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(
                 output, data_dict["original_image_size"]
             )
+            extra_info["target_coords_input_size"] = data_dict["target_coords"]
+
+
             pred_coords, target_coords = self.maybe_rescale_coords(
                 pred_coords_input_size, data_dict
             )
+            if self.log_targ_hm:
+                extra_info["final_heatmaps"] = plot_target(extra_info["final_heatmaps"],
+                                                           data_dict["target_coords"])
+
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
 
@@ -650,7 +660,7 @@ class NetworkTrainer(ABC):
         """
 
         # Don't worry in case annotations are not present since these are 0,0 anyway. this is handled elesewhere
-        # C1 or C2
+        # C1
         if self.use_full_res_coords:
             target_coords = data_dict["full_res_coords"].to(self.device)  # C1
         else:
@@ -658,13 +668,17 @@ class NetworkTrainer(ABC):
                 self.device
             )  # C3 (and C1 if input size == full res size so full & target the same)
 
-        # C3
+        # C2
         if self.use_full_res_coords and not self.resize_first:
-            # upscale_factor = torch.tensor(
-            #     [data_dict["resizing_factor"][0], data_dict["resizing_factor"][1]]
-            # ).to(self.device)
-            # upscaled_coords = torch.tensor([pred_coords[x]*upscale_factor[x] for x in range(len(pred_coords))]).to(self.device)
-            upscale_factor = data_dict["resizing_factor"]
+
+            # If we are using patch_centred sampling, we are basing prediction on a smaller patch
+            # containing the landmark, so we need to add the patch corner to the prediction.
+            if self.sampler_mode == "patch_centred":
+                x_y_corner = torch.unsqueeze(torch.tensor(
+                    [[data_dict["x_y_corner"][0][x], data_dict["x_y_corner"][1][x]] for x in range(len(data_dict["x_y_corner"][0]))]), axis=1).to(self.device)
+                pred_coords = torch.add(pred_coords, x_y_corner)
+
+            upscale_factor = torch.tensor(data_dict["resizing_factor"]).to(self.device)
             if not torch.is_tensor(pred_coords):
                 pred_coords = torch.tensor(pred_coords)
             upscaled_coords = torch.mul(pred_coords, upscale_factor)
@@ -788,7 +802,6 @@ class NetworkTrainer(ABC):
         ind_results = pd.DataFrame(individual_results)
         ind_results = ind_results.drop(columns="final_heatmaps", errors='ignore')
         ind_results = ind_results.drop(columns="final_heatmaps_wo_like_noise", errors='ignore')
-
 
         return summary_results, ind_results
 

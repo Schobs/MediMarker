@@ -157,6 +157,8 @@ _C.INFERENCE.FIT_GAUSS = (
     False  # If false, uses max, if true, first fits gaussian to output heatmap.
 )
 _C.INFERENCE.LOG_HEATMAPS = False
+_C.INFERENCE.LOG_HEATMAP_PLOT_TARG = False
+
 _C.INFERENCE.LOG_HEATMAPS_WO_NOISE = False
 
 _C.INFERENCE.ENSEMBLE_INFERENCE = False  # average predictions from multiple models

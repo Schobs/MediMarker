@@ -198,7 +198,7 @@ class UnetTrainer(NetworkTrainer):
         input_size_coords, input_max_values = get_coords(model_output)
 
         # Save the predicted coordinates on the model-input size image
-        extra_info["coords_og_size"] = input_size_coords
+        extra_info["pred_coords_input_size"] = input_size_coords
 
         # Depending on evaluation mode, we may need to resize the coords to the original image size
         if self.resize_first:
@@ -234,19 +234,20 @@ class UnetTrainer(NetworkTrainer):
             pred_coords = input_size_coords
             max_values = input_max_values
 
+        extra_info["hm_max"] = input_max_values
+
+        extra_info["final_heatmaps"] = np.array(final_heatmap.cpu().detach(), dtype=np.float16)
+
         # Maybe fit a gaussian to the output heatmap and get the coords from that
-        if self.fit_gauss_inference:
+        if self.fit_gauss_inference and not self.is_train:
             _, _, fitted_dicts = get_coords_fit_gauss(
                 model_output, input_size_coords, visualize=self.trainer_config.INFERENCE.DEBUG
             )
 
-        extra_info["hm_max"] = input_max_values
-        extra_info["final_heatmaps"] = np.array(final_heatmap.cpu().detach(), dtype=np.float16)
-        extra_info["fitted_gauss"] = np.empty((input_max_values.shape[0], input_max_values.shape[1], 2, 2))
-        for si, sample in enumerate(fitted_dicts):
-            inner_covs = []
-            for li, lm in enumerate(sample):
-                extra_info["fitted_gauss"][si, li, :, :] = lm["covariance"]
+            extra_info["fitted_gauss"] = np.empty((input_max_values.shape[0], input_max_values.shape[1], 2, 2))
+            for si, sample in enumerate(fitted_dicts):
+                for li, lm in enumerate(sample):
+                    extra_info["fitted_gauss"][si, li, :, :] = lm["covariance"]
         return pred_coords, extra_info
 
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):

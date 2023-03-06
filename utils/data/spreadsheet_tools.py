@@ -25,7 +25,7 @@ def combine_spreadsheets(spreadsheets, output_path):
 
 
 def combine_spreads():
-    for fold in [0, 1]:
+    for fold in [0, 1,2,3]:
         spreadsheets = ['/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/GP/s1/f'+str(fold)+'_train/individual_results_fold'+str(fold)+'.xlsx',
                         '/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/GP/s1/f' +
                         str(fold)+'_val/individual_results_fold'+str(fold)+'.xlsx',

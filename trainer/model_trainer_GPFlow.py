@@ -509,39 +509,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         return prediction, extra_info
 
-    # def maybe_rescale_coords(self, pred_coords, data_dict):
-    #     """Maybe rescale coordinates based on evaluation parameters, and decide which target coords to evaluate against.
-    #         Cases C1:4:
-    #         C1) used full-scale image to train or resized heatmap already: leave predicted, use full-res target
-    #         C2) used low-scale image to train and rescaling coordinates up to full-scale image size
-    #         C3) use low-scale image to train, want to eval on low-scale coordinates
-    #     Args:
-    #         pred_coords (tensor): coords extracted from output heatmap
-    #         data_dict (dict): dataloader sample dictionary
 
-    #     Returns:
-    #         tensor, tensor: predicted coordinates and target coordinates for evaluation
-    #     """
-
-    #     # Don't worry in case annotations are not present since these are 0,0 anyway. this is handled elesewhere
-    #     # C1 or C2
-    #     if self.use_full_res_coords:
-    #         target_coords = data_dict["full_res_coords"].to(self.device)  # C1
-    #     else:
-    #         # C3 (and C1 if input size == full res size so full & target the same)
-    #         target_coords = np.round(data_dict["label"]["landmarks"])
-
-    #     # C3
-    #     if self.use_full_res_coords and not self.resize_first:
-    #         upscale_factor = torch.tensor(
-    #             [data_dict["resizing_factor"][0], data_dict["resizing_factor"][1]]
-    #         ).to(self.device)
-    #         # upscaled_coords = torch.tensor([pred_coords[x]*upscale_factor[x] for x in range(len(pred_coords))]).to(self.device)
-    #         upscaled_coords = torch.mul(pred_coords, upscale_factor)
-    #         pred_coords = torch.round(upscaled_coords)
-    #         # pred_coords = pred_coords * upscale_factor
-
-    #     return pred_coords, target_coords
 
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
         """
