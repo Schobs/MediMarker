@@ -218,6 +218,9 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
                     landmarks_in_indicator = 0
                 else:
                     landmarks_in_indicator = 1
+            logger.info("going with xmin and ymin %s and  %s w landmark in: %s",
+                        x_min, y_min, landmarks_in_indicator)
+            break
 
         if centre_patch_jitter > 0:
             # if garuntee_gt_in:
