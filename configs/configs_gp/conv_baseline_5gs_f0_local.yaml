@@ -46,7 +46,7 @@ TRAINER:
   SAVE_EVERY: 20 # Saves checkpoint every X epochs
   VALIDATE_EVERY: 1 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
-  INFERENCE_ONLY: True
+  INFERENCE_ONLY: False
   FOLD: 0 
 
 SAMPLER:
@@ -73,7 +73,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 5 #irrelevant
   ARCHITECTURE: "U-Net"  # ["U-Net" , "PHD-Net"]
-  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/GP/conv_baseline/conv_baseline_5gs_f0_local/model_best_valid_coord_error_fold0.model" #Put your checkpoint for Inference here.
+  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/GP/conv_baseline/conv_baseline_5gs_f0_local/model_best_valid_coord_error_fold0.model" #Put your checkpoint for Inference here.
   # GPFLOW:
   #   NUM_INDUCING_POINTS: 100 # of inducing points or inducing patches
   #   KERN: "rbf"  # possible values: ["conv", "rbf", "matern52"]

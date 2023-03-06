@@ -3,7 +3,7 @@
 OUTPUT: 
   # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f0/"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_2gs_f0/"
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
@@ -70,7 +70,7 @@ SAMPLER:
     CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
 
 MODEL:
-  GAUSS_SIGMA: 5 #irrelevant
+  GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "U-Net"  # ["U-Net" , "PHD-Net"]
   # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_matern/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
   # GPFLOW:

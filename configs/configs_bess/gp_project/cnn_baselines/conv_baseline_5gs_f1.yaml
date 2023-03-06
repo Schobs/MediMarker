@@ -3,7 +3,7 @@
 OUTPUT: 
   # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f0/"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f1/"
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
@@ -46,7 +46,7 @@ TRAINER:
   SAVE_EVERY: 20 # Saves checkpoint every X epochs
   VALIDATE_EVERY: 1 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
-  FOLD: 0
+  FOLD: 1
 
 SAMPLER:
   DATA_AUG: None #the data aug scheme, currently flattens, but can change this to other schemes.
@@ -64,7 +64,7 @@ SAMPLER:
     RESOLUTION_TO_SAMPLE_FROM:  "input_size" #means it samples from 512,512 not the original resolution
     SAMPLE_PATCH_SIZE: [64,64] #patch size
     # CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAS_DS5/individual_results_allfolds.xlsx"
-    CENTRED_PATCH_COORDINATE_PATH: "/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/GP/s1/s1_preds_all/combined_results_fold0.xlsx"
+    CENTRED_PATCH_COORDINATE_PATH: "/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/GP/s1/s1_preds_all/combined_results_fold1.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "Sheet1"
     CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
     CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
