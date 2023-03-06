@@ -399,7 +399,10 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             ]
 
             if self.guarantee_landmarks_in_image:
+                fail_count = 0
                 while not all(landmarks_in_indicator) == 1:
+                    if fail_count == 10:
+                        raise ValueError("Failed to find a valid transform for this sample to keep landmark in image.")
                     # list where [0] is image and [1] are coords.
                     transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
 
@@ -416,6 +419,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                         else 0
                         for xy in input_coords
                     ]
+                    fail_count += 1
 
                     # Don't do data augmentation.
         else:

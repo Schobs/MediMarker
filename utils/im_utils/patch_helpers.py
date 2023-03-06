@@ -151,7 +151,7 @@ def sample_patch_with_bias(image, landmarks, sample_patch_bias, load_im_size,  s
     )
 
 
-def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_patch_size, centre_patch_jitter, debug, groundtruth_lms=None, safe_padding=128, deterministic=False):
+def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_patch_size, centre_patch_jitter, debug, groundtruth_lms=None, safe_padding=128, deterministic=False, garuntee_gt_in=True):
     """ Samples a patch from an image, centred around coords_to_centre_around.
         Patch is padded with zeros to the size of the patch to allow fo future data augmentation.
         If the coordinate is too near the edge of the image, the patch is adjusted towards the centre.
@@ -191,45 +191,55 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
     # Is % of image better than exact pixel # to jitter by? For now, it will be %
     # Pick a random direction in x and y, and move centre by that much.
     # Then the image edge code will handle if centre is off the image.
-    if centre_patch_jitter > 0:
-        # Jitter needs to ensure centre_coord is still in the patch. Add some pixels for safety of image edges.
-        max_x_jitter = max(0, ((sample_patch_size[0]/2)*centre_patch_jitter) - 5)
-        max_y_jitter = max(0, ((sample_patch_size[1]/2)*centre_patch_jitter) - 5)
+    landmarks_in_indicator = 0
+    fail_count = 0
+    while landmarks_in_indicator == 0:
+        if fail_count > 10:
+            raise ValueError("Failed to sample a patch with a landmark in it.")
+        if centre_patch_jitter > 0:
+            # if garuntee_gt_in:
 
-        # Ensure the same jitter is applied to the landmarks
-        if deterministic:
-            np.random.seed(int(coords_to_centre_around[0, 0] + coords_to_centre_around[0, 1]))
+            # Jitter needs to ensure centre_coord is still in the patch. Add some pixels for safety of image edges.
+            max_x_jitter = max(0, ((sample_patch_size[0]/2)*centre_patch_jitter) - 5)
+            max_y_jitter = max(0, ((sample_patch_size[1]/2)*centre_patch_jitter) - 5)
 
-        x_dir = np.random.choice([-1, 1])
-        y_dir = np.random.choice([-1, 1])
-        x_jitter = x_dir * np.random.randint(0, max_x_jitter)
-        y_jitter = y_dir * np.random.randint(0, max_y_jitter)
+            # Ensure the same jitter is applied to the landmarks
+            if deterministic:
+                np.random.seed(int(coords_to_centre_around[0, 0] + coords_to_centre_around[0, 1]))
 
-        centre_coord = [centre_coord[0] + x_jitter, centre_coord[1] + y_jitter]
+            x_dir = np.random.choice([-1, 1])
+            y_dir = np.random.choice([-1, 1])
+            x_jitter = x_dir * np.random.randint(0, max_x_jitter)
+            y_jitter = y_dir * np.random.randint(0, max_y_jitter)
 
-        # raise NotImplementedError("Jitter not implemented for centre patch sampling")
+            centre_coord = [centre_coord[0] + x_jitter, centre_coord[1] + y_jitter]
 
-    # Need to cover case where the landmark is near the edge of the image.
-    if centre_coord[0] > (load_im_size[0]-(sample_patch_size[0]/2)):
-        x_min = load_im_size[0]-sample_patch_size[0]
-    else:
-        x_min = centre_coord[0] - (sample_patch_size[0]/2)
+            # raise NotImplementedError("Jitter not implemented for centre patch sampling")
 
-    if centre_coord[1] > (load_im_size[1]-(sample_patch_size[1]/2)):
-        y_min = load_im_size[1]-sample_patch_size[1]
-    else:
-        y_min = centre_coord[1] - (sample_patch_size[1]/2)
-
-    # Cover the case where the landmark is near the close edge of the image.
-    x_min = max(0, x_min)
-    y_min = max(0, y_min)
-
-    # check if the GT landmark is in the patch
-    if groundtruth_lms is not None:
-        if groundtruth_lms[0][0] < x_min or groundtruth_lms[0][0] > x_min + sample_patch_size[0] or groundtruth_lms[0][1] < y_min or groundtruth_lms[0][1] > y_min + sample_patch_size[1]:
-            landmarks_in_indicator = 0
+        # Need to cover case where the landmark is near the edge of the image.
+        if centre_coord[0] > (load_im_size[0]-(sample_patch_size[0]/2)):
+            x_min = load_im_size[0]-sample_patch_size[0]
         else:
-            landmarks_in_indicator = 1
+            x_min = centre_coord[0] - (sample_patch_size[0]/2)
+
+        if centre_coord[1] > (load_im_size[1]-(sample_patch_size[1]/2)):
+            y_min = load_im_size[1]-sample_patch_size[1]
+        else:
+            y_min = centre_coord[1] - (sample_patch_size[1]/2)
+
+        # Cover the case where the landmark is near the close edge of the image.
+        x_min = max(0, x_min)
+        y_min = max(0, y_min)
+
+        # check if the GT landmark is in the patch
+        if groundtruth_lms is not None:
+            if groundtruth_lms[0][0] < x_min or groundtruth_lms[0][0] > x_min + sample_patch_size[0] or groundtruth_lms[0][1] < y_min or groundtruth_lms[0][1] > y_min + sample_patch_size[1]:
+                landmarks_in_indicator = 0
+            else:
+                landmarks_in_indicator = 1
+
+        if not garuntee_gt_in:
+            break
 
     patch_image = image[:, int(y_min):int(y_min+sample_patch_size[1]), int(x_min):int(x_min+sample_patch_size[0])]
     if groundtruth_lms is not None:
@@ -324,5 +334,3 @@ def get_patch_stitching_info(image_size, patch_size):
             break
 
     return patch_start_idxs
-
-
