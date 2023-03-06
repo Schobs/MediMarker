@@ -398,30 +398,30 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 for xy in input_coords
             ]
 
-            if self.guarantee_landmarks_in_image:
-                fail_count = 0
-                while not all(landmarks_in_indicator) == 1:
-                    if fail_count == 10:
-                        raise ValueError("Failed to find a valid transform for this sample to keep landmark in image.")
-                    # list where [0] is image and [1] are coords.
-                    transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
+            # if self.guarantee_landmarks_in_image:
+            #     fail_count = 0
+            #     while not all(landmarks_in_indicator) == 1:
+            #         if fail_count == 10:
+            #             raise ValueError("Failed to find a valid transform for this sample to keep landmark in image.")
+            #         # list where [0] is image and [1] are coords.
+            #         transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
 
-                    input_image = normalize_cmr(transformed_sample[0], to_tensor=self.to_pytorch)
-                    input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
+            #         input_image = normalize_cmr(transformed_sample[0], to_tensor=self.to_pytorch)
+            #         input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
 
-                    # Recalculate indicators incase transform pushed out/in coords.
-                    landmarks_in_indicator = [
-                        1
-                        if (
-                            (0 <= xy[0] <= self.input_size[0])
-                            and (0 <= xy[1] <= self.input_size[1])
-                        )
-                        else 0
-                        for xy in input_coords
-                    ]
-                    fail_count += 1
+            #         # Recalculate indicators incase transform pushed out/in coords.
+            #         landmarks_in_indicator = [
+            #             1
+            #             if (
+            #                 (0 <= xy[0] <= self.input_size[0])
+            #                 and (0 <= xy[1] <= self.input_size[1])
+            #             )
+            #             else 0
+            #             for xy in input_coords
+            #         ]
+            #         fail_count += 1
 
-                    # Don't do data augmentation.
+            # Don't do data augmentation.
         else:
 
             input_coords = coords

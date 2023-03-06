@@ -195,7 +195,30 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
     fail_count = 0
     while landmarks_in_indicator == 0:
         if fail_count > 10:
-            raise ValueError("Failed to sample a patch with a landmark in it.")
+            logger.info("Failed to sample a patch with a landmark in it s1 pred %s and GT %s.",
+                        coords_to_centre_around[0], groundtruth_lms)
+            # Need to cover case where the landmark is near the edge of the image.
+            centre_coord = coords_to_centre_around[0]
+
+            if centre_coord[0] > (load_im_size[0]-(sample_patch_size[0]/2)):
+                x_min = load_im_size[0]-sample_patch_size[0]
+            else:
+                x_min = centre_coord[0] - (sample_patch_size[0]/2)
+
+            if centre_coord[1] > (load_im_size[1]-(sample_patch_size[1]/2)):
+                y_min = load_im_size[1]-sample_patch_size[1]
+            else:
+                y_min = centre_coord[1] - (sample_patch_size[1]/2)
+                # Cover the case where the landmark is near the close edge of the image.
+            x_min = max(0, x_min)
+            y_min = max(0, y_min)
+            # check if the GT landmark is in the patch
+            if groundtruth_lms is not None:
+                if groundtruth_lms[0][0] < x_min or groundtruth_lms[0][0] > x_min + sample_patch_size[0] or groundtruth_lms[0][1] < y_min or groundtruth_lms[0][1] > y_min + sample_patch_size[1]:
+                    landmarks_in_indicator = 0
+                else:
+                    landmarks_in_indicator = 1
+
         if centre_patch_jitter > 0:
             # if garuntee_gt_in:
 
