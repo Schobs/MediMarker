@@ -13,19 +13,21 @@ def combine_spreadsheets(spreadsheets, output_path):
         None
     """
     # Load the first spreadsheet to initialize the DataFrame
-    df = pd.read_excel(spreadsheets[0])
+    df = pd.read_excel(spreadsheets[0],  converters={'uid': str})
 
     # Concatenate the rows of all spreadsheets
     for path in spreadsheets[1:]:
-        next_df = pd.read_excel(path, sheet_name=0, dtype={"uid": "string"})
-        df = pd.concat([df, next_df], ignore_index=True)
+        next_df = pd.read_excel(path, sheet_name=0,  converters={'uid': str})
+        # print(next_df["uid"])
+        df = pd.concat([df, next_df], ignore_index=False)
 
+    # df["uid"] = df["uid"].apply('="{}"'.format)
     # Save the concatenated DataFrame to a new Excel file
     df.to_excel(output_path, index=False)
 
 
 def combine_spreads():
-    for fold in [0, 1,2,3]:
+    for fold in [0, 1, 2, 3]:
         spreadsheets = ['/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/GP/s1/f'+str(fold)+'_train/individual_results_fold'+str(fold)+'.xlsx',
                         '/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/GP/s1/f' +
                         str(fold)+'_val/individual_results_fold'+str(fold)+'.xlsx',
