@@ -374,7 +374,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     untransformed_coords,
                     landmarks_in_indicator,
                     x_y_corner,
-                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords, deterministic=self.center_patch_deterministic)
+                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords, deterministic=self.center_patch_deterministic, garuntee_gt_in=self.guarantee_landmarks_in_image)
 
             kps = KeypointsOnImage(
                 [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],

@@ -240,6 +240,9 @@ def sample_patch_centred(image, coords_to_centre_around, load_im_size, sample_pa
 
         if not garuntee_gt_in:
             break
+        else:
+            centre_coord = coords_to_centre_around[0]
+            fail_count += 1
 
     patch_image = image[:, int(y_min):int(y_min+sample_patch_size[1]), int(x_min):int(x_min+sample_patch_size[0])]
     if groundtruth_lms is not None:
