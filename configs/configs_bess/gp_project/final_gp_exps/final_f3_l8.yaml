@@ -1,41 +1,37 @@
 
  
 OUTPUT: 
-  # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/final_f3_l8" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f3/"
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
   VERBOSE: True #whether to print results every epoch
-  COMET_TAGS: ["conv_baseline", "64", "hpc"]
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round", "64", "l11", "f0", "6th_round"]
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
   NUM_RES_SUPERVISIONS: 1 # Leave this.
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE_TRAIN: 12 # indicates entire dataset for batch (needed for ExactGP)
-  MAX_EPOCHS: 1000 
-  MINI_BATCH_SIZE: 20 # Leave this.
-  # REGRESS_SIGMA: 20
-  DATA_LOADER_BATCH_SIZE_EVAL: 12
-  BASE_LR: 0.01
-  AUTO_MIXED_PRECISION: True
-  EARLY_STOPPING_PATIENCE: 250 # epochs for validation coord error not improving before stopping training
-  DECAY_POLICY: None
-
-
-
+  DATA_LOADER_BATCH_SIZE_TRAIN: 6 # indicates entire dataset for batch (needed for ExactGP)
+  MAX_EPOCHS: 10000
+  MINI_BATCH_SIZE: 1 # Leave this.
+  # REGRESS_SIGMA: True
+  DATA_LOADER_BATCH_SIZE_EVAL: 6
+  BASE_LR: 0.001
+  AUTO_MIXED_PRECISION: False
+  EARLY_STOPPING_PATIENCE: 250 # epochs for validation loss not improving before stopping training
+  DECAY_POLICY: "scheduled_3000"
 
 DATASET:
   ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
   SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
-  LANDMARKS : [11] #Choose landmark (between 0-17)
-  TRAINSET_SIZE: -1 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
-  TO_PYTORCH_TENSOR: True  # True if using pytorch, False if using tensorflow
+  LANDMARKS : [8] #Choose landmark (between 0-17)
+  # TRAINSET_SIZE: 10 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
+  TO_PYTORCH_TENSOR: False  # True if using pytorch, False if using tensorflow
 
  
 TRAINER:
@@ -43,27 +39,24 @@ TRAINER:
   SAVE_LATEST_ONLY: False
   CACHE_DATA: True # Kind of irrelevant for ExactGP
   INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
-  SAVE_EVERY: 20 # Saves checkpoint every X epochs
-  VALIDATE_EVERY: 1 #validation every X epochs
+  SAVE_EVERY: 100 # Saves checkpoint every X epochs
+  VALIDATE_EVERY: 25 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
   FOLD: 3
 
 SAMPLER:
-  DATA_AUG: None #the data aug scheme, currently flattens, but can change this to other schemes.
+  DATA_AUG: "Flatten" #the data aug scheme, currently flattens, but can change this to other schemes.
   INPUT_SIZE : [512,512] #resizes data to this size, then gets patches of SAMPLER.PATCH.SAMPLE_PATCH_SIZE
   SAMPLE_MODE: 'patch_centred' # ['patch_bias', 'full', "patch_centred"] (patch_centred gets centre from stage 1 preds)
   EVALUATION_SAMPLE_MODE: "patch_centred"  # ['patch_bias', 'full', "patch_centred"] (evaluate from stage 1 preds)
   DATA_AUG_GUARANTEE_LMS_IN_IMAGE: True
 
-  DEBUG: False 
-
-  NUM_WORKERS: 2
+  NUM_WORKERS: 0
   DEBUG: False # Set True for nice visualizations and logging. recomended for understanding.
   PATCH:
     SAMPLER_BIAS: 1.0 #irrelevent for patch_centred
     RESOLUTION_TO_SAMPLE_FROM:  "input_size" #means it samples from 512,512 not the original resolution
     SAMPLE_PATCH_SIZE: [64,64] #patch size
-    # CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAS_DS5/individual_results_allfolds.xlsx"
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1/s1_preds_all/combined_results_fold3.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "Sheet1"
     CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
@@ -71,17 +64,30 @@ SAMPLER:
 
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
-  ARCHITECTURE: "U-Net"  # ["U-Net" , "PHD-Net"]
-  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_matern/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
-  # GPFLOW:
-  #   NUM_INDUCING_POINTS: 100 # of inducing points or inducing patches
-  #   KERN: "rbf"  # possible values: ["conv", "rbf", "matern52"]
-  #   CONV_KERN_SIZE: [3,3]  # size of kernel for convolutional kernel
+  ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
+  GPFLOW:
+    NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
+    INDUCING_SAMPLE_VAR: 1
+    KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
+    CONV_KERN_SIZE: [5,5]  # size of kernel for convolutional kernel
+    CONV_KERN_STRIDE: 5  #stride of convolutional kernel
+    CONV_KERN_LS: 1  # base kernel lengthscale
+    CONV_KERN_V: 20  # base kernel variance
+    CONV_KERN_TYPE: "matern12"
+    FIX_NOISE_UNTIL_EPOCH: 3000 
+    MODEL_NOISE_INIT: 0.01
+    TRAIN_IP: True
+    INDEPENDENT_LIKELIHOODS: True
+    LIKELIHOOD_NOISE_UPPER_BOUND: None
+    LIKELIHOOD_NOISE_TRAINING_INTERVALS: None
+    LIKELIHOOD_NOISE_SEPERATE_OPTIM: False
+    KL_SCALE: 0.01
 
 INFERENCE:
-  EVALUATION_MODE: "scale_pred_coords"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
-  FIT_GAUSS: True
-  LOG_HEATMAPS: True
-  LOG_HEATMAP_PLOT_TARG: True
+
+SSH:
+  AUTO_AMEND_PATHS: False
+

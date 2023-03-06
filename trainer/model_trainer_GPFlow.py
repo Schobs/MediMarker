@@ -871,6 +871,10 @@ class GPFlowTrainer(NetworkTrainer):
             self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
 
             self.optimizer.lr.assign(self.initial_lr / 10)
+        elif self.lr_policy == "scheduled_3000" and self.epoch == 3000:
+            self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
+
+            self.optimizer.lr.assign(self.initial_lr / 10)
         elif self.lr_policy == "scheduled_100_2000":
             if self.epoch == 100:
                 self.logger.info("Reducing LR from %s to %s", self.initial_lr, self.initial_lr / 10)
