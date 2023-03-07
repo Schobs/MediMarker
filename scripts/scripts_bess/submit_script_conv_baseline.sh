@@ -12,7 +12,7 @@ config=../../configs/configs_bess/gp_project/conv_baseline/BFUSA_8GS.yaml
 
 
 echo "Config: " $config
-
+z
 for lm in ${landmarks[@]}
 do  
     for fold in ${folds[@]}

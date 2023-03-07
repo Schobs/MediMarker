@@ -92,6 +92,19 @@
                 "PYTHONPATH": "${workspaceFolder}"
             },
         }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: Analysis",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/evaluation/analyse_results_miccai.py",
+            // "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/final_gp_exps/final_f3_l9_local.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+        }, 
     ]
 }
 

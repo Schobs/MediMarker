@@ -1,5 +1,9 @@
+import json
+import logging
 import numpy as np
 import pandas as pd
+from scipy.stats import multivariate_normal
+import re
 
 
 def success_detection_rate(sample_dicts, threshold):
@@ -68,8 +72,75 @@ def success_detection_rate(sample_dicts, threshold):
     return details_dictionary
 
 
-def generate_summary_df(ind_lms_results, sdr_dicts):
+def nlpd_evaluation(list_of_dicts):
+    nlpd_results = {}
+    mean_errors = {}
+    for sample in list_of_dicts:
+        uid = sample["uid"]
 
+        s = sample["mean"].replace(' ', ', ')
+        s = re.sub(r'(?<!\d)(\s?)(,)(\s?)(?!\d)', r'\1\3', s)
+        pred_mean = np.array(eval(s))
+
+        c = sample["cov"][2:-2].replace('\n', '')
+        # Use regular expressions to replace spaces with commas
+        c = re.sub("[ ]{1,}", ",", c)
+        c = c.replace(',]', ']')
+        c = c.replace('[,', '[')
+
+        pred_cov = np.array(eval(c))
+
+        pred_cov = np.array(eval(c))
+        # sample["cov"].astype(np.float64)
+        target = np.array(eval(sample["target"].replace('.', ', ')))
+
+        assert pred_cov.shape == (2, 2), "Should be only single prediction. Covariance matrix is not 2x2"
+        assert target.shape == (1, 2), "Should be only single target. "
+        assert pred_mean.shape == (1, 2), "Should be only single prediction."
+
+        target = target[0]
+        pred_mean = pred_mean[0]
+        nlpd, mean_error = calculate_nlpd(pred_mean, pred_cov, target)
+        nlpd_results[uid] = nlpd
+        mean_errors[uid] = mean_error
+    return nlpd_results,mean_errors
+
+
+def calculate_nlpd(pred_mean: np.ndarray, pred_cov: np.ndarray, target_mean: np.ndarray, target_cov: np.ndarray = None) -> float:
+    """
+    Calculates the negative log predictive density (NLPD) between a predicted distribution and a target distribution.
+
+    Parameters:
+        pred_mean (ndarray): The mean vector of the predicted distribution.
+        pred_cov (ndarray): The covariance matrix of the predicted distribution.
+        target_mean (ndarray): The mean vector of the target distribution.
+        target_cov (ndarray, optional): The covariance matrix of the target distribution. If not provided, the target distribution is assumed to be a degenerate Gaussian with zero covariance.
+
+    Returns:
+        float: The NLPD value.
+
+    """
+    pred_dist = multivariate_normal(mean=pred_mean, cov=pred_cov)
+    nlpd = -np.log(pred_dist.pdf(target_mean))
+
+    mean_error = np.linalg.norm(pred_mean - target_mean)
+
+    if target_cov is None:
+        target_cov = np.zeros_like(pred_cov)
+    if np.allclose(target_cov, 0):
+        target_cov = 1e-6 * np.eye(target_cov.shape[0])
+
+    nlpd = -np.log(pred_dist.pdf(target_mean))
+    # nlpd = -np.mean(np.log(pred_dist.pdf(target_mean)) + 0.5 * np.log(np.linalg.det(target_cov))
+    #                 + 0.5 * np.trace(np.linalg.solve(target_cov, pred_cov)) + 0.5 * len(pred_mean) * np.log(2*np.pi))
+
+    # logger = logging.getLogger()
+
+    # logger.info("Prediction Mean %s, Covariance %s and Target %s. NLPD: ", pred_mean, pred_cov, target_mean, nlpd)
+    return nlpd, mean_error
+
+
+def generate_summary_df(ind_lms_results, sdr_dicts):
     """
     Generates pandas dataframe with summary statistics.
 
