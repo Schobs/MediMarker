@@ -6,7 +6,7 @@ from losses.losses import (
     AdaptiveWingLoss,
     SigmaLoss,
 )
-from models.TrUNet import unetr
+from models.unetr import unetr
 import torch
 import numpy as np
 
@@ -20,12 +20,12 @@ from trainer.model_trainer_base import NetworkTrainer
 from transforms.generate_labels import TrUNetLabelGenerator
 
 
-class TrUNetTrainer(NetworkTrainer):
+class unetrTrainer(NetworkTrainer):
     """Class for the TrUNet trainer."""
 
     def __init__(self, **kwargs):
 
-        super(TrUNetTrainer, self).__init__(**kwargs)
+        super(unetrTrainer, self).__init__(**kwargs)
 
         # global config variable
         self.early_stop_patience = 250
@@ -45,7 +45,7 @@ class TrUNetTrainer(NetworkTrainer):
         )
 
         # get arch config parameters
-        self.num_resolution_layers = TrUNetTrainer.get_resolution_layers(
+        self.num_resolution_layers = unetrTrainer.get_resolution_layers(
             self.input_size, self.min_feature_res
         )
 
@@ -105,7 +105,8 @@ class TrUNetTrainer(NetworkTrainer):
     def initialize_network(self):
         """Initialise the network."""
 
-        self.network =
+        self.network = unetr(image_size=(512, 512), input_dim=4, output_dim=3,
+                             embed_dim=768, patch_dim=16, num_heads=12, dropout=0.1)
         self.network.to(self.device)
 
         # Log network and initial weights
