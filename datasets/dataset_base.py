@@ -245,7 +245,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                         original_size,
                         image,
                         interested_landmarks,
-                    ) = load_and_resize_image(data["image"], interested_landmarks, self.load_im_size, self.datatype_load, round=(self.sample_mode == "patch_centred"))
+                    ) = load_and_resize_image(data["image"], interested_landmarks, self.load_im_size, self.datatype_load, round=not (self.sample_mode == "patch_centred"))
 
                     self.images.append(image)
                     self.image_resizing_factors.append(resized_factor)
@@ -347,7 +347,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         else:
             resized_factor, original_size, image, coords = load_and_resize_image(
-                image, coords, self.load_im_size, self.datatype_load, round=(self.sample_mode == "patch_centred")
+                image, coords, self.load_im_size, self.datatype_load, round=not (self.sample_mode == "patch_centred")
             )
 
         untransformed_coords = coords

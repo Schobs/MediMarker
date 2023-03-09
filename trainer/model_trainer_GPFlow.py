@@ -361,9 +361,9 @@ class GPFlowTrainer(NetworkTrainer):
                     target_coords,
                 ) = self.maybe_get_coords(log_coords, log_heatmaps, data_dict)
 
-                if pred_coords is not None:
+                if pred_coords is not None and not torch.is_tensor(pred_coords):
                     pred_coords = torch.tensor(pred_coords)
-                if target_coords is not None:
+                if target_coords is not None and not torch.is_tensor(target_coords):
                     target_coords = torch.tensor(target_coords)
                 logged_vars = self.dict_logger.log_key_variables(
                     logged_vars,
@@ -449,7 +449,7 @@ class GPFlowTrainer(NetworkTrainer):
             extra_info["target_coords_input_size"] = data_dict["target_coords"]
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
             if torch.is_tensor(target_coords):
-                target_coords = target_coords.cpu().detach().numpy()
+                target_coords = target_coords
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
 
@@ -509,8 +509,6 @@ class GPFlowTrainer(NetworkTrainer):
 
         return prediction, extra_info
 
-
-
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):
         """
         Use model outputs from a patchified image to stitch together a full resolution heatmap
@@ -520,6 +518,45 @@ class GPFlowTrainer(NetworkTrainer):
         raise NotImplementedError(
             "need to have original image size passed in because no longer assuming all have same size. see model base trainer for inspo"
         )
+
+    def maybe_rescale_coords(self, pred_coords, data_dict):
+        """Maybe rescale coordinates based on evaluation parameters, and decide which target coords to evaluate against.
+            Cases C1:4:
+            C1) used full-scale image to train or resized heatmap already: leave predicted, use full-res target
+            C2) used low-scale image to train and rescaling coordinates up to full-scale image size
+            C3) use low-scale image to train, want to eval on low-scale coordinates
+        Args:
+            pred_coords (tensor): coords extracted from output heatmap
+            data_dict (dict): dataloader sample dictionary
+
+        Returns:
+            tensor, tensor: predicted coordinates and target coordinates for evaluation
+        """
+
+        # Don't worry in case annotations are not present since these are 0,0 anyway. this is handled elesewhere
+        # C1
+        if self.use_full_res_coords:
+            target_coords = data_dict["full_res_coords"].to(self.device)  # C1
+        else:
+            target_coords = np.round(data_dict["target_coords"]).to(
+                self.device
+            )  # C3 (and C1 if input size == full res size so full & target the same)
+
+        # C2
+        if self.use_full_res_coords and not self.resize_first:
+
+            # If we are using patch_centred sampling, we are basing prediction on a smaller patch
+            # containing the landmark, so we need to add the patch corner to the prediction.
+            if not torch.is_tensor(pred_coords):
+                pred_coords = torch.tensor(pred_coords).to(self.device)
+
+            upscale_factor = torch.tensor(data_dict["resizing_factor"]).to(self.device)
+
+            upscaled_coords = torch.mul(pred_coords, upscale_factor)
+            pred_coords = torch.round(upscaled_coords).to(self.device)
+            # pred_coords = pred_coords * upscale_factor
+
+        return pred_coords, target_coords
 
     def on_epoch_end(self, per_epoch_logs: Dict[str, float]) -> bool:
         """

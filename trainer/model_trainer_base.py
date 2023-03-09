@@ -526,7 +526,6 @@ class NetworkTrainer(ABC):
             )
             extra_info["target_coords_input_size"] = data_dict["target_coords"]
 
-
             pred_coords, target_coords = self.maybe_rescale_coords(
                 pred_coords_input_size, data_dict
             )
@@ -673,16 +672,17 @@ class NetworkTrainer(ABC):
 
             # If we are using patch_centred sampling, we are basing prediction on a smaller patch
             # containing the landmark, so we need to add the patch corner to the prediction.
+            if not torch.is_tensor(pred_coords):
+                pred_coords = torch.tensor(pred_coords).to(self.device)
             if self.sampler_mode == "patch_centred":
                 x_y_corner = torch.unsqueeze(torch.tensor(
                     [[data_dict["x_y_corner"][0][x], data_dict["x_y_corner"][1][x]] for x in range(len(data_dict["x_y_corner"][0]))]), axis=1).to(self.device)
-                pred_coords = torch.add(pred_coords, x_y_corner)
+                pred_coords = torch.add(pred_coords, x_y_corner).to(self.device)
 
             upscale_factor = torch.tensor(data_dict["resizing_factor"]).to(self.device)
-            if not torch.is_tensor(pred_coords):
-                pred_coords = torch.tensor(pred_coords)
+
             upscaled_coords = torch.mul(pred_coords, upscale_factor)
-            pred_coords = torch.round(upscaled_coords)
+            pred_coords = torch.round(upscaled_coords).to(self.device)
             # pred_coords = pred_coords * upscale_factor
 
         return pred_coords, target_coords

@@ -1,12 +1,12 @@
 # ensemble_string_pre="ensemble_" 
-folds=(0 1 2 3)
+folds=(3)
 landmarks=(8 9 11)
 
 # config=../../configs/configs_bess/gp_project/conv_baselines/
 # search_dir=../../configs/configs_bess/nnunet
 # regex='(^../configs_bess/ISBI_).*5GS'
 # regex='(^../configs_bess/april/ISBI_)'
-regex='^.*5gs*'
+regex='^.*2gs*'
 # not_include_regex="^(?!\s*local\s*$).*"
 
     # echo "test Config: " $eachconfig
@@ -37,7 +37,7 @@ do
 
 
 
-                    outstring="/F${fold}L${lm}/"
+                    outstring="/F${fold}L${lm}_V2/"
                     echo "params: ": $lm, $fold
                     echo "matched config : " $eachconfig
 

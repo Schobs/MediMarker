@@ -2,7 +2,7 @@ import numpy as np
 import os
 import pandas as pd
 from pandas import ExcelWriter
-from localization_evaluation import nlpd_evaluation, success_detection_rate, generate_summary_df
+from localization_evaluation import generate_summary_df_withnlpd, nlpd_evaluation, success_detection_rate, generate_summary_df
 import copy
 
 
@@ -39,17 +39,29 @@ def get_parameters(name):
 def find_spreadsheets(root_dirs, F, L):
     matches_ind = []
     summaries_ind = []
-    for root in root_dirs:
-        for t in F:
-            folder_name = f"F{t}L{L}"
-            folder_path = os.path.join(root, folder_name)
-            if os.path.isdir(folder_path):
-                for filename in os.listdir(folder_path):
-                    if "individual_results" in filename:
-                        matches_ind.append(os.path.join(folder_path, filename))
-                    if "summary" in filename:
-                        summaries_ind.append(os.path.join(folder_path, filename))
-    return matches_ind, summaries_ind
+    if "optim" in root_dirs[0]:
+        for root in root_dirs:
+            for t in F:
+                folder_name = f"final_f{t}_l{L}"
+                folder_path = root
+                if folder_path.endswith(folder_name):
+                    for filename in os.listdir(folder_path):
+                        if "individual_results" in filename:
+                            matches_ind.append(os.path.join(folder_path, filename))
+                        if "summary" in filename:
+                            summaries_ind.append(os.path.join(folder_path, filename))
+    else:
+        for root in root_dirs:
+            for t in F:
+                folder_name = f"F{t}L{L}_V2"
+                folder_path = os.path.join(root, folder_name)
+                if os.path.isdir(folder_path):
+                    for filename in os.listdir(folder_path):
+                        if "individual_results" in filename:
+                            matches_ind.append(os.path.join(folder_path, filename))
+                        if "summary" in filename:
+                            summaries_ind.append(os.path.join(folder_path, filename))
+    return list(set(matches_ind)), list(set(summaries_ind))
 
 
 def analyse_all_folds(
@@ -99,6 +111,7 @@ def analyse_all_folds(
 
     # For each fold load the results files
     for fold in folds:
+
         summ_file_name = [x for x in summaries_ind if f"fold{fold}" in x][0]
         ind_file_name = [x for x in matches_ind if f"fold{fold}" in x][0]
         try:
@@ -163,11 +176,19 @@ def analyse_all_folds(
                 for idx, x in filter_df.iterrows()
             ]
 
-            list_for_nlpd = [
-                {"uid": int(x["uid"]), "cov": x["fitted_gauss"], "mean": x["pred_coords_input_size"],
-                 "target":x["target_coords_input_size"]}
-                for idx, x in results.iterrows()
-            ]
+            if isinstance(cov_key, str):
+                list_for_nlpd = [
+                    {"uid": int(x["uid"]), "cov": x["fitted_gauss"], "mean": x["pred_coords_input_size"],
+                     "target":x["target_coords_input_size"]}
+                    for idx, x in results.iterrows()
+                ]
+            else:
+                assert len(cov_key) == 2, "Cov key must be a string or a list of two strings. bad hardcoded, I know."
+                list_for_nlpd = [
+                    {"uid": int(x["uid"]), "cov": [x[cov_key[0]], x[cov_key[1]]], "mean": x["pred_coords_input_size"],
+                     "target":x["target_coords_input_size"]}
+                    for idx, x in results.iterrows()
+                ]
 
             # Get SDR results
             radius_list = [
@@ -207,7 +228,8 @@ def analyse_all_folds(
             # Get all landmark errors into a 2D list, 1 list for each landmark.
             all_errors = results[all_lm_keys].values.T.tolist()
 
-            summary_results = generate_summary_df(all_errors, outlier_results)
+            summary_results = generate_summary_df_withnlpd(
+                all_errors, outlier_results, nlpd_results, mean_error_results)
             if skipped_folds == []:
                 skipped_folds = "None"
             summary_results["Skipped Folds"] = str(skipped_folds)
@@ -248,10 +270,14 @@ def analyse_all_folds(
 
 # root_path = "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2"
 # root_path = "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22"
+# root_path = "/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/GP/optim/"
 root_path = "/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/"
-name_of_exp = "conv_baseline_5gs"
+name_of_exp = "2gs"
+cov_key = ["kernel_cov_matr", "likelihood_noise"]
+cov_key = "fitted_gauss"
+# name_of_exp = "final_"
 landmarks = [8, 9, 11]
-collation_location = os.path.join(root_path, "conv_baseline_5gs_summaries")
+collation_location = os.path.join(root_path, name_of_exp+"_summaries_V2")
 
 # /mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22
 # name_of_exp = "ISBI_256F_512Res_8GS_32MFR_AugACEL_DS3"
@@ -267,7 +293,11 @@ folds = [0, 1, 2, 3]
 summary_of_summaries = {}
 failed_experiments = []
 for lm in landmarks:
-    exp_name = name_of_exp + "_L" + str(lm)
+    # Choose this for CNN baseline
+    # exp_name = name_of_exp + "L" + str(lm) + "F"
+
+    # Choose this for CGP
+    exp_name = name_of_exp
     # Summarise all summaries into one big file #################
     summary_dicts, failed_exp = analyse_all_folds(
         root_path,
@@ -276,6 +306,7 @@ for lm in landmarks:
         folds,
         lm,
         collation_location,
+        cov_key=cov_key
     )
 
     if not failed_exp:
