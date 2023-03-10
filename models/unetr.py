@@ -172,7 +172,8 @@ class TransformerBlock(nn.Module):
         self.mlp_dim = int(
             (image_size[0] * image_size[1]) / (patch_size * patch_size))
         self.mlp = PositionwiseFeedForward(d_model, 2048)
-        self.attn = SelfAttention(num_heads, d_model, dropout)
+        self.attn = SelfAttention(
+            num_heads, d_model, dropout, embed_dim=d_model)
 
     def forward(self, x):
         h = x
