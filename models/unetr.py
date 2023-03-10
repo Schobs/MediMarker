@@ -280,7 +280,6 @@ class UNETR(nn.Module):
             Deconv2DBlock(embed_dim, 384)
 
         self.decoder12_upsampler = nn.Sequential(
-            # add this layer to match the expected number of channels
             Conv2DBlock(1024, 512, 1),
             SingleDeconv2DBlock(512, 512),
             Conv2DBlock(512, 256, 3),
@@ -309,7 +308,9 @@ class UNETR(nn.Module):
                 SingleDeconv2DBlock(128, 128),
                 Conv2DBlock(128, 64, 3),
                 Conv2DBlock(64, 64, 3),
-                SingleConv2DBlock(64, 64, 1)
+                SingleConv2DBlock(64, 64, 1),
+                # Add this layer to match the expected number of channels
+                Conv2DBlock(64, 64, 1)
             )
 
         self.decoder0_header = \
@@ -317,6 +318,15 @@ class UNETR(nn.Module):
                 Conv2DBlock(128, 64, 3),
                 Conv2DBlock(64, 64, 3),
                 SingleConv2DBlock(64, output_dim, 1)
+            )
+
+        self.decoder3_header = \
+            nn.Sequential(
+                Conv2DBlock(128, 64, 3),
+                Conv2DBlock(64, 64, 3),
+                SingleConv2DBlock(64, 64, 1),
+                # Add this layer to match the expected number of channels
+                Conv2DBlock(64, 64, 1)
             )
 
     def forward(self, x):
