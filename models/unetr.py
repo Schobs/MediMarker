@@ -277,7 +277,7 @@ class UNETR(nn.Module):
             )
 
         self.decoder12 = \
-            Deconv2DBlock(embed_dim, 512)
+            Deconv2DBlock(embed_dim, 384)
 
         self.decoder12_upsampler = nn.Sequential(
             # add this layer to match the expected number of channels
