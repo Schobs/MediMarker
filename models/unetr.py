@@ -77,11 +77,13 @@ class SelfAttention(nn.Module):
 
         self.vis = False
 
-    def transpose_for_scores(self, x, dims):
-        new_dims = dims[:2] + (self.num_attention_heads,
-                               self.attention_head_size) + dims[2:]
+    def transpose_for_scores(self, x):
+        new_dims = x.size()[:-2] + (self.num_attention_heads,
+                                    self.attention_head_size)
         x = x.view(*new_dims)
-        return x.permute(0, 2, 3, 1, 4)
+        query_layer = x.unsqueeze(dim=1)  # add a new dimension
+        query_layer = self.transpose_for_scores(query_layer)
+        return query_layer
 
     def forward(self, hidden_states):
         hidden_states_dims = hidden_states.size()
