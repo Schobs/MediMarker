@@ -168,7 +168,7 @@ class Embeddings(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model=768, num_heads=12, dropout=0.1, image_size=(512, 512), patch_size=16):
+    def __init__(self, d_model=768, num_heads=12, dropout=0.1, image_size=(512, 512), patch_size=16, embed_dim=768):
         super().__init__()
         self.attention_norm = nn.LayerNorm(d_model, eps=1e-6)
         self.mlp_norm = nn.LayerNorm(d_model, eps=1e-6)
@@ -205,8 +205,8 @@ class Transformer(nn.Module):
         self.encoder_norm = nn.LayerNorm(embed_dim, eps=1e-6)
         self.extract_layers = extract_layers
         for _ in range(num_layers):
-            layer = TransformerBlock(embed_dim=embed_dim, num_heads=num_heads,
-                                     dropout=dropout, image_size=image_size, patch_size=patch_size)
+            layer = TransformerBlock(d_model=embed_dim, num_heads=num_heads,
+                                     dropout=dropout, image_size=image_size, patch_size=patch_size, embed_dim=embed_dim)
             self.layer.append(copy.deepcopy(layer))
 
     def forward(self, x):
