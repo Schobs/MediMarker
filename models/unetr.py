@@ -165,7 +165,7 @@ class Embeddings(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model=1024, num_heads=12, dropout=0.1, image_size=(512, 512), patch_size=16):
+    def __init__(self, d_model=1024, num_heads=12, dropout=0.1, image_size=(512, 512), patch_size=16, embed_dim=768):
         super().__init__()
         self.attention_norm = nn.LayerNorm(d_model, eps=1e-6)
         self.mlp_norm = nn.LayerNorm(d_model, eps=1e-6)
@@ -173,7 +173,7 @@ class TransformerBlock(nn.Module):
             (image_size[0] * image_size[1]) / (patch_size * patch_size))
         self.mlp = PositionwiseFeedForward(d_model, 2048)
         self.attn = SelfAttention(
-            num_heads=num_heads, embed_dim=d_model, dropout=dropout)
+            num_heads, embed_dim, dropout, weight_dim=d_model)
 
     def forward(self, x):
         h = x
