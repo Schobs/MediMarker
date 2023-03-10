@@ -20,12 +20,12 @@ from trainer.model_trainer_base import NetworkTrainer
 from transforms.generate_labels import TrUNetLabelGenerator
 
 
-class unetrTrainer(NetworkTrainer):
+class UnetrTrainer(NetworkTrainer):
     """Class for the TrUNet trainer."""
 
     def __init__(self, **kwargs):
 
-        super(unetrTrainer, self).__init__(**kwargs)
+        super(UnetrTrainer, self).__init__(**kwargs)
 
         # global config variable
         self.early_stop_patience = 250
@@ -45,7 +45,7 @@ class unetrTrainer(NetworkTrainer):
         )
 
         # get arch config parameters
-        self.num_resolution_layers = unetrTrainer.get_resolution_layers(
+        self.num_resolution_layers = UnetrTrainer.get_resolution_layers(
             self.input_size, self.min_feature_res
         )
 
