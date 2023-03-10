@@ -113,7 +113,7 @@ class SelfAttention(nn.Module):
 
 
 class Mlp(nn.Module):
-    def __init__(self, in_features, act_layer=nn.ReLU, drop=0.):
+    def __init__(self, in_features, act_layer=nn.ReLU, drop=0.1):
         super().__init__()
         self.fc1 = nn.Linear(in_features, in_features)
         self.act = act_layer()
