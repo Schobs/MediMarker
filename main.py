@@ -245,9 +245,9 @@ def main():
 
     if writer is not None:
         writer.add_tag("completed inference")
-        # logger.info("Experiment found:at %s" % writer.url)
+        logger.info("Experiment found:at %s" % writer.url)
 
-    # logger.info("Done!")
+    logger.info("Done!")
 
 
 if __name__ == "__main__":
