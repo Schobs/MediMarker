@@ -59,10 +59,10 @@ class Deconv2DBlock(nn.Module):
 
 
 class SelfAttention(nn.Module):
-    def __init__(self, num_heads, embed_dim, dropout, weight_dim):
+    def __init__(self, num_heads, embed_dim, dropout):
         super().__init__()
         self.num_attention_heads = num_heads
-        self.attention_head_size = weight_dim
+        self.attention_head_size = int(embed_dim / num_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
 
         self.query = nn.Linear(embed_dim, self.all_head_size)
