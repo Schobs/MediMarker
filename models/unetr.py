@@ -1,6 +1,6 @@
 # =============================================================================
 # Author: Oscar Gavin, ogavin1@shef.ac.uk
-# Edited version of MONAI 3D UNETR model
+# Edited version of MONAI 3D UNETR model: https://github.com/Project-MONAI/research-contributions/tree/main/UNETR/BTCV
 # =============================================================================
 
 
@@ -217,7 +217,7 @@ class Transformer(nn.Module):
 
 
 class UNETR(nn.Module):
-    def __init__(self, image_size=(128, 128), input_dim=4, output_dim=3, embed_dim=768, patch_dim=16, num_heads=12, dropout=0.1):
+    def __init__(self, image_size=(128, 128), input_dim=1, output_dim=3, embed_dim=768, patch_dim=16, num_heads=12, dropout=0.1):
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
