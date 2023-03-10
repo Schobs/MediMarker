@@ -130,7 +130,7 @@ class Mlp(nn.Module):
 
 
 class PositionwiseFeedForward(nn.Module):
-    def __init__(self, d_model, d_ff=2048, dropout=0.1):
+    def __init__(self, d_model=768, d_ff=2048, dropout=0.1):
         super().__init__()
         self.w_1 = nn.Linear(d_model, d_ff)
         self.act = nn.ReLU()
@@ -168,16 +168,14 @@ class Embeddings(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, embed_dim, num_heads, dropout, image_size, patch_size):
+    def __init__(self, d_model=768, num_heads=12, dropout=0.1, image_size=(512, 512), patch_size=16):
         super().__init__()
-        self.attention_norm = nn.LayerNorm(embed_dim, eps=1e-6)
-        self.mlp_norm = nn.LayerNorm(embed_dim, eps=1e-6)
+        self.attention_norm = nn.LayerNorm(d_model, eps=1e-6)
+        self.mlp_norm = nn.LayerNorm(d_model, eps=1e-6)
         self.mlp_dim = int(
             (image_size[0] * image_size[1]) / (patch_size * patch_size))
-        self.mlp = PositionwiseFeedForward(
-            embed_dim=embed_dim, d_ff=2048, dropout=dropout)
-        self.attn = SelfAttention(
-            num_heads=num_heads, embed_dim=embed_dim, dropout=dropout)
+        self.mlp = PositionwiseFeedForward(d_model, 2048)
+        self.attn = SelfAttention(num_heads, d_model, dropout)
 
     def forward(self, x):
         h = x
