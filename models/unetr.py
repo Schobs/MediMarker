@@ -203,7 +203,7 @@ class Transformer(nn.Module):
         self.encoder_norm = nn.LayerNorm(embed_dim, eps=1e-6)
         self.extract_layers = extract_layers
         for _ in range(num_layers):
-            layer = TransformerBlock(d_model=embed_dim, num_heads=num_heads,
+            layer = TransformerBlock(embed_dim=embed_dim, num_heads=num_heads,
                                      dropout=dropout, image_size=image_size, patch_size=patch_size)
             self.layer.append(copy.deepcopy(layer))
 
