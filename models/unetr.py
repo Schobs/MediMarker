@@ -165,7 +165,7 @@ class Embeddings(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model=768, num_heads=12, dropout=0.1, image_size=(512, 512), patch_size=16, embed_dim=768):
+    def __init__(self, d_model=1024, num_heads=12, dropout=0.1, image_size=(512, 512), patch_size=16):
         super().__init__()
         self.attention_norm = nn.LayerNorm(d_model, eps=1e-6)
         self.mlp_norm = nn.LayerNorm(d_model, eps=1e-6)
