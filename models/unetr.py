@@ -173,7 +173,7 @@ class TransformerBlock(nn.Module):
             (image_size[0] * image_size[1]) / (patch_size * patch_size))
         self.mlp = PositionwiseFeedForward(d_model, 2048)
         self.attn = SelfAttention(
-            num_heads, d_model, dropout)
+            num_heads=num_heads, embed_dim=d_model, dropout=dropout)
 
     def forward(self, x):
         h = x
@@ -204,7 +204,7 @@ class Transformer(nn.Module):
         self.extract_layers = extract_layers
         for _ in range(num_layers):
             layer = TransformerBlock(d_model=embed_dim, num_heads=num_heads,
-                                     dropout=dropout, image_size=image_size, patch_size=patch_size, embed_dim=embed_dim)
+                                     dropout=dropout, image_size=image_size, patch_size=patch_size)
             self.layer.append(copy.deepcopy(layer))
 
     def forward(self, x):
