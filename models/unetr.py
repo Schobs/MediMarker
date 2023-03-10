@@ -77,19 +77,21 @@ class SelfAttention(nn.Module):
 
         self.vis = False
 
-    def transpose_for_scores(self, x, dims=(0, 2, 3, 1)):
-        """
-        This function transposes a tensor for self-attention computation.
+    def transpose_for_scores(self, x, dims=(0, 2, 3, 1, 4)):
+        # Determine the new order of dimensions for the tensor
+        new_dims = []
+        for d in dims:
+            if d < len(x.shape) and d >= -len(x.shape):
+                new_dims.append(d)
+            elif d < 0:
+                new_dims.append(len(x.shape) + d)
+            else:
+                new_dims.append(len(x.shape) - 1)
+        x = x.permute(*new_dims)
 
-        Args:
-            x: input tensor of shape (batch_size, num_channels, height, width)
-            dims: permutation of dimensions for transposing x (default: (0, 2, 3, 1))
-
-        Returns:
-            tensor of shape (batch_size * num_patches, num_channels // self.num_heads, height * width, self.num_heads)
-        """
-        new_dims = [x.shape[d] for d in dims]
-        return x.permute(*dims).reshape(*new_dims)
+        # Reshape the tensor to combine some dimensions
+        size = x.size()[:-2] + (x.size(-2) * x.size(-1),)
+        return x.reshape(*size), None
 
     def forward(self, hidden_states):
         hidden_states_dims = hidden_states.size()
