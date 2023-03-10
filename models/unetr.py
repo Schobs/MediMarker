@@ -69,7 +69,7 @@ class SelfAttention(nn.Module):
         self.key = nn.Linear(embed_dim, self.all_head_size)
         self.value = nn.Linear(embed_dim, self.all_head_size)
 
-        self.out = nn.Linear(embed_dim, embed_dim)
+        self.out = nn.Linear(self.all_head_size, embed_dim)
         self.attn_dropout = nn.Dropout(dropout)
         self.proj_dropout = nn.Dropout(dropout)
 
