@@ -181,6 +181,11 @@ class TransformerBlock(nn.Module):
         h = x
         x = self.attention_norm(x)
         x, weights = self.attn(x)
+
+        # Add this code to check the size of the input tensor to the SelfAttention module
+        assert x.size() == h.size(
+        ), f"Shape mismatch: {x.size()} != {h.size()}"
+
         x = x + h
         h = x
 
@@ -217,7 +222,7 @@ class Transformer(nn.Module):
 
 
 class UNETR(nn.Module):
-    def __init__(self, image_size=(128, 128), input_dim=1, output_dim=3, embed_dim=768, patch_dim=16, num_heads=12, dropout=0.1):
+    def __init__(self, image_size=(512, 512), input_dim=1, output_dim=3, embed_dim=768, patch_dim=16, num_heads=12, dropout=0.1):
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
