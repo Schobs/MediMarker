@@ -77,26 +77,22 @@ class SelfAttention(nn.Module):
 
         self.vis = False
 
-    def transpose_for_scores(self, x, dims=(0, 2, 3, 1)):
-        new_dims = [x.shape[d] if d not in dims else -
-                    1 for d in range(len(x.shape))]
-        x = x.view(*new_dims)
-        new_dims = [new_dims.index(x) if x == -1 else dims.index(x)
-                    for x in range(len(x.shape))]
-        return x.permute(*new_dims)
+    def transpose_for_scores(self, x):
+        new_x_shape = x.size()[
+            :-1] + (self.num_attention_heads, self.attention_head_size)
+        x = x.view(*new_x_shape)
+        return x.permute(0, 2, 1, 3)
 
     def forward(self, hidden_states):
-        hidden_states_dims = hidden_states.size()
+        hidden_states = hidden_states.view(
+            hidden_states.size(0), -1, hidden_states.size(1))
         mixed_query_layer = self.query(hidden_states)
         mixed_key_layer = self.key(hidden_states)
         mixed_value_layer = self.value(hidden_states)
 
-        query_layer = self.transpose_for_scores(
-            mixed_query_layer, hidden_states_dims)
-        key_layer = self.transpose_for_scores(
-            mixed_key_layer, hidden_states_dims)
-        value_layer = self.transpose_for_scores(
-            mixed_value_layer, hidden_states_dims)
+        query_layer = self.transpose_for_scores(mixed_query_layer)
+        key_layer = self.transpose_for_scores(mixed_key_layer)
+        value_layer = self.transpose_for_scores(mixed_value_layer)
 
         attention_scores = torch.matmul(
             query_layer, key_layer.transpose(-1, -2))
@@ -107,14 +103,13 @@ class SelfAttention(nn.Module):
         attention_probs = self.attn_dropout(attention_probs)
 
         context_layer = torch.matmul(attention_probs, value_layer)
-        context_layer = self.transpose_for_scores(
-            context_layer.permute(0, 3, 1, 2, 4), hidden_states_dims)
+        context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.size()[
             :-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
         attention_output = self.out(context_layer)
         attention_output = self.proj_dropout(attention_output)
-        return attention_output[:, :, :, 0], weights
+        return attention_output, weights
 
 
 class Mlp(nn.Module):
