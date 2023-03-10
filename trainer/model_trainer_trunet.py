@@ -6,7 +6,7 @@ from losses.losses import (
     AdaptiveWingLoss,
     SigmaLoss,
 )
-from models.TrUNet import unetr
+from models.TrUNet import TrUNet
 import torch
 import numpy as np
 
@@ -105,7 +105,13 @@ class TrUNetTrainer(NetworkTrainer):
     def initialize_network(self):
         """Initialise the network."""
 
-        self.network =
+        self.network = TrUNet(
+            in_channels=1,
+            out_channels=19,
+            img_size=512,
+            feature_size=self.base_num_features,
+            norm_name='batch',
+            spatial_dims=2)
         self.network.to(self.device)
 
         # Log network and initial weights
