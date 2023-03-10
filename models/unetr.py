@@ -130,7 +130,7 @@ class Mlp(nn.Module):
 
 
 class PositionwiseFeedForward(nn.Module):
-    def __init__(self, d_model=256, d_ff=1024, dropout=0.1):
+    def __init__(self, d_model, d_ff=2048, dropout=0.1):
         super().__init__()
         self.w_1 = nn.Linear(d_model, d_ff)
         self.act = nn.ReLU()
