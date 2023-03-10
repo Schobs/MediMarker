@@ -3,6 +3,7 @@ outputs2/
 outputsISBI/
 profiler/
 scripts/scripts_sharc/
+scripts/results/*.txt
 configs/configs_legacy/
 configs/configs_local/
 utils/setup/

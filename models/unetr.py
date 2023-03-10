@@ -112,7 +112,7 @@ class SelfAttention(nn.Module):
         context_layer = context_layer.view(*new_context_layer_shape)
         attention_output = self.out(context_layer)
         attention_output = self.proj_dropout(attention_output)
-        return attention_output, weights
+        return attention_output[:, :, :, 0], weights
 
 
 class Mlp(nn.Module):
@@ -130,7 +130,7 @@ class Mlp(nn.Module):
 
 
 class PositionwiseFeedForward(nn.Module):
-    def __init__(self, d_model=768, d_ff=2048, dropout=0.1):
+    def __init__(self, d_model=256, d_ff=1024, dropout=0.1):
         super().__init__()
         self.w_1 = nn.Linear(d_model, d_ff)
         self.act = nn.ReLU()
@@ -174,8 +174,10 @@ class TransformerBlock(nn.Module):
         self.mlp_norm = nn.LayerNorm(embed_dim, eps=1e-6)
         self.mlp_dim = int(
             (image_size[0] * image_size[1]) / (patch_size * patch_size))
-        self.mlp = PositionwiseFeedForward(embed_dim, 2048)
-        self.attn = SelfAttention(num_heads, embed_dim, dropout)
+        self.mlp = PositionwiseFeedForward(
+            embed_dim=embed_dim, d_ff=2048, dropout=dropout)
+        self.attn = SelfAttention(
+            num_heads=num_heads, embed_dim=embed_dim, dropout=dropout)
 
     def forward(self, x):
         h = x
@@ -199,14 +201,14 @@ class TransformerBlock(nn.Module):
 class Transformer(nn.Module):
     def __init__(self, input_dim, embed_dim, image_size, patch_size, num_heads, num_layers, dropout, extract_layers):
         super().__init__()
-        self.embeddings = Embeddings(
-            input_dim, embed_dim, image_size, patch_size, dropout)
+        self.embeddings = Embeddings(input_dim=input_dim, embed_dim=embed_dim,
+                                     image_size=image_size, patch_size=patch_size, dropout=dropout)
         self.layer = nn.ModuleList()
         self.encoder_norm = nn.LayerNorm(embed_dim, eps=1e-6)
         self.extract_layers = extract_layers
         for _ in range(num_layers):
-            layer = TransformerBlock(
-                embed_dim, num_heads, dropout, image_size, patch_size)
+            layer = TransformerBlock(embed_dim=embed_dim, num_heads=num_heads,
+                                     dropout=dropout, image_size=image_size, patch_size=patch_size)
             self.layer.append(copy.deepcopy(layer))
 
     def forward(self, x):
@@ -261,47 +263,54 @@ class UNETR(nn.Module):
             nn.Sequential(
                 Deconv2DBlock(embed_dim, 512),
                 Deconv2DBlock(512, 256),
-                Deconv2DBlock(256, 128)
+                Deconv2DBlock(256, 128),
+                Deconv2DBlock(128, 64)
             )
 
         self.decoder6 = \
             nn.Sequential(
                 Deconv2DBlock(embed_dim, 512),
                 Deconv2DBlock(512, 256),
+                Deconv2DBlock(256, 128)
             )
 
         self.decoder9 = \
-            Deconv2DBlock(embed_dim, 512)
+            nn.Sequential(
+                Deconv2DBlock(embed_dim, 512),
+                Deconv2DBlock(512, 256)
+            )
 
-        self.decoder12_upsampler = \
-            SingleDeconv2DBlock(embed_dim, 512)
+        self.decoder12 = \
+            Deconv2DBlock(embed_dim, 512)
 
         self.decoder9_upsampler = \
             nn.Sequential(
-                Conv2DBlock(1024, 512),
-                Conv2DBlock(512, 512),
-                Conv2DBlock(512, 512),
-                SingleDeconv2DBlock(512, 256)
+                SingleDeconv2DBlock(512, 512),
+                Conv2DBlock(512, 256, 3),
+                Conv2DBlock(256, 256, 3),
+                SingleDeconv2DBlock(256, 128)
             )
 
         self.decoder6_upsampler = \
             nn.Sequential(
-                Conv2DBlock(512, 256),
-                Conv2DBlock(256, 256),
-                SingleDeconv2DBlock(256, 128)
+                SingleDeconv2DBlock(256, 256),
+                Conv2DBlock(256, 128, 3),
+                Conv2DBlock(128, 128, 3),
+                SingleDeconv2DBlock(128, 64)
             )
 
         self.decoder3_upsampler = \
             nn.Sequential(
-                Conv2DBlock(256, 128),
-                Conv2DBlock(128, 128),
-                SingleDeconv2DBlock(128, 64)
+                SingleDeconv2DBlock(128, 128),
+                Conv2DBlock(128, 64, 3),
+                Conv2DBlock(64, 64, 3),
+                SingleConv2DBlock(64, 64, 1)
             )
 
         self.decoder0_header = \
             nn.Sequential(
-                Conv2DBlock(128, 64),
-                Conv2DBlock(64, 64),
+                Conv2DBlock(128, 64, 3),
+                Conv2DBlock(64, 64, 3),
                 SingleConv2DBlock(64, output_dim, 1)
             )
 
@@ -327,6 +336,10 @@ class UNETR(nn.Module):
                         self.patch_size[0], self.patch_size[1])
         z3 = z3.reshape(-1, z3.shape[1], self.patch_size[0]
                         * 8, self.patch_size[1] * 8)
+        z6 = z6.reshape(-1, z6.shape[1], self.patch_size[0]
+                        * 4, self.patch_size[1] * 4)
 
         output = self.decoder0_header(torch.cat([z0, z3], dim=1))
+        output = self.decoder3_header(torch.cat([output, z6], dim=1))
+
         return output
