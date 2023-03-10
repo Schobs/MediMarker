@@ -78,8 +78,8 @@ class SelfAttention(nn.Module):
         self.vis = False
 
     def transpose_for_scores(self, x, dims):
-        new_dims = dims[:2] + (self.num_attention_heads,
-                               self.attention_head_size) + dims[2:]
+        new_dims = x.size()[:-1] + (self.num_attention_heads,
+                                    self.attention_head_size)
         x = x.view(*new_dims)
         return x.permute(0, 2, 3, 1, 4)
 
