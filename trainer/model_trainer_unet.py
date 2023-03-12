@@ -48,6 +48,7 @@ class UnetTrainer(NetworkTrainer):
         self.min_feature_res = self.trainer_config.MODEL.UNET.MIN_FEATURE_RESOLUTION
         self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
         self.input_size = self.trainer_config.SAMPLER.INPUT_SIZE
+        self.dropout = self.trainer_config.TRAINER.MC_DROPOUT if self.trainer_config.TRAINER.MC_DROPOUT is not None else False
 
 
         #get arch config parameters
@@ -102,7 +103,8 @@ class UnetTrainer(NetworkTrainer):
     def initialize_network(self):
 
         # Let's make the network
-        self.network = UNet(input_channels=self.num_input_channels, base_num_features=self.base_num_features, num_out_heatmaps=self.num_out_heatmaps,
+        import pdb; pdb.set_trace()
+        self.network = UNet(dropout=self.dropout, input_channels=self.num_input_channels, base_num_features=self.base_num_features, num_out_heatmaps=self.num_out_heatmaps,
             num_resolution_levels= self.num_resolution_layers, conv_operation=self.conv_operation, normalization_operation=self.normalization_operation,
             normalization_operation_config=self.norm_op_kwargs, activation_function= self.activation_function, activation_func_config= self.activation_kwargs,
             weight_initialization=self.weight_inititialiser, strided_convolution_kernels = self.pool_op_kernel_size, convolution_kernels= self.conv_op_kernel_size,

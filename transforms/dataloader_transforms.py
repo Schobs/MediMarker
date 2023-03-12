@@ -57,9 +57,9 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
             iaa.Sometimes(
                 0.6,
                 iaa.Affine(
-                    rotate(-45, 45),
-                    shear(-20, 20),
-                    scale(0.8, 1.2),
+                    rotate=(-45, 45),
+                    shear=(-20, 20),
+                    scale=(0.8, 1.2),
                 )
             ),
             iaa.flip.Flipud(p=0.5),

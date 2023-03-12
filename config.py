@@ -46,7 +46,7 @@ _C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional" #["patchify_and_stitch",
 # Solver settings
 # ----------------------------------------------------------------------------
 _C.SOLVER = CN()
-_C.SOLVER.SEED = 42
+_C.SOLVER.SEED = None
 _C.SOLVER.BASE_LR = 0.01  # Initial learning rate
 _C.SOLVER.DECAY_POLICY = "poly" # ["poly", None]
 _C.SOLVER.MAX_EPOCHS = 1000 
@@ -68,6 +68,7 @@ _C.TRAINER.SAVE_LATEST_ONLY = True
 _C.TRAINER.CACHE_DATA = True
 _C.TRAINER.FOLD = 0
 _C.TRAINER.INFERENCE_ONLY = False
+_C.TRAINER.MC_DROPOUT = False
 
 # ----------------------------------------------------------------------------
 # Model settings settings

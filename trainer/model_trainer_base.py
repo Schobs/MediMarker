@@ -374,8 +374,6 @@ class NetworkTrainer(ABC):
 
             print("done")
 
-           
-    
             
     def maybe_rescale_coords(self, pred_coords, data_dict):
         """Maybe rescale coordinates based on evaluation parameters, and decide which target coords to evaluate against.
@@ -548,28 +546,26 @@ class NetworkTrainer(ABC):
         `inverse_transform` : Dict
             With the key being the name of the augmentation transform, and the value being the magnitude with which the transform was applied.
         """
-        functs_list = ["rotate", "scale", "shear", "flipud"]
-        function_index = math.floor(seed / 10000 * 4)
+        functs_list = ["rotate", "scalex", "scaley", "flipud"]
+        function_index = math.floor(seed / 100000 * 4)
         function_name = functs_list[function_index]
         negative_sign = True if seed / 2 == 0 else False
         rotate_magnitude = math.floor(seed / 10000 * 360) if function_name == "rotate" else 0
-        shear_magnitude = math.floor(seed / 10000 * 20) if function_name == "shear" else 0
-        scale_magnitude = round(random.uniform(0.8, 1.2), 2)
+        scale_magnitude = round(random.uniform(0.8, 1.2), 2) if function_name == "scalex" or "scaley" else 0
         rotate_magnitude = rotate_magnitude * -1 if negative_sign and rotate_magnitude is not 0 else rotate_magnitude
-        shear_magnitude = shear_magnitude * -1 if negative_sign and shear_magnitude is not 0 else shear_magnitude
         functions = {    
             "rotate" : iaa.Sequential([iaa.Rotate(rotate_magnitude)]),
-            "shear" : iaa.Sequential([iaa.ShearY(shear_magnitude)]),
-            "scale" : iaa.Sequential([iaa.ScaleX(scale_magnitude)]),
+            "scalex" : iaa.Sequential([iaa.ScaleX(scale_magnitude)]),
+            "scaley" : iaa.Sequential([iaa.ScaleY(scale_magnitude)]),
             "flipud" : iaa.Sequential([iaa.Flipud(1)])
         }
         inverse_functions = {
             "inverse_rotate" : rotate_magnitude,
-            "inverse_shear" : shear_magnitude,
-            "inverse_scale" : scale_magnitude,
+            "inverse_scalex" : scale_magnitude,
+            "inverse_scaley" : scale_magnitude,
             "inverse_flip" : 1
         }
-        transform = list(functions.values())[function_index]
+        transform = functions[function_name]
         inverse_transform = {list(inverse_functions.keys())[function_index] :
                             list(inverse_functions.values())[function_index]}
         img = data['image'][idx].cpu().detach().numpy()
@@ -599,22 +595,21 @@ class NetworkTrainer(ABC):
         """
         for funct, eval_log in zip(inverse_functs, eval_logs['individual_results']):
             key = funct.keys()
-            if "inverse_rotate" in key:
+            if "normal" in key:
+                continue
+            elif "inverse_rotate" in key:
                 coords = np.array([self.extract_original_coords_from_rotation(funct["inverse_rotate"], coords) for coords in eval_log["predicted_coords"]])
-                #import pdb; pdb.set_trace()
-                eval_log['predicted_coords'] = coords
-            elif "inverse_shear" in key:
-                coords = np.array([self.extract_original_coords_from_shear(funct["inverse_shear"], coords) for coords in eval_log['predicted_coords']])
-                #import pdb; pdb.set_trace()
                 eval_log['predicted_coords'] = coords
             elif "inverse_flip" in key:
                 coords = np.array([self.extract_original_coords_from_flipud(coords) for coords in eval_log['predicted_coords']])
                 eval_log['predicted_coords'] = coords
-            else:
-                coords = np.array([self.extract_original_coords_from_scale(funct["inverse_scale"], coords) for coords in eval_log['predicted_coords']])
-                #import pdb; pdb.set_trace()
+            elif "inverse_scalex" in key:
+                coords = np.array([self.extract_original_coords_from_scale_x(funct["inverse_scalex"], coords) for coords in eval_log['predicted_coords']])
                 eval_log['predicted_coords'] = coords
-        #import pdb; pdb.set_trace()
+            else:
+                coords = np.array([self.extract_original_coords_from_scale_y(funct["inverse_scaley"], coords) for coords in eval_log['predicted_coords']])
+                eval_log['predicted_coords'] = coords
+            import pdb; pdb.set_trace()
         return eval_logs
 
     def extract_original_coords_from_rotation(self, rotation_mag : float, rotated_coords : Tuple):
@@ -635,30 +630,34 @@ class NetworkTrainer(ABC):
             Again assumes the layout of the evaluation log as mentioned above. A tuple containing the converted coordinates now relating to the
             original image.
         """
-        rotation_mag *= -1
-        original_x = rotated_coords[0] * math.sin(rotation_mag) - rotated_coords[1] * math.sin(rotation_mag)
-        original_y = rotated_coords[1] * math.sin(rotation_mag) + rotated_coords[0] * math.sin(rotation_mag)
-        conv_coords = np.array([original_x, original_y])
+        deg = math.radians(-1 * rotation_mag)
+        x = rotated_coords[0]
+        y = rotated_coords[1]
+        xo = self.training_resolution[0] / 2
+        yo = self.training_resolution[1] / 2
+        x_final = math.cos(deg) * (x - xo) - math.sin(deg) * (y - yo) + xo
+        y_final = math.sin(deg) * (x - xo) + math.cos(deg) * (y - yo)+ yo
+        conv_coords = np.array([x_final, y_final])
         return conv_coords
 
-    def extract_original_coords_from_shear(self, shear_mag : float, sheared_coords : Tuple):
-        """"""
-        original_x = sheared_coords[0] - sheared_coords[1] * math.tan(math.radians(shear_mag))
-        original_y = sheared_coords[1]
-        conv_coords = np.array([original_x, original_y])
-        return conv_coords
-
-    def extract_original_coords_from_scale(self, scale_mag : float, scaled_coords : Tuple):
+    def extract_original_coords_from_scale_x(self, scale_mag : float, scaled_coords : Tuple):
         """"""
         original_x = scaled_coords[0] / scale_mag
         original_y = scaled_coords[1]
+        conv_coords = np.array([original_x, original_y])
+        return conv_coords
+    
+    def extract_original_coords_from_scale_y(self, scale_mag : float, scaled_coords : Tuple):
+        """"""
+        original_x = scaled_coords[0]
+        original_y = scaled_coords[1] / scale_mag
         conv_coords = np.array([original_x, original_y])
         return conv_coords
 
     def extract_original_coords_from_flipud(self, flip_coords : Tuple):
         """"""
         original_x = flip_coords[0]
-        original_y = self.training_resolution[0] - flip_coords[1]
+        original_y = self.training_resolution[1] - flip_coords[1]
         conv_coords = np.array([original_x, original_y])
         #import pdb; pdb.set_trace()
         return conv_coords
@@ -716,21 +715,22 @@ class NetworkTrainer(ABC):
                 try:
                     evaluation_logs = self.dict_logger.ensemble_inference_log_template()
                     direct_data_dict = next(generator)
-                    augmented_dict = direct_data_dict
-                    augmented_dict['image'] = [x for x in augmented_dict['image'] for i in range(num_tta_iterations)]
+                    augmented_dict = direct_data_dict.copy()
+                    augmented_dict['image'] = [x for x in augmented_dict['image'] for i in range(num_tta_iterations+1)]
                     all_inverse_transformations = []
                     for idx in range(len(augmented_dict['image'])):
-                        aug_seed = np.random.randint(10000)
+                        if idx % 5 == 0:
+                            all_inverse_transformations.append({"normal" : None})
+                            continue
+                        aug_seed = np.random.randint(100000)
                         augmented_dict, inverse_transformation = self.apply_tta_augmentation(augmented_dict, aug_seed, idx)
                         all_inverse_transformations.append(inverse_transformation)
                     # Directly pass the next data_dict to run_iteration rather than iterate it within.
+                    print(all_inverse_transformations)
                     for i in range(num_tta_iterations):
                         batch = augmented_dict.copy()
-                        try:
-                            batch['image'] = torch.stack(batch['image'][i::num_tta_iterations])
-                        except:
-                            import pdb; pdb.set_trace()
-                        inverse_transforms = all_inverse_transformations[i::num_tta_iterations]
+                        batch['image'] = torch.stack(batch['image'][i::num_tta_iterations+1]) #First batch is all normal images.
+                        inverse_transforms = all_inverse_transformations[i::num_tta_iterations+1]
                         l, _ = self.run_iteration(
                             generator,
                             self.test_dataloader,
@@ -819,6 +819,10 @@ class NetworkTrainer(ABC):
             )
             # network evaluation mode
             self.network.eval()
+            try:
+                checkpoint = checkpoint[0]
+            except:
+                pass
             self.load_checkpoint(checkpoint, training_bool=False) #@Lawrence - this needs fixing...
             # Initialise esenmble results dictionaries
             ensemble_result_dicts = {
