@@ -362,10 +362,10 @@ class UNETR(nn.Module):
         # Reshape the output of the transformer to match the shape of the feature maps in the decoder
         z0 = z0.reshape(-1, z0.shape[1],
                         self.patch_size[0], self.patch_size[1])
-        z3 = z3.reshape(-1, z3.shape[1], self.patch_size[0]
-                        * 8, self.patch_size[1] * 8)
-        z6 = z6.reshape(-1, z6.shape[1], self.patch_size[0]
-                        * 4, self.patch_size[1] * 4)
+        z3 = z3.reshape(-1, z3.shape[1],
+                        self.patch_size[0]*8, self.patch_size[1]*8)
+        z6 = z6.reshape(-1, z6.shape[1],
+                        self.patch_size[0]*4, self.patch_size[1]*4)
 
         output = self.decoder0_header(torch.cat([z0, z3], dim=1))
         output = self.decoder3_header(torch.cat([output, z6], dim=1))
