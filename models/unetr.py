@@ -266,7 +266,9 @@ class UNETR(nn.Module):
             nn.Sequential(
                 Deconv2DBlock(embed_dim, 512),
                 Deconv2DBlock(512, 256),
-                Deconv2DBlock(256, 128)
+                Deconv2DBlock(256, 128),
+                # New layer to match number of channels
+                Conv2DBlock(128, 256, 1)
             )
 
         self.decoder9 = \
