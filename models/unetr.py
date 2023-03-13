@@ -285,13 +285,13 @@ class UNETR(nn.Module):
             SingleDeconv2DBlock(256, 128)
         )
 
-        self.decoder9_upsampler = \
-            nn.Sequential(
-                SingleDeconv2DBlock(512, 512),
-                Conv2DBlock(512, 256, 3),
-                Conv2DBlock(256, 256, 3),
-                SingleDeconv2DBlock(256, 128)
-            )
+        self.decoder9_upsampler = nn.Sequential(
+            Conv2DBlock(640, 512, 1),
+            SingleDeconv2DBlock(512, 512),
+            Conv2DBlock(512, 256, 3),
+            Conv2DBlock(256, 256, 3),
+            SingleDeconv2DBlock(256, 128)
+        )
 
         self.decoder6_upsampler = \
             nn.Sequential(
