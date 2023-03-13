@@ -220,28 +220,27 @@ class Transformer(nn.Module):
 
 
 class UNETR(nn.Module):
-    def __init__(self, image_size=(512, 512), input_dim=1, output_dim=3, embed_dim=768, patch_dim=16, num_heads=12, dropout=0.1):
+    def __init__(self, img_shape=(512, 512), input_dim=1, output_dim=1, embed_dim=768, patch_size=16, num_heads=12, dropout=0.1):
         super().__init__()
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.embed_dim = embed_dim
-        self.image_size = image_size
-        self.patch_dim = patch_dim
+        self.img_shape = img_shape
+        self.patch_size = patch_size
         self.num_heads = num_heads
         self.dropout = dropout
         self.num_layers = 12
         self.ext_layers = [3, 6, 9, 12]
 
-        self.patch_size = (
-            int(image_size[0] / patch_dim), int(image_size[1] / patch_dim))
+        self.patch_dim = [int(x / patch_size) for x in img_shape]
 
         # Transformer Encoder
         self.transformer = \
             Transformer(
                 input_dim,
                 embed_dim,
-                image_size,
-                patch_dim,
+                img_shape,
+                patch_size,
                 num_heads,
                 self.num_layers,
                 dropout,
@@ -276,11 +275,8 @@ class UNETR(nn.Module):
                 Deconv2DBlock(512, 256)
             )
 
-        self.decoder12 = \
-            Deconv2DBlock(embed_dim, 512)
-
         self.decoder12_upsampler = nn.Sequential(
-            Conv2DBlock(1024, 512, 1),
+            Conv2DBlock(embed_dim, 512, 1),
             SingleDeconv2DBlock(512, 512),
             Conv2DBlock(512, 256, 3),
             Conv2DBlock(256, 256, 3),
@@ -299,56 +295,34 @@ class UNETR(nn.Module):
             nn.Sequential(
                 SingleDeconv2DBlock(256, 256),
                 Conv2DBlock(256, 128, 3),
-                Conv2DBlock(128, 64, 3),
-                SingleDeconv2DBlock(64, 64)
+                Conv2DBlock(128, 128, 3),
+                SingleDeconv2DBlock(128, 64)
             )
 
         self.decoder3_upsampler = \
             nn.Sequential(
                 SingleDeconv2DBlock(128, 128),
                 Conv2DBlock(128, 64, 3),
-                Conv2DBlock(64, 32, 3),
-                SingleDeconv2DBlock(32, 32),
+                Conv2DBlock(64, 64, 3),
+                SingleConv2DBlock(64, 64, 1),
                 # Add this layer to match the expected number of channels
-                Conv2DBlock(32, 64, 1)
-            )
-
-        self.decoder3_upsampler = \
-            nn.Sequential(
-                SingleDeconv2DBlock(128, 128),
-                Conv2DBlock(128, 64, 3),
-                Conv2DBlock(64, 32, 3),
-                SingleDeconv2DBlock(32, 32),
-                # Add this layer to match the expected number of channels
-                Conv2DBlock(32, 64, 1)
+                Conv2DBlock(64, 64, 1)
             )
 
         self.decoder0_header = \
             nn.Sequential(
-                Conv2DBlock(128, 64, 3),
-                Conv2DBlock(64, 32, 3),
-                SingleConv2DBlock(32, output_dim, 1)
-            )
-
-        self.decoder3_header = \
-            nn.Sequential(
-                Conv2DBlock(128, 64, 3),
-                Conv2DBlock(64, 32, 3),
-                SingleDeconv2DBlock(32, 32),
-                # Add this layer to match the expected number of channels
-                Conv2DBlock(32, 64, 1),
                 Conv2DBlock(64, 64, 3),
                 Conv2DBlock(64, 64, 3),
-                SingleConv2DBlock(64, output_dim, 1)
+                SingleConv2DBlock(64, self.output_dim, 1)
             )
 
     def forward(self, x):
         z = self.transformer(x)
         z0, z3, z6, z9, z12 = x, *z
-        z3 = z3.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_size)
-        z6 = z6.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_size)
-        z9 = z9.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_size)
-        z12 = z12.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_size)
+        z3 = z3.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_dim)
+        z6 = z6.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_dim)
+        z9 = z9.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_dim)
+        z12 = z12.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_dim)
 
         z12 = self.decoder12_upsampler(z12)
         z9 = self.decoder9(z9)
@@ -358,16 +332,5 @@ class UNETR(nn.Module):
         z3 = self.decoder3(z3)
         z3 = self.decoder3_upsampler(torch.cat([z3, z6], dim=1))
         z0 = self.decoder0(z0)
-
-        # Reshape the output of the transformer to match the shape of the feature maps in the decoder
-        z0 = z0.reshape(-1, z0.shape[1],
-                        self.patch_size[0], self.patch_size[1])
-        z3 = z3.reshape(-1, z3.shape[1],
-                        self.patch_size[0]*8, self.patch_size[1]*8)
-        z6 = z6.reshape(-1, z6.shape[1],
-                        self.patch_size[0]*4, self.patch_size[1]*4)
-
         output = self.decoder0_header(torch.cat([z0, z3], dim=1))
-        output = self.decoder3_header(torch.cat([output, z6], dim=1))
-
         return output
