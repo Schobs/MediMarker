@@ -297,6 +297,8 @@ class UNETR(nn.Module):
 
         self.decoder6_upsampler = \
             nn.Sequential(
+                # Add this layer to match the expected number of channels
+                Conv2DBlock(512, 256, 1),
                 SingleDeconv2DBlock(256, 256),
                 Conv2DBlock(256, 128, 3),
                 Conv2DBlock(128, 128, 3),
