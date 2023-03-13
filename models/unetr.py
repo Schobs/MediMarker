@@ -258,68 +258,48 @@ class UNETR(nn.Module):
             nn.Sequential(
                 Deconv2DBlock(embed_dim, 512),
                 Deconv2DBlock(512, 256),
-                Deconv2DBlock(256, 128),
-                Deconv2DBlock(128, 64)
+                Deconv2DBlock(256, 128)
             )
 
         self.decoder6 = \
             nn.Sequential(
                 Deconv2DBlock(embed_dim, 512),
                 Deconv2DBlock(512, 256),
-                Deconv2DBlock(256, 128),
-                # New layer to match number of channels
-                Conv2DBlock(128, 256, 1)
             )
 
         self.decoder9 = \
+            Deconv2DBlock(embed_dim, 512)
+
+        self.decoder12_upsampler = \
+            SingleDeconv2DBlock(embed_dim, 512)
+
+        self.decoder9_upsampler = \
             nn.Sequential(
-                Deconv2DBlock(embed_dim, 512),
-                Deconv2DBlock(512, 256),
-                # Added layer to increase number of channels to 512
-                Conv2DBlock(256, 512, 1)
+                Conv2DBlock(1024, 512),
+                Conv2DBlock(512, 512),
+                Conv2DBlock(512, 512),
+                SingleDeconv2DBlock(512, 256)
             )
-
-        self.decoder12_upsampler = nn.Sequential(
-            Conv2DBlock(embed_dim, 512, 1),
-            SingleDeconv2DBlock(512, 512),
-            Conv2DBlock(512, 256, 3),
-            Conv2DBlock(256, 256, 3),
-            SingleDeconv2DBlock(256, 128)
-        )
-
-        self.decoder9_upsampler = nn.Sequential(
-            Conv2DBlock(640, 512, 1),
-            SingleDeconv2DBlock(512, 512),
-            Conv2DBlock(512, 256, 3),
-            Conv2DBlock(256, 256, 3),
-            SingleDeconv2DBlock(256, 128)
-        )
 
         self.decoder6_upsampler = \
             nn.Sequential(
-                SingleDeconv2DBlock(256, 256),
-                Conv2DBlock(256, 128, 3),
-                Conv2DBlock(128, 128, 3),
-                SingleDeconv2DBlock(128, 128),
-                # add this layer to adjust the number of channels
-                Conv2DBlock(128, 64, 1)
+                Conv2DBlock(512, 256),
+                Conv2DBlock(256, 256),
+                SingleDeconv2DBlock(256, 128)
             )
 
         self.decoder3_upsampler = \
             nn.Sequential(
-                SingleDeconv2DBlock(128, 128),
-                Conv2DBlock(128, 64, 3),
-                Conv2DBlock(64, 64, 3),
-                SingleConv2DBlock(64, 64, 1),
-                # Add this layer to match the expected number of channels
-                Conv2DBlock(64, 64, 1)
+                Conv2DBlock(256, 128),
+                Conv2DBlock(128, 128),
+                SingleDeconv2DBlock(128, 64)
             )
 
         self.decoder0_header = \
             nn.Sequential(
-                Conv2DBlock(64, 64, 3),
-                Conv2DBlock(64, 64, 3),
-                SingleConv2DBlock(64, self.output_dim, 1)
+                Conv2DBlock(128, 64),
+                Conv2DBlock(64, 64),
+                SingleConv2DBlock(64, output_dim, 1)
             )
 
     def forward(self, x):
