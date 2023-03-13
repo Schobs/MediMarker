@@ -299,34 +299,47 @@ class UNETR(nn.Module):
             nn.Sequential(
                 SingleDeconv2DBlock(256, 256),
                 Conv2DBlock(256, 128, 3),
-                Conv2DBlock(128, 128, 3),
-                SingleDeconv2DBlock(128, 64)
+                Conv2DBlock(128, 64, 3),
+                SingleDeconv2DBlock(64, 64)
             )
 
         self.decoder3_upsampler = \
             nn.Sequential(
                 SingleDeconv2DBlock(128, 128),
                 Conv2DBlock(128, 64, 3),
-                Conv2DBlock(64, 64, 3),
-                SingleConv2DBlock(64, 64, 1),
+                Conv2DBlock(64, 32, 3),
+                SingleDeconv2DBlock(32, 32),
                 # Add this layer to match the expected number of channels
-                Conv2DBlock(64, 64, 1)
+                Conv2DBlock(32, 64, 1)
+            )
+
+        self.decoder3_upsampler = \
+            nn.Sequential(
+                SingleDeconv2DBlock(128, 128),
+                Conv2DBlock(128, 64, 3),
+                Conv2DBlock(64, 32, 3),
+                SingleDeconv2DBlock(32, 32),
+                # Add this layer to match the expected number of channels
+                Conv2DBlock(32, 64, 1)
             )
 
         self.decoder0_header = \
             nn.Sequential(
                 Conv2DBlock(128, 64, 3),
-                Conv2DBlock(64, 64, 3),
-                SingleConv2DBlock(64, output_dim, 1)
+                Conv2DBlock(64, 32, 3),
+                SingleConv2DBlock(32, output_dim, 1)
             )
 
         self.decoder3_header = \
             nn.Sequential(
                 Conv2DBlock(128, 64, 3),
-                Conv2DBlock(64, 64, 3),
-                SingleConv2DBlock(64, 64, 1),
+                Conv2DBlock(64, 32, 3),
+                SingleDeconv2DBlock(32, 32),
                 # Add this layer to match the expected number of channels
-                Conv2DBlock(64, 64, 1)
+                Conv2DBlock(32, 64, 1),
+                Conv2DBlock(64, 64, 3),
+                Conv2DBlock(64, 64, 3),
+                SingleConv2DBlock(64, output_dim, 1)
             )
 
     def forward(self, x):
