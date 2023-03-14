@@ -330,8 +330,4 @@ class UNETR(nn.Module):
         z3 = self.decoder3_upsampler(torch.cat([z3, z6], dim=1))
         z0 = self.decoder0(z0)
         output = self.decoder0_header(torch.cat([z0, z3], dim=1))
-
-        if target.shape[-2:] != input.shape[-2:]:
-            target = F.interpolate(
-                target, size=input.shape[-2:], mode='bilinear', align_corners=False)
-        return F.mse_loss(input, target, reduction=self.reduction)
+        return output
