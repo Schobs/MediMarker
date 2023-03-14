@@ -28,8 +28,10 @@ class AdaptiveWingLoss(nn.Module):
         delta_y2 = delta_y[
             delta_y >= self.theta
         ]  # get the high activation pixels (predcited foreground)
-        y1 = y[delta_y < self.theta]  # get the low act target pixels (background)
-        y2 = y[delta_y >= self.theta]  # get the high act target pixels (foreground)
+        # get the low act target pixels (background)
+        y1 = y[delta_y < self.theta]
+        # get the high act target pixels (foreground)
+        y2 = y[delta_y >= self.theta]
         loss1 = self.omega * torch.log(
             1 + torch.pow(delta_y1 / self.omega, self.alpha - y1)
         )
@@ -133,7 +135,14 @@ class HeatmapLoss(nn.Module):
         self.loss = loss_func
 
     def forward(self, net_output, target):
-        # print("in the single heatmap output loss the x and y shapes are: ", net_output.detach().cpu().numpy().shape, (target).detach().cpu().numpy().shape)
+        # Add the missing channel dimension to net_output
+        # This will change the size from [2, 512, 512] to [2, 1, 512, 512]
+        net_output = net_output.unsqueeze(1)
+
+        # Then, you may need to replicate the channel dimension to match the target tensor
+        # This will change the size from [2, 1, 512, 512] to [2, 19, 512, 512]
+        net_output = net_output.expand(-1, 19, -1, -1)
+
         return self.loss(net_output, target)
 
 
@@ -306,7 +315,8 @@ class MultiBranchPatchLoss(nn.Module):
         self.branch_scheme = branch_scheme
         self.criterion_reg = nn.MSELoss(reduction="mean")
         self.distance_weighted_bool = distance_weighted_bool
-        self.loss_seperated_keys = ["all_loss_all", "displacement_loss", "heatmap_loss"]
+        self.loss_seperated_keys = ["all_loss_all",
+                                    "displacement_loss", "heatmap_loss"]
         self.binary_weighted_weights = binary_weighted_weights
 
         assert class_loss_scheme in ["gaussian", "binary"]
@@ -367,7 +377,8 @@ class MultiBranchPatchLoss(nn.Module):
         #     ]
 
         # ]]])
-        ling_alg = torch.mean(weights * torch.linalg.norm((input_ - target), axis=2))
+        ling_alg = torch.mean(
+            weights * torch.linalg.norm((input_ - target), axis=2))
         # mean_mse = torch.mean(weights * (input_ - target) ** 2)
         return ling_alg
 
@@ -414,7 +425,8 @@ class MultiBranchPatchLoss(nn.Module):
             losses_seperated["displacement_loss"] = loss_disp
 
         if self.branch_scheme == "heatmap" or self.branch_scheme == "multi":
-            loss_class = self.class_criterion(pred_class, labels["patch_heatmap"])
+            loss_class = self.class_criterion(
+                pred_class, labels["patch_heatmap"])
 
             total_loss += loss_class
             losses_seperated["heatmap_loss"] = loss_class
