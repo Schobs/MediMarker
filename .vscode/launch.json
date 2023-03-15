@@ -1,0 +1,126 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: LannUnet GP",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
+            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_gp/gp_debug2.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: PHD-Net",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
+            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_local/phdnet/debugger.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: LannUNet patch",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/landmark_unet/LaNNU-Net/main.py",
+            "args": ["--cfg", "${workspaceRoot}/landmark_unet/LaNNU-Net/configs/configs_local/patch_training/patch_debug.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: LannUNet Full",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/unet_S1_predictions.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: LannUNet Misc",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/conv_baseline.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }, 
+        {
+        "cwd": "${workspaceFolder}",
+        "name": "Python: Local LannUNet Misc",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceRoot}/main.py",
+        "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/conv_baseline_5gs_f0_local.yaml"],
+        "console": "integratedTerminal",
+        "justMyCode": true
+        }, 
+
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: GPFLow Test",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/LLHA.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+        }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: Misc GPFLow",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/final_gp_exps_local/final_f1_l8.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+        }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: Analysis",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/evaluation/analyse_results_miccai.py",
+            // "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/final_gp_exps/final_f3_l9_local.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+        }, 
+
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: Bsc",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_BSC_projects/cephalometric_cv_lawrence.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+        }, 
+    ]
+}
+
+
+

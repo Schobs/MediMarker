@@ -1,0 +1,47 @@
+
+OUTPUT: 
+  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/Bsc/ethan/1' #change this to where you have the data
+  #Logging stuff. HIGHLY RECOMMENDED. CHECK THE DOCS FOR INFO. Please use it, it will help you a LOT. 
+  # If not using set USE_COMETML_LOGGING to False.
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "aluS7PJmGWfAY2u9h3SGY05Kt"
+  COMET_WORKSPACE: "ejones18"
+  COMET_PROJECT_NAME: "TTA_testing"
+
+SOLVER:
+  DEEP_SUPERVISION: True
+  NUM_RES_SUPERVISIONS: 5
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE: 12  #As high as will fit in gpu memory
+  MAX_EPOCHS: 225 #How long you want to train? ideal is at least 150-250. 
+  AUTO_MIXED_PRECISION: False
+
+MODEL:
+  GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.
+  # CHECKPOINT: "/path_to/checkpoint" #Use this to resume training from a checkpoint, or load the checkpoint during inference
+
+DATASET:
+  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/' #change this to where you have the data
+  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid' #change this
+  NAME:  "ISBI"
+  IMAGE_MODALITY: 'Cephalometric'
+  LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+    
+ 
+TRAINER:
+  INFERENCE_ONLY: True # set to true if already trained and want to perform inference (testing) only.
+  CACHE_DATA: False #Ideally true, saves time from loading from disk.
+  FOLD: 0 # Pick the fold. this dataset has folds 0,1,2,3. You can set to -1 and directly put the path to JSON in SRC_TARGETS if you want.
+
+INFERENCE:
+  EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: False #Set to true to get some visualization of predicted heatmaps!
+  TTA_ENSEMBLE_INFERENCE: True
+  ENSEMBLE_CHECKPOINTS: ["/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/Bsc/ethan/model_best_valid_coord_error_fold0.model"]
+
+SAMPLER:
+  NUM_WORKERS: 8 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down. 
+  DATA_AUG: 'TTA' # set to None for no augmentation. for other schemes see the documentation.
+  INPUT_SIZE : [512,512]
+  DEBUG: False  #Set to true to get some visualization of data augmentation and the target heatmaps! Are they close to the predicted heatmaps after training?
+ 

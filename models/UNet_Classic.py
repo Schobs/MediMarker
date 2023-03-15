@@ -12,11 +12,12 @@ import torch.nn as nn
 from torch import cat as torch_concat
 from torch import device, cuda
 
+
 class ConvNormNonlin(nn.Module):
-    def __init__(self, dropout, input_channels, output_channels,
-                    conv_op=nn.Conv2d, conv_kwargs=None,
-                    norm_op=nn.InstanceNorm2d, norm_op_kwargs=None,
-                    nonlin=nn.LeakyReLU, nonlin_kwargs=None):
+    def __init__(self, input_channels, output_channels,
+                 conv_op=nn.Conv2d, conv_kwargs=None,
+                 norm_op=nn.InstanceNorm2d, norm_op_kwargs=None,
+                 nonlin=nn.LeakyReLU, nonlin_kwargs=None, dropout=False):
         super(ConvNormNonlin, self).__init__()
         if nonlin_kwargs is None:
             nonlin_kwargs = {'negative_slope': 1e-2, 'inplace': True}
@@ -35,13 +36,13 @@ class ConvNormNonlin(nn.Module):
         self.norm_op = norm_op
         self.dropout = self.dropout = nn.Dropout(p=0.1) if dropout is True else False
 
-        #Convolutional operation
+        # Convolutional operation
         self.convolution = self.conv_op(input_channels, output_channels, **self.conv_kwargs)
 
-        #Normalization operation
+        # Normalization operation
         self.normalization = self.norm_op(output_channels, **self.norm_op_kwargs)
 
-        #Activation function
+        # Activation function
         self.activation = self.nonlin(**self.nonlin_kwargs)
 
         #self.dropout = nn.Dropout(dropout_rate) if dropout_rate is not None else None
@@ -65,58 +66,56 @@ class UNet(nn.Module):
     """
 
     def __init__(self, dropout, input_channels, base_num_features, num_out_heatmaps,
-            num_resolution_levels, conv_operation, normalization_operation,
-            normalization_operation_config, activation_function, activation_func_config,
-            weight_initialization, strided_convolution_kernels , convolution_kernels, convolution_config, 
-            upsample_operation, deep_supervision, max_features=512, ):
-    
-    
-    
+                 num_resolution_levels, conv_operation, normalization_operation,
+                 normalization_operation_config, activation_function, activation_func_config,
+                 weight_initialization, strided_convolution_kernels, convolution_kernels, convolution_config,
+                 upsample_operation, deep_supervision, max_features=512, ):
+
         super(UNet, self).__init__()
-        
-        self.input_channels = input_channels 
-        self.base_num_features =base_num_features
-        self.num_out_heatmaps=num_out_heatmaps
-        self.num_resolution_levels= num_resolution_levels
-        self.conv_operation =conv_operation
-        self.normalization_operation=normalization_operation
-        self.normalization_operation_config=normalization_operation_config
-        self.activation_function =activation_function
-        self.activation_func_config=activation_func_config
-        self.weight_initialization=weight_initialization
-        self.strided_convolution_kernels  = strided_convolution_kernels
-        self.convolution_kernels =convolution_kernels
-        self.convolution_config=convolution_config
+
+        self.input_channels = input_channels
+        self.base_num_features = base_num_features
+        self.num_out_heatmaps = num_out_heatmaps
+        self.num_resolution_levels = num_resolution_levels
+        self.conv_operation = conv_operation
+        self.normalization_operation = normalization_operation
+        self.normalization_operation_config = normalization_operation_config
+        self.activation_function = activation_function
+        self.activation_func_config = activation_func_config
+        self.weight_initialization = weight_initialization
+        self.strided_convolution_kernels = strided_convolution_kernels
+        self.convolution_kernels = convolution_kernels
+        self.convolution_config = convolution_config
         self.upsample_operation = upsample_operation
         self.max_features = max_features
         self.deep_supervision = deep_supervision
         self.dropout = nn.Dropout(p=0.1) if dropout is True else False
 
-        #Define the network
+        # Define the network
         self.conv_blocks_encoder = []
         self.upsample_transp_convs = []
         self.conv_blocks_decoder = []
         self.intermediate_outputs = []
 
-        #set initial number of kernels and input channels
+        # set initial number of kernels and input channels
         output_features = self.base_num_features
         input_features = self.input_channels
 
-        #The Encoder part
+        # The Encoder part
         for res_level in range(self.num_resolution_levels):
 
-            #Get the convoltion kernels for this resolution level. We use 2 conv-norm-activation sequences per level
-            first_conv_kwargs = deepcopy( self.convolution_config)
+            # Get the convoltion kernels for this resolution level. We use 2 conv-norm-activation sequences per level
+            first_conv_kwargs = deepcopy(self.convolution_config)
             first_conv_kwargs['kernel_size'] = self.convolution_kernels[res_level]
 
-            second_conv_kwargs = deepcopy( self.convolution_config)
+            second_conv_kwargs = deepcopy(self.convolution_config)
             second_conv_kwargs['kernel_size'] = self.convolution_kernels[res_level]
 
-            #If the first convolution, do not downsample, otherwise downsample using strided convolutions
+            # If the first convolution, do not downsample, otherwise downsample using strided convolutions
             if res_level == 0:
                 first_stride = 1
             else:
-                first_stride = strided_convolution_kernels[res_level-1] #-1 because the first res_level didn't use
+                first_stride = strided_convolution_kernels[res_level-1]  # -1 because the first res_level didn't use
 
             first_conv_kwargs['stride'] = first_stride
             second_conv_kwargs['stride'] = 1
@@ -124,43 +123,44 @@ class UNet(nn.Module):
             self.conv_blocks_encoder.append(
                 nn.Sequential(
                     ConvNormNonlin(
-                        input_features, output_features, self.conv_operation, first_conv_kwargs, self.normalization_operation, 
-                        self.normalization_operation_config, self.activation_function, self.activation_func_config 
+                        input_features, output_features, self.conv_operation, first_conv_kwargs, self.normalization_operation,
+                        self.normalization_operation_config, self.activation_function, self.activation_func_config, dropout=False
                     ),
                     ConvNormNonlin(
-                        output_features, output_features, self.conv_operation, second_conv_kwargs, self.normalization_operation, 
-                        self.normalization_operation_config, self.activation_function, self.activation_func_config
+                        output_features, output_features, self.conv_operation, second_conv_kwargs, self.normalization_operation,
+                        self.normalization_operation_config, self.activation_function, self.activation_func_config, dropout=False
                     )
                 )
             )
 
             input_features = output_features
-            output_features = min(int(output_features*2), self.max_features) # We double the features each level to a preset maximum (default: 512)
+            # We double the features each level to a preset maximum (default: 512)
+            output_features = min(int(output_features*2), self.max_features)
 
-
-        #The Decoder part. We need to transpose the convolution to increase resolution. During training
+        # The Decoder part. We need to transpose the convolution to increase resolution. During training
         # we concatonate these features with a skip connection to mirror the same number of features. Then we need to
         # apply the classic block of 2 conv-norm-activation blocks
 
-        #initialise feature sizes
+        # initialise feature sizes
         nfeatures_from_encoder = output_features
-        for res_level in range(self.num_resolution_levels-1): #-1 because the encoder block covered the lowest resolution already
-            
-            # print("self conv_blovks encoder ", -(1 + res_level), " is ", self.conv_blocks_encoder[-(1 + res_level)][-1].output_channels)
-            nfeatures_from_encoder = self.conv_blocks_encoder[-(1 + res_level)][-1].output_channels #prev level #features 
+        # -1 because the encoder block covered the lowest resolution already
+        for res_level in range(self.num_resolution_levels-1):
 
-            nfeatures_from_skip =  self.conv_blocks_encoder[-(2 + res_level)][-1].output_channels #target #features 
+            # print("self conv_blovks encoder ", -(1 + res_level), " is ", self.conv_blocks_encoder[-(1 + res_level)][-1].output_channels)
+            # prev level #features
+            nfeatures_from_encoder = self.conv_blocks_encoder[-(1 + res_level)][-1].output_channels
+
+            nfeatures_from_skip = self.conv_blocks_encoder[-(2 + res_level)][-1].output_channels  # target #features
             n_features_after_tu_and_concat = nfeatures_from_skip * 2
 
-            #Transpose Convolution to upsample resolution
-            self.upsample_transp_convs.append(self.upsample_operation(nfeatures_from_encoder, nfeatures_from_skip, 
-                strided_convolution_kernels[-(res_level + 1)], strided_convolution_kernels[-(res_level + 1)], bias=False ))
-            
-            #Now we know the input will have same # features as skip connection, and doubled resolution to also match skip.
+            # Transpose Convolution to upsample resolution
+            self.upsample_transp_convs.append(self.upsample_operation(nfeatures_from_encoder, nfeatures_from_skip,
+                                                                      strided_convolution_kernels[-(res_level + 1)], strided_convolution_kernels[-(res_level + 1)], bias=False))
 
-            
-            #Get the convolution kernels for this resolution level. We use 2 conv-norm-activation sequences per level.
-            #Since we are doing no pooling use the convs, they both have stride 1. 
+            # Now we know the input will have same # features as skip connection, and doubled resolution to also match skip.
+
+            # Get the convolution kernels for this resolution level. We use 2 conv-norm-activation sequences per level.
+            # Since we are doing no pooling use the convs, they both have stride 1.
             conv_kwargs = deepcopy(self.convolution_config)
             conv_kwargs['kernel_size'] = self.convolution_kernels[-(res_level + 1)]
             conv_kwargs['stride'] = 1
@@ -168,33 +168,32 @@ class UNet(nn.Module):
             self.conv_blocks_decoder.append(
                 nn.Sequential(
                     ConvNormNonlin(
-                        n_features_after_tu_and_concat, nfeatures_from_skip, self.conv_operation, conv_kwargs, self.normalization_operation, 
-                        self.normalization_operation_config, self.activation_function, self.activation_func_config 
+                        n_features_after_tu_and_concat, nfeatures_from_skip, self.conv_operation, conv_kwargs, self.normalization_operation,
+                        self.normalization_operation_config, self.activation_function, self.activation_func_config, dropout=False
                     ),
                     ConvNormNonlin(
-                        nfeatures_from_skip, nfeatures_from_skip, self.conv_operation, conv_kwargs, self.normalization_operation, 
-                        self.normalization_operation_config, self.activation_function, self.activation_func_config
+                        nfeatures_from_skip, nfeatures_from_skip, self.conv_operation, conv_kwargs, self.normalization_operation,
+                        self.normalization_operation_config, self.activation_function, self.activation_func_config, dropout=False
                     )
                 )
             )
 
-        #Now do intermediate decoder levels for deep supervision
-        #Get the very last layer of each decoder block, and apply 1x1 convolution for output heatmaps.
+        # Now do intermediate decoder levels for deep supervision
+        # Get the very last layer of each decoder block, and apply 1x1 convolution for output heatmaps.
 
         for deep_sup in range(len(self.conv_blocks_decoder)):
             self.intermediate_outputs.append(self.conv_operation(self.conv_blocks_decoder[deep_sup][-1].output_channels, self.num_out_heatmaps,
-                                            1, 1, 0, 1, 1))
+                                                                 1, 1, 0, 1, 1))
 
+        # Initialise blocks as module lists
 
-        #Initialise blocks as module lists
-        
-        #Define the network
+        # Define the network
         self.conv_blocks_encoder = nn.ModuleList(self.conv_blocks_encoder)
         self.upsample_transp_convs = nn.ModuleList(self.upsample_transp_convs)
-        self.conv_blocks_decoder =nn.ModuleList(self.conv_blocks_decoder)
+        self.conv_blocks_decoder = nn.ModuleList(self.conv_blocks_decoder)
         self.intermediate_outputs = nn.ModuleList(self.intermediate_outputs)
-        
-        #Initialise weights
+
+        # Initialise weights
         self.apply(self.weight_initialization)
 
     def forward(self, x):
@@ -202,7 +201,7 @@ class UNet(nn.Module):
         seg_outputs = []
 
         # print("intital: ", x.shape)
-        #Encoder
+        # Encoder
         for encoder_lvl in range(len(self.conv_blocks_encoder)-1):
             x = self.conv_blocks_encoder[encoder_lvl](x)
             # print("encoder lvl %s : %s " % (encoder_lvl, x.shape))
@@ -214,8 +213,7 @@ class UNet(nn.Module):
         # print("bottleneck lvl: %s " % (x.shape))
         # print(("bottleneck lvl %s .") % (x.shape,))
 
-
-        #Decoder (with transpose convolutions)
+        # Decoder (with transpose convolutions)
         for decoder_lvl in range(len(self.conv_blocks_decoder)):
 
             x = self.upsample_transp_convs[decoder_lvl](x)
@@ -228,18 +226,17 @@ class UNet(nn.Module):
             # print("decoder_lvl %s,after decoder convs: %s " % (decoder_lvl, x.shape))
 
             if self.deep_supervision:
-                seg_outputs.append((self.intermediate_outputs[decoder_lvl](x))) #Don't use an activation function
+                seg_outputs.append((self.intermediate_outputs[decoder_lvl](x)))  # Don't use an activation function
                 # print("seg outputs level ", decoder_lvl, " is ", seg_outputs[-1].shape)
         if not self.deep_supervision:
-            seg_outputs.append((self.intermediate_outputs[-1](x))) #if not deep supervision, only use the final layer
+            seg_outputs.append((self.intermediate_outputs[-1](x)))  # if not deep supervision, only use the final layer
 
         return seg_outputs
-      
 
     # def get_resolutions_feature_levels(self, input_size, start_features=32, max_features=512):
     #     if input_size[0] != input_size[1]:
     #         raise NotImplementedError("only square inputs currently configured.")
-        
+
     #     num_features = start_features
     #     res_layers = []
     #     feature_levels = []
@@ -260,6 +257,3 @@ class UNet(nn.Module):
     #         return nn.LeakyReLU(negative_slope=0.01)
     #     else:
     #         raise NotImplementedError("the only activation function supported is leaky_relu")
-
-
-
