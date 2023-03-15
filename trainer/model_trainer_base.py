@@ -415,9 +415,13 @@ class NetworkTrainer(ABC):
         if self.auto_mixed_precision:
             with autocast():
                 output = self.network(data)
+                # print("output: ", output.shape)
                 del data
                 # Only attempts loss if annotations avaliable for entire batch
                 if all(data_dict["annotation_available"]):
+                    # print("target: ", len(target["heatmaps"]))
+                    # print("target: ", (target["heatmaps"][0].shape))
+
                     l, loss_dict = self.loss(output, target, self.sigmas)
                     if backprop:
                         self.amp_grad_scaler.scale(l).backward()
@@ -438,6 +442,7 @@ class NetworkTrainer(ABC):
 
             # Only attempts loss if annotations avaliable for entire batch
             if all(data_dict["annotation_available"]):
+
                 l, loss_dict = self.loss(output, target, self.sigmas)
 
                 if backprop:

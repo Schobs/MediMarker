@@ -135,14 +135,7 @@ class HeatmapLoss(nn.Module):
         self.loss = loss_func
 
     def forward(self, net_output, target):
-        # Add the missing channel dimension to net_output
-        # This will change the size from [2, 512, 512] to [2, 1, 512, 512]
-        net_output = net_output.unsqueeze(1)
-
-        # Then, you may need to replicate the channel dimension to match the target tensor
-        # This will change the size from [2, 1, 512, 512] to [2, 19, 512, 512]
-        net_output = net_output.expand(-1, 19, -1, -1)
-
+        # print("in the single heatmap output loss the x and y shapes are: ", net_output.detach().cpu().numpy().shape, (target).detach().cpu().numpy().shape)
         return self.loss(net_output, target)
 
 
@@ -211,7 +204,16 @@ class IntermediateOutputLoss(nn.Module):
         # print(0, "pred shape %s and targ shape %s with weight %s  and loss %s and weighted loss %s" %(x[0].detach().cpu().numpy().shape, y[0].detach().cpu().numpy().shape, self.ds_weights[0], self.hm_loss(x[0], y[0]), l) )
         for i in range(0, len(y)):
             # print(i, "pred shape %s and targ shape %s with weight %s  and loss %s, and weighted loss: %s" %(x[i].detach().cpu().numpy().shape, y[i].detach().cpu().numpy().shape, self.ds_weights[i], self.hm_loss(x[i], y[i]), self.ds_weights[i] * self.hm_loss(x[i], y[i])) )
+
+            # print(len(x), len(y))
+            # print(i, self.ds_weights[i])
+            # print(x[i].shape)
+            # print(y[i].shape)
+
+            # print("shapes ,", x[i].shape, y[i].shape)
+
             this_lvl_loss = self.ds_weights[i] * self.hm_loss(x[i], y[i])
+
             l += this_lvl_loss
             losses_seperated["hm_loss_level_" + str(i)] = this_lvl_loss
 

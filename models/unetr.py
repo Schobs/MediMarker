@@ -322,13 +322,28 @@ class UNETR(nn.Module):
         # z0 = torch.cat([z0, coords], dim=1)
 
         z12 = self.decoder12_upsampler(z12)
+        # print("z12 shape: "+str(z12.shape))
         z9 = self.decoder9(z9)
+        # print("z9 shape: "+str(z9.shape))
         z9 = self.decoder9_upsampler(torch.cat([z9, z12], dim=1))
+        # print("z9 shape: "+str(z9.shape))
+
         z6 = self.decoder6(z6)
+        # print("z6 shape: "+str(z6.shape))
+
         z6 = self.decoder6_upsampler(torch.cat([z6, z9], dim=1))
+        # print("z6 shape: "+str(z6.shape))
+
         z3 = self.decoder3(z3)
+        # print("z3 shape: "+str(z3.shape))
+
         z3 = self.decoder3_upsampler(torch.cat([z3, z6], dim=1))
+        # print("z3 shape: "+str(z3.shape))
+
         z0 = self.decoder0(z0)
+        # print("z0 shape: "+str(z0.shape))
+
         output = self.decoder0_header(torch.cat([z0, z3], dim=1))
-        print("output shape: "+output.shape())
-        return output
+
+        # print("output shape: "+str(output.shape))
+        return [output]

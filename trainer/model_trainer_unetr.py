@@ -105,7 +105,7 @@ class UnetrTrainer(NetworkTrainer):
     def initialize_network(self):
         """Initialise the network."""
 
-        self.network = UNETR(image_size=(512, 512), input_dim=1, output_dim=2,
+        self.network = UNETR(image_size=(512, 512), input_dim=1, output_dim=self.num_out_heatmaps,
                              embed_dim=1024, patch_size=16, num_heads=12, dropout=0.1)
         self.network.to(self.device)
 

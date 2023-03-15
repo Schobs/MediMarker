@@ -8,7 +8,6 @@ from comet_ml import Experiment
 import torch
 from pandas import ExcelWriter
 from pytorch_lightning.utilities.seed import seed_everything
-import lightning_fabric as lf
 
 
 from utils.logging.comet_logging import save_comet_html
