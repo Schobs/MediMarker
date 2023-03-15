@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/final_f1_l8" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/final_f1_l8_vis" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
@@ -66,6 +66,8 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/final_f1_l8/model_best_valid_loss_fold1.model"
+
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     INDUCING_SAMPLE_VAR: 1
@@ -86,9 +88,11 @@ MODEL:
 
 INFERENCE:
   EVALUATION_MODE: "scale_pred_coords"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
-  DEBUG: False #Set True for plot of predictions with covariances plotted.
+  DEBUG: True #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
+  LOG_HEATMAP_PLOT_TARG: True
+  LOG_HEATMAPS: True
+
 
 SSH:
   AUTO_AMEND_PATHS: True
-

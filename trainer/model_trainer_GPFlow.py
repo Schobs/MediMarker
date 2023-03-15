@@ -337,6 +337,13 @@ class GPFlowTrainer(NetworkTrainer):
         data = data_dict["image"]
         target = data_dict["label"]["landmarks"]
 
+        if "047" not in data_dict["uid"] and "47" not in data_dict["uid"] and "370" not in data_dict["uid"] and "347" not in data_dict["uid"]:
+            self.logger.info("no found uid: %s ", data_dict["uid"])
+
+            return 0, generator
+        else:
+            self.logger.info("found uid: %s ", data_dict["uid"])
+
         # Only attempts loss if annotations avaliable for entire batch
         if all(data_dict["annotation_available"]):
             l = self.optimization_step((data, target), backprop)
@@ -365,6 +372,7 @@ class GPFlowTrainer(NetworkTrainer):
                     pred_coords = torch.tensor(pred_coords)
                 if target_coords is not None and not torch.is_tensor(target_coords):
                     target_coords = torch.tensor(target_coords)
+
                 logged_vars = self.dict_logger.log_key_variables(
                     logged_vars,
                     pred_coords,
@@ -375,6 +383,7 @@ class GPFlowTrainer(NetworkTrainer):
                     log_coords,
                     split,
                 )
+
                 if debug:
                     debug_vars = [x for x in logged_vars["individual_results"] if x["uid"] in data_dict["uid"]]
                     self.eval_label_generator.debug_prediction_gpflow(

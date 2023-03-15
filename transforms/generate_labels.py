@@ -5,6 +5,7 @@ import math
 import matplotlib.pyplot as plt
 from utils.im_utils.heatmap_manipulation import get_coords
 from utils.im_utils.visualisation import (
+    multi_variate_hm,
     visualize_image_trans_coords,
     visualize_imageNcoords_cropped_imgNnormcoords,
 )
@@ -407,72 +408,110 @@ class GPFlowLabelGenerator(LabelGenerator):
         predicted_coords = predicted_coords
         # input_size_pred_coords = extra_info["coords_og_size"]
 
-        for sample_idx, ind_sample in enumerate(logged_vars):
-            f, ax = plt.subplots(1, 2, figsize=(8, 3))
+        for sample_idx, f_heatmap in enumerate(extra_info["final_heatmaps"]):
+            self.logger.info("ind_sample uid  %s", input_dict["uid"][sample_idx])
+            # plt.imshow(extra_info["final_heatmaps"][0][0])
+            # plt.show()
+            f, ax = plt.subplots(1, 3, figsize=(8, 3))
+            ax[0].imshow(extra_info["final_heatmaps"][sample_idx][0])
+            heatmap_shape = [int(np.sqrt(len(input_dict["image"][sample_idx]))),
+                             int(np.sqrt(len(input_dict["image"][sample_idx])))]
+            x = input_dict["image"][sample_idx].numpy().reshape(heatmap_shape)
+
+            # add green cross at landmark location
+            landmark = input_dict["label"]["landmarks"][sample_idx]
+            # mymarker = ax[1].scatter(0.2, 0.2, s=1000, c='red',
+            #                          transform=ax[1].transAxes, marker='x', clip_on=False)
+            # ax[1].add_artist(mymarker)
+            ax[1].imshow(x)
+            ax[1].plot(landmark[0], landmark[1], 'r+', mew=20, ms=4)
+            ax[2].imshow(extra_info["final_heatmaps"][sample_idx][0][:, :, 0])
+
+            plt.show()
+            plt.close()
+
+            # cross_size=6
+            # # add intersection over the landmark
+            # x_min=max(0, int(landmark[0] - cross_size / 2))
+            # x_max=min(heatmap_shape[0], int(landmark[0] + (cross_size / 2)+1))
+
+            # y_min=max(0, int(landmark[1] - cross_size / 2))
+            # y_max=min(heatmap_shape[1], int(landmark[1] + (cross_size / 2)+1))
+            # # image[x_min:x_max, int(landmark[1]), 1] = 255  # green line
+            # # image[int(landmark[0]), y_min:y_max, 1] = 255  # green line
+
+            # image[y_min:y_max, int(landmark[0]), 1]=255  # green line
+            # image[int(landmark[1]), x_min:x_max, 1]=255  # green line
+
+            # plt.imshow(ind_sampleextra_info["final_heatmaps"])
             # extra_info = {"lower": lower, "upper": upper, "cov_matr": cov_matr}
 
             # extra_info = ind_sample["extra_info"]
             # create  kernel
-            m1 = model_output_coords[sample_idx][0]
-            s1 = extra_info["cov_matr"][sample_idx, :, sample_idx, :]
-            # s1 = np.array([s1[0][0], s1[1][0]])
-            k1 = multivariate_normal(mean=m1, cov=s1)
+            # m1 = model_output_coords[sample_idx][0]
+            # s1 = extra_info["cov_matr"][sample_idx, :, sample_idx, :]
 
-            # create a grid of (x,y) coordinates at which to evaluate the kernels
-            xlim = (0, np.sqrt(len(transformed_input_image[sample_idx])))
-            ylim = (0, np.sqrt(len(transformed_input_image[sample_idx])))
-            xres = int(np.sqrt(len(transformed_input_image[sample_idx])))
-            yres = int(np.sqrt(len(transformed_input_image[sample_idx])))
+            # multi_variate_hm(ind_sample, m1, s1, transformed_input_image[sample_idx].shape, noise=None,
+            #                  plot_targ=True, plot_wo_noise_extra=False)
 
-            x = np.linspace(xlim[0], xlim[1], xres)
-            y = np.linspace(ylim[0], ylim[1], yres)
-            xx, yy = np.meshgrid(x, y)
+            # # s1 = np.array([s1[0][0], s1[1][0]])
+            # k1 = multivariate_normal(mean=m1, cov=s1)
 
-            # evaluate kernels at grid points
-            xxyy = np.c_[xx.ravel(), yy.ravel()]
-            zz = k1.pdf(xxyy)
+            # # create a grid of (x,y) coordinates at which to evaluate the kernels
+            # xlim = (0, np.sqrt(len(transformed_input_image[sample_idx])))
+            # ylim = (0, np.sqrt(len(transformed_input_image[sample_idx])))
+            # xres = int(np.sqrt(len(transformed_input_image[sample_idx])))
+            # yres = int(np.sqrt(len(transformed_input_image[sample_idx])))
 
-            # reshape and plot image
-            img = zz.reshape((xres, yres))
-            ax[1].imshow(img)
+            # x = np.linspace(xlim[0], xlim[1], xres)
+            # y = np.linspace(ylim[0], ylim[1], yres)
+            # xx, yy = np.meshgrid(x, y)
 
-            # show image with label
-            image_label = coordinate_label[sample_idx].numpy()
-            image_ex = transformed_input_image[sample_idx].numpy()
+            # # evaluate kernels at grid points
+            # xxyy = np.c_[xx.ravel(), yy.ravel()]
+            # zz = k1.pdf(xxyy)
 
-            ax[0].imshow(image_ex.reshape((xres, yres)))
+            # # reshape and plot image
+            # img = zz.reshape((xres, yres))
+            # ax[1].imshow(img)
 
-            rect1 = patchesplt.Rectangle(
-                (int(image_label[0]), int(image_label[1])),
-                3,
-                3,
-                linewidth=2,
-                edgecolor="g",
-                facecolor="none",
-            )
-            ax[0].add_patch(rect1)
+            # # show image with label
+            # image_label = coordinate_label[sample_idx].numpy()
+            # image_ex = transformed_input_image[sample_idx].numpy()
 
-            rect2 = patchesplt.Rectangle(
-                (int(image_label[0]), int(image_label[1])),
-                3,
-                3,
-                linewidth=2,
-                edgecolor="g",
-                facecolor="none",
-            )
-            ax[1].add_patch(rect2)
-            rect3 = patchesplt.Rectangle(
-                (int(m1[0]), int(m1[1])),
-                3,
-                3,
-                linewidth=2,
-                edgecolor="r",
-                facecolor="none",
-            )
-            ax[1].add_patch(rect3)
+            # ax[0].imshow(image_ex.reshape((xres, yres)))
 
-            plt.show()
-            plt.close()
+            # rect1 = patchesplt.Rectangle(
+            #     (int(image_label[0]), int(image_label[1])),
+            #     3,
+            #     3,
+            #     linewidth=2,
+            #     edgecolor="g",
+            #     facecolor="none",
+            # )
+            # ax[0].add_patch(rect1)
+
+            # rect2 = patchesplt.Rectangle(
+            #     (int(image_label[0]), int(image_label[1])),
+            #     3,
+            #     3,
+            #     linewidth=2,
+            #     edgecolor="g",
+            #     facecolor="none",
+            # )
+            # ax[1].add_patch(rect2)
+            # rect3 = patchesplt.Rectangle(
+            #     (int(m1[0]), int(m1[1])),
+            #     3,
+            #     3,
+            #     linewidth=2,
+            #     edgecolor="r",
+            #     facecolor="none",
+            # )
+            # ax[1].add_patch(rect3)
+
+            # plt.show()
+            # plt.close()
 
 
 class UNetLabelGenerator(LabelGenerator):
@@ -596,7 +635,7 @@ class UNetLabelGenerator(LabelGenerator):
         ]  # -1 to get the last layer only (ignore deep supervision predictions)
 
         predicted_coords = [x.cpu().detach().numpy() for x in predicted_coords]
-        input_size_pred_coords = extra_info["coords_og_size"]
+        input_size_pred_coords = extra_info["pred_coords_input_size"]
 
         for sample_idx, ind_sample in enumerate(logged_vars):
             self.logger.info(

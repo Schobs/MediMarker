@@ -3,7 +3,7 @@
 OUTPUT: 
   # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f0"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f0/v2"
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
@@ -72,7 +72,13 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 5 #irrelevant
   ARCHITECTURE: "U-Net"  # ["U-Net" , "PHD-Net"]
-  # CHECKPOINT: /shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f0/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
+  # CHECKPOINT: /shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f0/F0L9/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f0/F0L8/model_best_valid_loss_fold0.model" #Put your checkpoint for Inference here.
+
+
+#  /mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f0/F0L9/
+  #  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f1/F1L8/model_best_valid_loss_fold1.model" #Put your checkpoint for Inference here.
+
   # GPFLOW:
   #   NUM_INDUCING_POINTS: 100 # of inducing points or inducing patches
   #   KERN: "rbf"  # possible values: ["conv", "rbf", "matern52"]
@@ -80,8 +86,8 @@ MODEL:
 
 INFERENCE:
   EVALUATION_MODE: "scale_pred_coords"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
-  DEBUG: False #Set True for plot of predictions with covariances plotted.
+  DEBUG: True #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
-  FIT_GAUSS: True
+  FIT_GAUSS: False
   LOG_HEATMAPS: True
   LOG_HEATMAP_PLOT_TARG: True

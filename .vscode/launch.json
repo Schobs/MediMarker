@@ -85,7 +85,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/main.py",
-            "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/final_gp_exps_local/final_f0_l8.yaml"],
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/final_gp_exps_local/final_f1_l8.yaml"],
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {
