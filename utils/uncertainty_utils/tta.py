@@ -121,6 +121,7 @@ def apply_tta_augmentation(data, seed, idx):
         With the key being the name of the augmentation transform, and the value being the magnitude with which the transform was applied.
     """
     functs_list = ["rotate", "scalex", "scaley", "flipud"]
+    # function_index = 3
     function_index = math.floor(seed / 100000 * 4)
     function_name = functs_list[function_index]
     negative_sign = True if seed / 2 == 0 else False
@@ -140,6 +141,8 @@ def apply_tta_augmentation(data, seed, idx):
         "inverse_flip": 1
     }
     transform = functions[function_name]
+    # transform = "inverse_flip"
+
     inverse_transform = {list(inverse_functions.keys())[function_index]:
                          list(inverse_functions.values())[function_index]}
     img = data['image'][idx].cpu().detach().numpy()

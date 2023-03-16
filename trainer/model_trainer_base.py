@@ -24,7 +24,7 @@ from inference.ensemble_inference_helper import EnsembleUncertainties
 from evaluation.localization_evaluation import success_detection_rate, generate_summary_df
 from utils.im_utils.heatmap_manipulation import get_coords
 from utils.local_logging.dict_logger import DictLogger
-from utils.uncertainty_utils.tta import apply_tta_augmentation
+from utils.uncertainty_utils.tta import apply_tta_augmentation, invert_coordinates
 
 
 class NetworkTrainer(ABC):
@@ -273,8 +273,8 @@ class NetworkTrainer(ABC):
         # Log info from this iteration.
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
-                pred_coords, pred_coords_input_size, extra_info, target_coords = self.maybe_get_coords(
-                    output, log_coords, data_dict)
+                pred_coords, pred_coords_input_size, extra_info, target_coords, logged_vars = self.maybe_get_coords(
+                    output, log_coords, data_dict, logged_vars)
                 logged_vars = self.dict_logger.log_key_variables(
                     logged_vars, pred_coords, extra_info, target_coords, loss_dict, data_dict, log_coords, split)
                 if debug:
@@ -287,7 +287,7 @@ class NetworkTrainer(ABC):
         del target
         return l.detach().cpu().numpy(), generator
 
-    def maybe_get_coords(self, output, log_coords, data_dict):
+    def maybe_get_coords(self, output, log_coords, data_dict, logged_vars):
         """From output gets coordinates and extra info for logging. If log_coords is false, returns None for all.
             It also decides whether to resize heatmap, rescale coords depending on config settings.
 
@@ -301,11 +301,15 @@ class NetworkTrainer(ABC):
         """
         if log_coords:
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(output, data_dict["original_image_size"])
+
+            if "individual_results_extra_keys" in logged_vars.keys() and "tta_augmentations" in logged_vars["individual_results_extra_keys"]:
+                pred_coords_input_size = invert_coordinates(pred_coords_input_size, logged_vars)
+            logged_vars["individual_results"] = logged_vars["individual_results"][:-(len(pred_coords_input_size))]
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
 
-        return pred_coords, pred_coords_input_size, extra_info, target_coords
+        return pred_coords, pred_coords_input_size, extra_info, target_coords, logged_vars
 
     def on_epoch_end(self, per_epoch_logs):
         """
@@ -406,8 +410,9 @@ class NetworkTrainer(ABC):
 
         # C2
         if self.use_full_res_coords and not self.resize_first:
-            upscale_factor = torch.tensor([data_dict["resizing_factor"][0],
-                                          data_dict["resizing_factor"][1]]).to(self.device)
+            upscale_factor = data_dict["resizing_factor"].to(self.device)
+            # upscale_factor = torch.tensor([data_dict["resizing_factor"][0],
+            #                               data_dict["resizing_factor"][1]]).to(self.device)
             # upscaled_coords = torch.tensor([pred_coords[x]*upscale_factor[x] for x in range(len(pred_coords))]).to(self.device)
             upscaled_coords = torch.mul(pred_coords, upscale_factor)
             pred_coords = torch.round(upscaled_coords)
@@ -553,7 +558,7 @@ class NetworkTrainer(ABC):
         # @ETHAN: make this a config option
         num_tta_iterations = 4
 
-        #@ETHAN : see how i changed the batch size dynamically based on config.
+        # @ETHAN : see how i changed the batch size dynamically based on config.
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         self.test_dataloader = DataLoader(
             test_dataset,

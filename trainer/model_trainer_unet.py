@@ -158,25 +158,12 @@ class UnetTrainer(NetworkTrainer):
 
         final_heatmap = output
 
-        # print("num final hms ", len(final_heatmap))
-        # print("len og im sizes ", len(original_image_size))
-        # print(" og im shapes ", original_image_size.shape)
-
-        # original_image_size =  torch.flip(original_image_size, dims=[1]).cpu().detach().numpy()
-        # original_image_size =  torch.flip(original_image_size, dims=[1]).cpu().detach().numpy()
-
         original_image_size = original_image_size.cpu().detach().numpy()[:, ::-1, :]
 
         all_ims_same_size = np.all(original_image_size[0] == original_image_size)
 
-        # print("all_ims_same_size ", all_ims_same_size)
-    #  get_coords_fit_gauss(images, predicted_coords_all, visualize=False)
         input_size_coords, input_max_values = get_coords(output)
-        # if self.fit_gauss_inference:
-        #     input_size_coords, input_max_values, input_fitted_dicts = get_coords_fit_gauss(output, input_size_coords, visualize=True)
-        # else:
-        # print("input_size_coords", input_size_coords[0].shape, input_size_coords[1].shape)
-        # extra_info["coords_og_size"] = [[input_size_coords[0][idx], input_size_coords[1][idx]] for idx in range(len(input_size_coords[0]))]
+
         extra_info["coords_og_size"] = input_size_coords
         # print("self resize first: ", self.resize_first)
         if self.resize_first:
@@ -207,6 +194,9 @@ class UnetTrainer(NetworkTrainer):
                 # print("shape : ", hms_list[-1].shape)
                 # final_heatmap = torch.nested_tensor(hms_list)
             # print("pred_coords , max_values shape", pred_coords.shape, max_values.shape)
+        else:
+            pred_coords, max_values = input_size_coords, input_max_values
+            
         if self.fit_gauss_inference:
             pred_coords, max_values, fitted_dicts = get_coords_fit_gauss(final_heatmap, pred_coords, visualize=False)
 

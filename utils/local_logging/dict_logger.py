@@ -85,16 +85,13 @@ class DictLogger():
             if key_ in vars_to_log:
                 log_dict[key_].append(value)
 
-        # Only log info we requested in the evaluation/ensemble templates
-        # print("before extra info filter", extra_info.keys())
         extra_info = {k: extra_info[k] for k in log_dict['individual_results_extra_keys'] if k in extra_info}
-        # print("after extra info filter", extra_info.keys())
 
         if log_coords:
-
-            if "individual_results_extra_keys" in vars_to_log and "tta_augmentations" in log_dict["individual_results_extra_keys"]:
-                pred_coords = invert_coordinates(pred_coords, log_dict)
-                # log_dict["individual_results"] = log_dict["individual_results"][:len(log_dict["individual_results"])-pred_coords.shape[0]]
+            
+            #@ETHA: inverting the predicted coords here!
+            # if "individual_results_extra_keys" in vars_to_log and "tta_augmentations" in log_dict["individual_results_extra_keys"]:
+            #     pred_coords = invert_coordinates(pred_coords, log_dict)
 
             # Get coord error of the input resolution to network
             coord_error = torch.linalg.norm((pred_coords - target_coords), axis=2)
@@ -115,11 +112,11 @@ class DictLogger():
                     # so we need to pop it out of the list to get the value and remove it.
                     # the -(len(pred_coords) means it will only ever get the tta_augmentations out
                     # and not the running list of results.
-                    if "tta_augmentations" in log_dict["individual_results_extra_keys"]:
-                        tta_aug = log_dict["individual_results"].pop(-(len(pred_coords)))
-                        ind_dict = {"tta_aug": tta_aug}
-                    else:
-                        ind_dict = {}
+                    # if "tta_augmentations" in log_dict["individual_results_extra_keys"]:
+                    #     tta_aug = log_dict["individual_results"].pop(-(len(pred_coords)))
+                    #     ind_dict = {"tta_aug": tta_aug}
+                    # else:
+                    ind_dict = {}
 
                     # First log standard info about the sample, maybe detaching if it is a tensor
                     for standard_info_key in self.standard_info_keys:

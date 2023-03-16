@@ -34,7 +34,7 @@ TRAINER:
   FOLD: 0 # Pick the fold. this dataset has folds 0,1,2,3. You can set to -1 and directly put the path to JSON in SRC_TARGETS if you want.
 
 INFERENCE:
-  EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  EVALUATION_MODE: "scale_pred_coords" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set to true to get some visualization of predicted heatmaps!
   TTA_ENSEMBLE_INFERENCE: True
   # ENSEMBLE_CHECKPOINTS: ["/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/Bsc/ethan/model_best_valid_coord_error_fold0.model"]
