@@ -24,6 +24,7 @@ from inference.ensemble_inference_helper import EnsembleUncertainties
 from evaluation.localization_evaluation import success_detection_rate, generate_summary_df
 from utils.im_utils.heatmap_manipulation import get_coords
 from utils.local_logging.dict_logger import DictLogger
+from utils.uncertainty_utils.tta import apply_tta_augmentation
 
 
 class NetworkTrainer(ABC):
@@ -531,64 +532,6 @@ class NetworkTrainer(ABC):
         """"""
         return np.array([arr[3], arr[4], arr[0]])
 
-    def apply_tta_augmentation(self, data: List, seed: int, idx: int):
-        """
-        A function that applies a random TTA trnasformation on an inputted image. Takes a random seed to determine the specific transformation and
-        the magnitude of such transformation using a basic mapping function with the boundaries provided by the imgaug documentation for each
-        specific transformation (hence the difference in allowed values). Also determines randomly whether the allowed transformations should be
-        multiplied by -1 to allow for wider range of possible transforms.
-        Parameters
-        ----------
-        `data` : List
-            The dict containing the features and information of the image in question.
-        `seed` : Int
-            A stochastic seed variable used as described as above.
-        Returns
-        -------
-        `augemented_dict` : Dict
-            The augmented image.
-        `inverse_transform` : Dict
-            With the key being the name of the augmentation transform, and the value being the magnitude with which the transform was applied.
-        """
-        functs_list = ["rotate", "scalex", "scaley", "flipud"]
-        function_index = math.floor(seed / 100000 * 4)
-        function_name = functs_list[function_index]
-        negative_sign = True if seed / 2 == 0 else False
-        rotate_magnitude = math.floor(seed / 10000 * 360) if function_name == "rotate" else 0
-        scale_magnitude = round(random.uniform(0.8, 1.2), 2) if function_name == "scalex" or "scaley" else 0
-        rotate_magnitude = rotate_magnitude * -1 if negative_sign and rotate_magnitude != 0 else rotate_magnitude
-        functions = {
-            "rotate": iaa.Sequential([iaa.Rotate(rotate_magnitude)]),
-            "scalex": iaa.Sequential([iaa.ScaleX(scale_magnitude)]),
-            "scaley": iaa.Sequential([iaa.ScaleY(scale_magnitude)]),
-            "flipud": iaa.Sequential([iaa.Flipud(1)])
-        }
-        inverse_functions = {
-            "inverse_rotate": rotate_magnitude,
-            "inverse_scalex": scale_magnitude,
-            "inverse_scaley": scale_magnitude,
-            "inverse_flip": 1
-        }
-        transform = functions[function_name]
-        inverse_transform = {list(inverse_functions.keys())[function_index]:
-                             list(inverse_functions.values())[function_index]}
-        img = data['image'][idx].cpu().detach().numpy()
-        img_dims = img.shape
-        img = np.reshape(img, (img_dims[1], img_dims[2], img_dims[0]))
-        augemented_img = transform.augment_image(img)
-        augemented_img = np.reshape(augemented_img, (img_dims[0], img_dims[1], img_dims[2]))
-        data['image'][idx] = torch.from_numpy(augemented_img.copy())
-        return data, inverse_transform
-
-        # coord_error = torch.linalg.norm((pred_coords- target_coords), axis=2)
-        # ind_dict["predicted_coords"] = ((pred_coords[idx].detach().cpu().numpy()))
-
-        # x = 1
-        # Now recalculate the errrors after inverting the coordinates, otherwise you are keeping the results from
-        #  comparing the augmented image acoordiantes  to the original coordinates.
-        # import pdb; pdb.set_trace()
-        # return eval_logs
-
     def run_inference_tta(self, split, checkpoint, debug=False):
         """"""
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
@@ -606,11 +549,15 @@ class NetworkTrainer(ABC):
             # This case is the full sampler
             inference_full_image = True
         inference_resolution = self.training_resolution
-        # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
+
+        # @ETHAN: make this a config option
+        num_tta_iterations = 4
+
+        #@ETHAN : see how i changed the batch size dynamically based on config.
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         self.test_dataloader = DataLoader(
             test_dataset,
-            batch_size=self.data_loader_batch_size,
+            batch_size=int(np.floor(self.data_loader_batch_size/(num_tta_iterations+1))),
             shuffle=False,
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
@@ -625,9 +572,6 @@ class NetworkTrainer(ABC):
         )
         # network evaluation mode
         self.network.eval()
-        # @ETHAN: just load one checkpoint
-        self.load_checkpoint(checkpoint[0], training_bool=False)
-        # Initialise esenmble results dictionaries
         ensemble_result_dicts = {
             uncert_key: [] for uncert_key in self.ensemble_handler.uncertainty_keys
         }
@@ -635,7 +579,6 @@ class NetworkTrainer(ABC):
             uncert_key: [[] for x in range(len(self.landmarks))]
             for uncert_key in self.ensemble_handler.uncertainty_keys
         }
-        num_tta_iterations = 4
         generator = iter(self.test_dataloader)
         if inference_full_image:
             while generator != None:
@@ -650,16 +593,18 @@ class NetworkTrainer(ABC):
                             all_inverse_transformations.append({"normal": None})
                             continue
                         aug_seed = np.random.randint(100000)
-                        augmented_dict, inverse_transformation = self.apply_tta_augmentation(
+                        augmented_dict, inverse_transformation = apply_tta_augmentation(
                             augmented_dict, aug_seed, idx)
                         all_inverse_transformations.append(inverse_transformation)
-                    # Directly pass the next data_dict to run_iteration rather than iterate it within.
-                    print(all_inverse_transformations)
-                    for i in range(num_tta_iterations):
+
+                    for i in range(num_tta_iterations+1):
                         batch = augmented_dict.copy()
-                        # First batch is all normal images.
+
                         batch['image'] = torch.stack(batch['image'][i::num_tta_iterations+1]).to(self.device)
                         inverse_transforms = all_inverse_transformations[i::num_tta_iterations+1]
+
+                        # @ETHAN Add the inverse transforms to the individual results.
+                        # Look for @ETHAN in dict_logger for where we use this.
                         [evaluation_logs["individual_results"].append(
                             {"transform": x}) for x in inverse_transforms]
 
@@ -672,34 +617,41 @@ class NetworkTrainer(ABC):
                             logged_vars=evaluation_logs,
                             debug=debug,
                             direct_data_dict=batch,
-
                         )
-                        # inverted_coords = self.invert_coordinates(temp_eval_logs, inverse_transforms)
 
-                        # Now recalculate the errrors after inverting the coordinates, otherwise you are keeping the results from
-                        #  comparing the augmented image acoordiantes  to the original coordinates.
+                    # @ETHAN Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations).
+                    # However, E-MHA and E-CPV results will be bad because they use the HEATMAPS to calcualte the coordinates.
+                    # In our code we are only transforming the COORDS back to the original coordinate space, not the heatmap!
+                    # Therefore, it is getting the coordinates from the transformed heatmaps, and each heatmap is transformed differently,
+                    # and none relate to the original coordinate. Therefore you can:
+                    # A) make a new class called tta_handler, and deal with the coordinates directly.
+                    # i.e. get the mean and variance of the coordinates of each uid. or,
+                    # B) invert the heatmaps back to the original image space. Then the below function will just work on their own.
+                    #
+                    # Option B) is much better because then you can directly compare to E-MHA and E-CPV using ensembles (previous work).
+                    # To check that you are inverting the heatmaps correctly, you can check that E-CPV results are the same results
+                    #  as what you would get with option A) i.e. mean and var of the transformed coordinates. Does it make sense why
+                    # those two should be equilivant? it is important to try and understand why. Check my TMI paper if unsure, and if
+                    # still unsure, we can chat.
+                    (
+                        ensembles_analyzed,
+                        ind_landmark_errors,
+                    ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
+                        evaluation_logs
+                    )
+                    # Update the dictionaries with the results
+                    for k_ in list(ensemble_result_dicts.keys()):
+                        ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
+                    for ens_key, coord_extact_methods in ind_landmark_errors.items():
+                        for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
+                            all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
 
-                        # Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)
                 except StopIteration:
                     generator = None
                     print("-", end="")
-                    print("No more in generator")
-                    del generator
+            print("No more in generator")
+            del generator
 
-                        
-                (
-                    ensembles_analyzed,
-                    ind_landmark_errors,
-                ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
-                    evaluation_logs
-                )
-                # Update the dictionaries with the results
-                for k_ in list(ensemble_result_dicts.keys()):
-                    ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
-                for ens_key, coord_extact_methods in ind_landmark_errors.items():
-                    for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
-                        all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
-          
         else:
             # this is where we patchify and stitch the input image
             raise NotImplementedError()
@@ -797,7 +749,6 @@ class NetworkTrainer(ABC):
                             debug=debug,
                             direct_data_dict=direct_data_dict,
                             restart_dataloader=False
-
                         )
 
                     # Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)

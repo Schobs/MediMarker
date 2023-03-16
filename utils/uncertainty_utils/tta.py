@@ -1,6 +1,8 @@
+import random
 import numpy as np
 import torch
 import math
+from imgaug import augmenters as iaa
 
 
 def invert_coordinates(orginal_coords, log_dict):
@@ -97,3 +99,53 @@ def extract_original_coords_from_flipud(flip_coords, training_resolution=[512, 5
     conv_coords = torch.tensor([original_x, original_y])
     #import pdb; pdb.set_trace()
     return conv_coords
+
+
+def apply_tta_augmentation(data, seed, idx):
+    """
+    A function that applies a random TTA trnasformation on an inputted image. Takes a random seed to determine the specific transformation and
+    the magnitude of such transformation using a basic mapping function with the boundaries provided by the imgaug documentation for each
+    specific transformation (hence the difference in allowed values). Also determines randomly whether the allowed transformations should be
+    multiplied by -1 to allow for wider range of possible transforms.
+    Parameters
+    ----------
+    `data` : List
+        The dict containing the features and information of the image in question.
+    `seed` : Int
+        A stochastic seed variable used as described as above.
+    Returns
+    -------
+    `augemented_dict` : Dict
+        The augmented image.
+    `inverse_transform` : Dict
+        With the key being the name of the augmentation transform, and the value being the magnitude with which the transform was applied.
+    """
+    functs_list = ["rotate", "scalex", "scaley", "flipud"]
+    function_index = math.floor(seed / 100000 * 4)
+    function_name = functs_list[function_index]
+    negative_sign = True if seed / 2 == 0 else False
+    rotate_magnitude = math.floor(seed / 10000 * 360) if function_name == "rotate" else 0
+    scale_magnitude = round(random.uniform(0.8, 1.2), 2) if function_name == "scalex" or "scaley" else 0
+    rotate_magnitude = rotate_magnitude * -1 if negative_sign and rotate_magnitude != 0 else rotate_magnitude
+    functions = {
+        "rotate": iaa.Sequential([iaa.Rotate(rotate_magnitude)]),
+        "scalex": iaa.Sequential([iaa.ScaleX(scale_magnitude)]),
+        "scaley": iaa.Sequential([iaa.ScaleY(scale_magnitude)]),
+        "flipud": iaa.Sequential([iaa.Flipud(1)])
+    }
+    inverse_functions = {
+        "inverse_rotate": rotate_magnitude,
+        "inverse_scalex": scale_magnitude,
+        "inverse_scaley": scale_magnitude,
+        "inverse_flip": 1
+    }
+    transform = functions[function_name]
+    inverse_transform = {list(inverse_functions.keys())[function_index]:
+                         list(inverse_functions.values())[function_index]}
+    img = data['image'][idx].cpu().detach().numpy()
+    img_dims = img.shape
+    img = np.reshape(img, (img_dims[1], img_dims[2], img_dims[0]))
+    augemented_img = transform.augment_image(img)
+    augemented_img = np.reshape(augemented_img, (img_dims[0], img_dims[1], img_dims[2]))
+    data['image'][idx] = torch.from_numpy(augemented_img.copy())
+    return data, inverse_transform

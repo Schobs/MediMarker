@@ -17,7 +17,7 @@ SOLVER:
   AUTO_MIXED_PRECISION: False
 
 MODEL:
-  GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.
+  GAUSS_SIGMA: 5 #The variance of the gaussian label, you can play around.
   # CHECKPOINT: "/path_to/checkpoint" #Use this to resume training from a checkpoint, or load the checkpoint during inference
 
 DATASET:
@@ -40,7 +40,7 @@ INFERENCE:
   ENSEMBLE_CHECKPOINTS: ["/home/aca19ej/LaNNU-Net/outputs/model_best_valid_coord_error_fold0.model"]
 
 SAMPLER:
-  NUM_WORKERS: 8 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down. 
+  NUM_WORKERS: 4 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down. 
   DATA_AUG: 'TTA' # set to None for no augmentation. for other schemes see the documentation.
   INPUT_SIZE : [512,512]
   DEBUG: False  #Set to true to get some visualization of data augmentation and the target heatmaps! Are they close to the predicted heatmaps after training?

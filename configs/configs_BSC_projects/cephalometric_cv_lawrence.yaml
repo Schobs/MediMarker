@@ -18,7 +18,7 @@ SOLVER:
 
 MODEL:
   GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.
-  # CHECKPOINT: "/path_to/checkpoint" #Use this to resume training from a checkpoint, or load the checkpoint during inference
+  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/Bsc/ethan/model_best_valid_coord_error_fold0.model" #Use this to resume training from a checkpoint, or load the checkpoint during inference
 
 DATASET:
   ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/' #change this to where you have the data
@@ -26,7 +26,7 @@ DATASET:
   NAME:  "ISBI"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
-    
+  TRAINSET_SIZE: 2
  
 TRAINER:
   INFERENCE_ONLY: True # set to true if already trained and want to perform inference (testing) only.
@@ -37,8 +37,7 @@ INFERENCE:
   EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set to true to get some visualization of predicted heatmaps!
   TTA_ENSEMBLE_INFERENCE: True
-  ENSEMBLE_CHECKPOINTS: ["/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/Bsc/ethan/model_best_valid_coord_error_fold0.model"]
-
+  # ENSEMBLE_CHECKPOINTS: ["/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/Bsc/ethan/model_best_valid_coord_error_fold0.model"]
 SAMPLER:
   NUM_WORKERS: 8 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down. 
   DATA_AUG: 'TTA' # set to None for no augmentation. for other schemes see the documentation.
