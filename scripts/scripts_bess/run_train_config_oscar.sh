@@ -1,4 +1,8 @@
 #!/bin/bash
+#SBATCH --partition=gpu
+#SBATCH --qos=gpu
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=1
 
 
 module load Anaconda3/5.3.0
