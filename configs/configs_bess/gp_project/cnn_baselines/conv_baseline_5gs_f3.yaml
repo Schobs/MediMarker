@@ -22,7 +22,7 @@ SOLVER:
   DATA_LOADER_BATCH_SIZE_EVAL: 12
   BASE_LR: 0.01
   AUTO_MIXED_PRECISION: True
-  EARLY_STOPPING_PATIENCE: 250 # epochs for validation coord error not improving before stopping training
+  EARLY_STOPPING_PATIENCE: 1000 # epochs for validation coord error not improving before stopping training
   DECAY_POLICY: None
 
 

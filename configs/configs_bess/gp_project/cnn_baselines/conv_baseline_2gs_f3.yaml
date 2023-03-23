@@ -3,7 +3,7 @@
 OUTPUT: 
   # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/gpflow_196" #Change this to where you want to save model checkpoints/results
 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_5gs_f3/"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/conv_baseline/conv_baseline_2gs_f3/"
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
@@ -22,7 +22,7 @@ SOLVER:
   DATA_LOADER_BATCH_SIZE_EVAL: 12
   BASE_LR: 0.01
   AUTO_MIXED_PRECISION: True
-  EARLY_STOPPING_PATIENCE: 250 # epochs for validation coord error not improving before stopping training
+  EARLY_STOPPING_PATIENCE: 1000 # epochs for validation coord error not improving before stopping training
   DECAY_POLICY: None
 
 
