@@ -60,7 +60,7 @@ class NetworkTrainer(ABC):
         self.gen_hms_in_mainthread = self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
 
         self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
-
+        self.standardize_landmarks = self.trainer_config.DATASET.STANDARDIZE_LANDMARKS
         # Patch centering args
 
         patch_sampler_generic_args = {"sample_patch_size": self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
@@ -71,12 +71,15 @@ class NetworkTrainer(ABC):
         patch_sampler_centring_train_args = {"xlsx_path": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH,
                                              "xlsx_sheet": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET,
                                              "center_patch_jitter": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_JITTER,
-                                             "deterministic": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC}
+                                             "deterministic": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC,
+                                             "safe_padding": 5
+                                             }
 
         patch_sampler_centring_eval_args = {"xlsx_path": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH,
                                             "xlsx_sheet": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET,
                                             "center_patch_jitter": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_JITTER,
-                                            "deterministic": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC_EVAL}
+                                            "deterministic": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC_EVAL,
+                                            "safe_padding": 5}
 
         self.train_dataset_patch_sampling_args = {"generic": patch_sampler_generic_args,
                                                   "biased": patch_sampler_bias_args,
@@ -91,7 +94,8 @@ class NetworkTrainer(ABC):
                                      "image_modality": self.trainer_config.DATASET.IMAGE_MODALITY,
                                      "root_path": self.trainer_config.DATASET.ROOT,
                                      "fold": self.trainer_config.TRAINER.FOLD,
-                                     "dataset_split_size": self.trainer_config.DATASET.TRAINSET_SIZE}
+                                     "dataset_split_size": self.trainer_config.DATASET.TRAINSET_SIZE,
+                                     "standardize_landmarks": self.trainer_config.DATASET.STANDARDIZE_LANDMARKS}
 
         self.data_aug_args_training = {"data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
                                        "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
@@ -406,6 +410,13 @@ class NetworkTrainer(ABC):
 
         data = (data_dict["image"]).to(self.device)
 
+        if "047" not in data_dict["uid"] and "47" not in data_dict["uid"] and "370" not in data_dict["uid"] and "347" not in data_dict["uid"]:
+            self.logger.info("no found uid: %s ", data_dict["uid"])
+
+            return 0, generator
+        else:
+            self.logger.info("found uid: %s ", data_dict["uid"])
+
         # This happens when we regress sigma with >0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
         if self.gen_hms_in_mainthread:
@@ -525,7 +536,6 @@ class NetworkTrainer(ABC):
                 output, data_dict["original_image_size"]
             )
             extra_info["target_coords_input_size"] = data_dict["target_coords"]
-
 
             pred_coords, target_coords = self.maybe_rescale_coords(
                 pred_coords_input_size, data_dict
@@ -673,16 +683,17 @@ class NetworkTrainer(ABC):
 
             # If we are using patch_centred sampling, we are basing prediction on a smaller patch
             # containing the landmark, so we need to add the patch corner to the prediction.
+            if not torch.is_tensor(pred_coords):
+                pred_coords = torch.tensor(pred_coords).to(self.device)
             if self.sampler_mode == "patch_centred":
                 x_y_corner = torch.unsqueeze(torch.tensor(
                     [[data_dict["x_y_corner"][0][x], data_dict["x_y_corner"][1][x]] for x in range(len(data_dict["x_y_corner"][0]))]), axis=1).to(self.device)
-                pred_coords = torch.add(pred_coords, x_y_corner)
+                pred_coords = torch.add(pred_coords, x_y_corner).to(self.device)
 
             upscale_factor = torch.tensor(data_dict["resizing_factor"]).to(self.device)
-            if not torch.is_tensor(pred_coords):
-                pred_coords = torch.tensor(pred_coords)
+
             upscaled_coords = torch.mul(pred_coords, upscale_factor)
-            pred_coords = torch.round(upscaled_coords)
+            pred_coords = torch.round(upscaled_coords).to(self.device)
             # pred_coords = pred_coords * upscale_factor
 
         return pred_coords, target_coords

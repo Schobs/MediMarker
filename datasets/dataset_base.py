@@ -10,6 +10,7 @@ from torchvision import transforms
 from transforms.transformations import (
     HeatmapsToTensor,
     normalize_cmr,
+    standardize_landmarks_func,
 )
 
 from tqdm import tqdm
@@ -42,7 +43,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
 
     References:
-        #TO DO
+        # TO DO
     """
 
     def __init__(
@@ -98,6 +99,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.data_augmentation_package = data_aug_args["data_augmentation_package"]
         self.guarantee_landmarks_in_image = data_aug_args["guarantee_lms_image"]
 
+        self.sample_mode = sample_mode
         self.sample_patch_size = patch_sampler_args["generic"]["sample_patch_size"]
         self.sample_patch_bias = patch_sampler_args["biased"]["sampling_bias"]
         self.sample_patch_from_resolution = patch_sampler_args["generic"]["sample_patch_from_resolution"]
@@ -105,11 +107,31 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         self.center_patch_sheet = patch_sampler_args["centred"]["xlsx_sheet"]
         self.center_patch_jitter = patch_sampler_args["centred"]["center_patch_jitter"]
         self.center_patch_deterministic = patch_sampler_args["centred"]["deterministic"]
+        self.center_safe_padding = patch_sampler_args["centred"]["safe_padding"]
 
         self.root_path = Path(dataset_args["root_path"])
         self.annotation_path = Path(dataset_args["annotation_path"])
         self.image_modality = dataset_args["image_modality"]
         self.landmarks = dataset_args["landmarks"]
+        self.standardize_landmarks = dataset_args["standardize_landmarks"]
+        if self.standardize_landmarks:
+            if self.sample_mode != "patch_centred":
+                raise ValueError(
+                    "Standardization of landmarks only supported for centred patch sampling i.e. Gaussian Procceses!"
+                )
+
+            # Mean and std of distribution of a Uniform distribution
+            self.standardize_mean = [self.sample_patch_size[0]/2, self.sample_patch_size[1]/2]
+            if self.center_patch_jitter == 0.0:
+                self.standardize_std = [0, 0]
+            else:
+                self.standardize_std = [
+                    np.sqrt(
+                        ((((self.sample_patch_size[0]*self.center_patch_jitter/2)-self.center_safe_padding)*2)**2)/12),
+                    np.sqrt(
+                        ((((self.sample_patch_size[1]*self.center_patch_jitter/2)-self.center_safe_padding)*2)**2)/12)
+                ]
+
         self.cv = dataset_args["fold"]
         self.dataset_split_size = dataset_args["dataset_split_size"]
 
@@ -120,8 +142,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         }
         self.to_pytorch = to_pytorch
         ############# Set Sample Mode #############
-
-        self.sample_mode = sample_mode
 
         self.split = split
         self.sigmas = sigmas
@@ -245,13 +265,16 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                         original_size,
                         image,
                         interested_landmarks,
-                    ) = load_and_resize_image(data["image"], interested_landmarks, self.load_im_size, self.datatype_load, round=(self.sample_mode == "patch_centred"))
+                    ) = load_and_resize_image(data["image"], interested_landmarks, self.load_im_size, self.datatype_load, round=not (self.sample_mode == "patch_centred"))
 
                     self.images.append(image)
                     self.image_resizing_factors.append(resized_factor)
                     self.original_image_sizes.append(original_size)
 
                 else:
+                    if self.standardize_landmarks:
+                        raise ValueError(
+                            "cannot standardize landmarks if not caching data right now. future work to implement.")
                     # Not caching, so just append image path.
                     self.images.append(data["image"])
 
@@ -347,7 +370,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         else:
             resized_factor, original_size, image, coords = load_and_resize_image(
-                image, coords, self.load_im_size, self.datatype_load, round=(self.sample_mode == "patch_centred")
+                image, coords, self.load_im_size, self.datatype_load, round=not (self.sample_mode == "patch_centred"), standardized=self.standardize_landmarks
             )
 
         untransformed_coords = coords
@@ -374,7 +397,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     untransformed_coords,
                     landmarks_in_indicator,
                     x_y_corner,
-                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords, deterministic=self.center_patch_deterministic, garuntee_gt_in=self.guarantee_landmarks_in_image)
+                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords,
+                                         deterministic=self.center_patch_deterministic, garuntee_gt_in=self.guarantee_landmarks_in_image, safe_padding=self.center_safe_padding)
 
             kps = KeypointsOnImage(
                 [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
@@ -398,30 +422,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 for xy in input_coords
             ]
 
-            # if self.guarantee_landmarks_in_image:
-            #     fail_count = 0
-            #     while not all(landmarks_in_indicator) == 1:
-            #         if fail_count == 10:
-            #             raise ValueError("Failed to find a valid transform for this sample to keep landmark in image.")
-            #         # list where [0] is image and [1] are coords.
-            #         transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
-
-            #         input_image = normalize_cmr(transformed_sample[0], to_tensor=self.to_pytorch)
-            #         input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
-
-            #         # Recalculate indicators incase transform pushed out/in coords.
-            #         landmarks_in_indicator = [
-            #             1
-            #             if (
-            #                 (0 <= xy[0] <= self.input_size[0])
-            #                 and (0 <= xy[1] <= self.input_size[1])
-            #             )
-            #             else 0
-            #             for xy in input_coords
-            #         ]
-            #         fail_count += 1
-
-            # Don't do data augmentation.
         else:
 
             input_coords = coords
@@ -431,6 +431,10 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 input_image = image
 
             landmarks_in_indicator = [1 for xy in input_coords]
+
+        # Can only standardize for patch_centred i.e. Gaussian Proccesses
+        if self.standardize_landmarks:
+            input_coords = (input_coords - self.standardize_mean) / self.standardize_std
 
         if self.generate_hms_here:
 

@@ -41,9 +41,9 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: True # Kind of irrelevant for ExactGP
-  INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
-  SAVE_EVERY: 20 # Saves checkpoint every X epochs
+  CACHE_DATA: False # Kind of irrelevant for ExactGP
+  INFERENCE_ONLY: True # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
+  SAVE_EVERY: 50 # Saves checkpoint every X epochs
   VALIDATE_EVERY: 1 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
   FOLD: 3
@@ -66,7 +66,7 @@ SAMPLER:
     # CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAS_DS5/individual_results_allfolds.xlsx"
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1/s1_preds_all/combined_results_fold3.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "Sheet1"
-    CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
+    CENTRED_PATCH_JITTER: 0.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
     CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
 
 MODEL:

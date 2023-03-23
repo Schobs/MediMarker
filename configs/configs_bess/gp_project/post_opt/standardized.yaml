@@ -1,14 +1,14 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/final_f0_l8" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized" #Change this to where you want to save model checkpoints/results
 
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
   VERBOSE: True #whether to print results every epoch
-  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round", "64", "l11", "f0", "6th_round"]
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round",  "7th_round", "64", "l11", "f0", "6th_round"]
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
@@ -32,6 +32,7 @@ DATASET:
   LANDMARKS : [8] #Choose landmark (between 0-17)
   # TRAINSET_SIZE: 10 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
   TO_PYTORCH_TENSOR: False  # True if using pytorch, False if using tensorflow
+  STANDARDIZE_LANDMARKS: True
 
  
 TRAINER:

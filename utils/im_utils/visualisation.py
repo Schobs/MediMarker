@@ -356,7 +356,7 @@ def visualize_centre_patch(
 
     logger = logging.getLogger()
 
-    fig, ax = plt.subplots(nrows=1, ncols=2, squeeze=False)
+    fig, ax = plt.subplots(nrows=1, ncols=3, squeeze=False)
 
     logger.info("full image shape: %s, patch shape: %s ",
                 full_im.shape, image_patch.shape)
@@ -422,6 +422,33 @@ def visualize_centre_patch(
         facecolor="none",
     )
     ax[0, 1].add_patch(rect22)
+
+    k1 = multivariate_normal(mean=[int(full_landmarks[0][0]), int(full_landmarks[0][1])], cov=[[200, 0], [0, 200]])
+
+    # create a grid of (x,y) coordinates at which to evaluate the kernels
+    heatmap_shape = full_im.shape
+    xlim = (0, heatmap_shape[0])
+    ylim = (0, heatmap_shape[1])
+    xres = int(heatmap_shape[0])
+    yres = int(heatmap_shape[1])
+    x = np.linspace(xlim[0], xlim[1], xres)
+    y = np.linspace(ylim[0], ylim[1], yres)
+    xx, yy = np.meshgrid(x, y)
+
+    # evaluate kernels at grid points
+    xxyy = np.c_[xx.ravel(), yy.ravel()]
+    zz = (k1.pdf(xxyy))
+
+    # reshape heatmap
+    heatmap = np.array(zz.reshape((xres, yres)), dtype=np.float32)
+    heatmap = (heatmap - heatmap.min()) / (heatmap.max() - heatmap.min()) * 255.0
+    heatmap = np.clip(heatmap, 0, 255)
+    heatmap = heatmap.astype(np.uint8)
+
+    # create 3-channel image with heatmap in channel 0
+    image = np.zeros((heatmap_shape[0], heatmap_shape[1], 3), dtype=np.uint8)
+    image[:, :, 0] = heatmap
+    ax[0, 2].imshow(image[:, :, 0])
     plt.show()
     plt.close()
 

@@ -199,7 +199,20 @@ def get_coords_fit_gauss(images, predicted_coords_all, visualize=False):
                 plt.show()
                 plt.close()
             del predicted_heatmap, data_fitted
-            print("initial guess: ", initial_guess, "and fitted: ", [popt[1], popt[2]])
+            print("initial guess: ", initial_guess, "and fitted: ", [popt[1], popt[2]], " with cov: ", cov)
+            # print(
+            #     "Covariance: %s, Amplitude %s, coords: (%s,%s) sigmaXY (%s, %s), theta %s, offset %s "
+            #     % (
+            #         cov,
+            #         popt[0],
+            #         popt[1],
+            #         popt[2],
+            #         popt[3],
+            #         popt[4],
+            #         np.degrees(popt[5]),
+            #         popt[6],
+            #     )
+            # )
             final_coords.append([popt[1], popt[2]])
             hm_maxes.append(popt[0])
             fitted_dicts.append(

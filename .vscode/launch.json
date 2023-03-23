@@ -56,14 +56,14 @@
             "justMyCode": true
         }, 
         {
-        "cwd": "${workspaceFolder}",
-        "name": "Python: Local LannUNet Misc",
-        "type": "python",
-        "request": "launch",
-        "program": "${workspaceRoot}/main.py",
-        "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/conv_baseline_5gs_f0_local.yaml"],
-        "console": "integratedTerminal",
-        "justMyCode": true
+            "cwd": "${workspaceFolder}",
+            "name": "Python: Local LannUNet Misc",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/conv_baseline_5gs_f0_local.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
         }, 
 
         {
@@ -72,7 +72,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/main.py",
-            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/LLHA.yaml"],
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/gpflow_conv_test.yaml"],
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
@@ -85,7 +85,20 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/main.py",
-            "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/final_gp_exps/final_f3_l9_local.yaml"],
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/final_gp_exps_local/final_f1_l8.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+        }, 
+        {
+            "cwd": "${workspaceFolder}",
+            "name": "Python: Analysis",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/evaluation/analyse_results_miccai.py",
+            // "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/final_gp_exps/final_f3_l9_local.yaml"],
             "console": "integratedTerminal",
             "justMyCode": true,
             "env": {

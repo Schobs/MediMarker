@@ -107,3 +107,10 @@ class HeatmapsToTensor(object):
             all_seg_labels.append(torch.from_numpy(maps).float())
 
         return all_seg_labels
+
+
+def standardize_landmarks_func(landmarks):
+    mean = np.mean(landmarks, axis=0)
+    std = np.std(landmarks, axis=0)
+    # stan_landmarks = (landmarks - mean) / std
+    return mean, std
