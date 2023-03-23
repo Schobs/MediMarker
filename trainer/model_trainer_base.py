@@ -60,7 +60,7 @@ class NetworkTrainer(ABC):
         self.gen_hms_in_mainthread = self.trainer_config.INFERRED_ARGS.GEN_HM_IN_MAINTHREAD
 
         self.sampler_mode = self.trainer_config.SAMPLER.SAMPLE_MODE
-
+        self.standardize_landmarks = self.trainer_config.DATASET.STANDARDIZE_LANDMARKS
         # Patch centering args
 
         patch_sampler_generic_args = {"sample_patch_size": self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
@@ -71,12 +71,15 @@ class NetworkTrainer(ABC):
         patch_sampler_centring_train_args = {"xlsx_path": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH,
                                              "xlsx_sheet": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET,
                                              "center_patch_jitter": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_JITTER,
-                                             "deterministic": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC}
+                                             "deterministic": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC,
+                                             "safe_padding": 5
+                                             }
 
         patch_sampler_centring_eval_args = {"xlsx_path": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH,
                                             "xlsx_sheet": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET,
                                             "center_patch_jitter": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_JITTER,
-                                            "deterministic": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC_EVAL}
+                                            "deterministic": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_DETERMINISTIC_EVAL,
+                                            "safe_padding": 5}
 
         self.train_dataset_patch_sampling_args = {"generic": patch_sampler_generic_args,
                                                   "biased": patch_sampler_bias_args,
@@ -91,7 +94,8 @@ class NetworkTrainer(ABC):
                                      "image_modality": self.trainer_config.DATASET.IMAGE_MODALITY,
                                      "root_path": self.trainer_config.DATASET.ROOT,
                                      "fold": self.trainer_config.TRAINER.FOLD,
-                                     "dataset_split_size": self.trainer_config.DATASET.TRAINSET_SIZE}
+                                     "dataset_split_size": self.trainer_config.DATASET.TRAINSET_SIZE,
+                                     "standardize_landmarks": self.trainer_config.DATASET.STANDARDIZE_LANDMARKS}
 
         self.data_aug_args_training = {"data_augmentation_strategy": self.trainer_config.SAMPLER.DATA_AUG,
                                        "data_augmentation_package": self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,

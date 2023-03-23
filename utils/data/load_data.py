@@ -117,7 +117,7 @@ def resize_coordinates(coords, resizing_factor, round=True):
         return coords * [1 / resizing_factor[0], 1 / resizing_factor[1]]
 
 
-def load_and_resize_image(image_path, coords, load_im_size, data_type_load, round=True):
+def load_and_resize_image(image_path, coords, load_im_size, data_type_load, round=True, standardized=False):
     """Load image and resize it to the specified size. Also resize the coordinates to match the new image size.
 
     Args:

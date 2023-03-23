@@ -337,13 +337,6 @@ class GPFlowTrainer(NetworkTrainer):
         data = data_dict["image"]
         target = data_dict["label"]["landmarks"]
 
-        if "047" not in data_dict["uid"] and "47" not in data_dict["uid"] and "370" not in data_dict["uid"] and "347" not in data_dict["uid"]:
-            self.logger.info("no found uid: %s ", data_dict["uid"])
-
-            return 0, generator
-        else:
-            self.logger.info("found uid: %s ", data_dict["uid"])
-
         # Only attempts loss if annotations avaliable for entire batch
         if all(data_dict["annotation_available"]):
             l = self.optimization_step((data, target), backprop)
@@ -455,10 +448,15 @@ class GPFlowTrainer(NetworkTrainer):
 
         if log_coords:
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(data_dict, log_heatmaps)
-            extra_info["target_coords_input_size"] = data_dict["target_coords"]
+
+            if self.standardize_landmarks:
+                extra_info["target_coords_input_size"] = self.unstandardize_coords(
+                    data_dict["target_coords"].cpu().detach().numpy())
+            else:
+                extra_info["target_coords_input_size"] = data_dict["target_coords"]
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
-            if torch.is_tensor(target_coords):
-                target_coords = target_coords
+            if not torch.is_tensor(target_coords):
+                target_coords = torch.tensor(target_coords)
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
 
@@ -485,7 +483,10 @@ class GPFlowTrainer(NetworkTrainer):
         else:
             noise = self.network.likelihood.variance.numpy()
 
-        prediction = np.expand_dims((y_mean), axis=1)
+        prediction = np.expand_dims((y_mean.numpy()), axis=1)
+
+        if self.standardize_landmarks:
+            prediction = self.unstandardize_coords(prediction)
 
         # Need to add the corner point here before scaling. found in data_dict["x_y_corner"]
         if self.inference_eval_mode == "scale_pred_coords" and not self.is_train:
@@ -547,9 +548,12 @@ class GPFlowTrainer(NetworkTrainer):
         if self.use_full_res_coords:
             target_coords = data_dict["full_res_coords"].to(self.device)  # C1
         else:
-            target_coords = np.round(data_dict["target_coords"]).to(
-                self.device
-            )  # C3 (and C1 if input size == full res size so full & target the same)
+            if self.standardize_landmarks:
+                target_coords = np.round(self.unstandardize_coords(
+                    data_dict["target_coords"].cpu().detach().numpy()))
+            else:
+                target_coords = np.round(data_dict["target_coords"])  #
+                # C3 (and C1 if input size == full res size so full & target the same)
 
         # C2
         if self.use_full_res_coords and not self.resize_first:
@@ -948,3 +952,9 @@ class GPFlowTrainer(NetworkTrainer):
                 hm_dict["final_heatmaps_wo_like_noise"].append(
                     [results_dict["uid"]+"_eval_phase_nolike", results_dict["final_heatmaps_wo_like_noise"]])
         self.dict_logger.log_dict_to_comet(self.comet_logger, hm_dict, -1)
+
+    def unstandardize_coords(self, stand_coords):
+        lm_mean = self.train_dataloader.dataset.standardize_mean
+        lm_std = self.train_dataloader.dataset.standardize_std
+
+        return np.multiply(stand_coords, lm_std) + (lm_mean)

@@ -56,14 +56,14 @@
             "justMyCode": true
         }, 
         {
-        "cwd": "${workspaceFolder}",
-        "name": "Python: Local LannUNet Misc",
-        "type": "python",
-        "request": "launch",
-        "program": "${workspaceRoot}/main.py",
-        "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/conv_baseline_5gs_f0_local.yaml"],
-        "console": "integratedTerminal",
-        "justMyCode": true
+            "cwd": "${workspaceFolder}",
+            "name": "Python: Local LannUNet Misc",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceRoot}/main.py",
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/conv_baseline_5gs_f0_local.yaml"],
+            "console": "integratedTerminal",
+            "justMyCode": true
         }, 
 
         {
@@ -72,7 +72,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceRoot}/main.py",
-            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/LLHA.yaml"],
+            "args": ["--cfg", "${workspaceRoot}/configs/configs_gp/gpflow_conv_test.yaml"],
             "console": "integratedTerminal",
             "justMyCode": false,
             "env": {
