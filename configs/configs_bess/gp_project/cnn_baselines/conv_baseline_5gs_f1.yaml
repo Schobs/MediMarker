@@ -16,13 +16,13 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 1 # Leave this.
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE_TRAIN: 12 # indicates entire dataset for batch (needed for ExactGP)
-  MAX_EPOCHS: 1000 
+  MAX_EPOCHS: 10000 
   MINI_BATCH_SIZE: 20 # Leave this.
   # REGRESS_SIGMA: 20
   DATA_LOADER_BATCH_SIZE_EVAL: 12
   BASE_LR: 0.01
   AUTO_MIXED_PRECISION: True
-  EARLY_STOPPING_PATIENCE: 250 # epochs for validation coord error not improving before stopping training
+  EARLY_STOPPING_PATIENCE: 1000 # epochs for validation coord error not improving before stopping training
   DECAY_POLICY: None
 
 
@@ -85,3 +85,6 @@ INFERENCE:
   FIT_GAUSS: False
   LOG_HEATMAPS: True
   LOG_HEATMAP_PLOT_TARG: True
+
+SSH:
+  AUTO_AMEND_PATHS: False
