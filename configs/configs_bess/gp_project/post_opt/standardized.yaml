@@ -1,8 +1,9 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized" #Change this to where you want to save model checkpoints/results
+  # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized" #Change this to where you want to save model checkpoints/results
 
+  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/standardized/t1' #change this to where you have the data
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
@@ -14,19 +15,19 @@ SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
   NUM_RES_SUPERVISIONS: 1 # Leave this.
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE_TRAIN: 6 # indicates entire dataset for batch (needed for ExactGP)
+  DATA_LOADER_BATCH_SIZE_TRAIN: 2 # indicates entire dataset for batch (needed for ExactGP)
   MAX_EPOCHS: 10000
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
-  DATA_LOADER_BATCH_SIZE_EVAL: 6
+  DATA_LOADER_BATCH_SIZE_EVAL: 2
   BASE_LR: 0.001
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 250 # epochs for validation loss not improving before stopping training
   DECAY_POLICY: "scheduled_3000"
 
 DATASET:
-  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
-  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/' #change this to where you have the data
+  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid' #change this
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [8] #Choose landmark (between 0-17)
@@ -38,10 +39,10 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: False # Kind of irrelevant for ExactGP
-  INFERENCE_ONLY: True # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
+  CACHE_DATA: True # Kind of irrelevant for ExactGP
+  INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
   SAVE_EVERY: 100 # Saves checkpoint every X epochs
-  VALIDATE_EVERY: 25 #validation every X epochs
+  VALIDATE_EVERY: 1 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
 
 
@@ -60,12 +61,13 @@ SAMPLER:
     SAMPLE_PATCH_SIZE: [64,64] #patch size
     CENTRED_PATCH_COORDINATE_PATH: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1/s1_preds_all/combined_results_fold0.xlsx"
     CENTRED_PATCH_COORDINATE_PATH_SHEET: "Sheet1"
-    CENTRED_PATCH_JITTER: 0.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
+    CENTRED_PATCH_JITTER: 1.0 #jitter for patch_centred. is a proportion of the patch size, which will generate random x,y jitter capped at that proportion .
     CENTRED_PATCH_DETERMINISTIC: False  #if True, will always sample the same patch for a given image i.e. same jitter applied.
 
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
+  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_standardize/model_ep_450_fold0.model" #Change this to where you want to save model checkpoints/results
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     INDUCING_SAMPLE_VAR: 1
@@ -75,7 +77,7 @@ MODEL:
     CONV_KERN_LS: 1  # base kernel lengthscale
     CONV_KERN_V: 20  # base kernel variance
     CONV_KERN_TYPE: "matern12"
-    FIX_NOISE_UNTIL_EPOCH: 3000 
+    FIX_NOISE_UNTIL_EPOCH: None 
     MODEL_NOISE_INIT: 0.01
     TRAIN_IP: True
     INDEPENDENT_LIKELIHOODS: True
@@ -85,9 +87,10 @@ MODEL:
     KL_SCALE: 0.01
 
 INFERENCE:
-  EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  EVALUATION_MODE: "scale_pred_coords"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
+  LOG_HEATMAPS: True
 
 SSH:
   AUTO_AMEND_PATHS: True

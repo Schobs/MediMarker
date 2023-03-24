@@ -622,6 +622,7 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
 
     for sample_idx, _ in enumerate(transformed_input_image):
         m1 = y_mean[sample_idx]
+
         s1 = cov_matr[sample_idx, :, sample_idx, :]
         if noise is not None:
             if isinstance(noise, list):
@@ -664,7 +665,11 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
         #     plt.plot(data[:,0],data[:,1], 'o')
             if plot_targ:
                 # add green cross at landmark location
-                landmark = data_dict["label"]["landmarks"][sample_idx]
+                if "landmarks_unstandardized" in data_dict["label"].keys():
+                    landmark = data_dict["label"]["landmarks_unstandardized"][sample_idx][0]
+                else:
+                    landmark = data_dict["label"]["landmarks"][sample_idx]
+
                 cross_size = 6
                 # add intersection over the landmark
                 x_min = max(0, int(landmark[0] - cross_size / 2))

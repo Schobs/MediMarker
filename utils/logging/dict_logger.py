@@ -157,12 +157,19 @@ class DictLogger():
                     for standard_info_key in self.standard_info_keys:
 
                         # print("printing log: ",standard_info_key, data_dict[standard_info_key], standard_info_key)
-                        data_point = data_dict[standard_info_key][idx]
+                        if isinstance(data_dict[standard_info_key], dict):
+                            for k, v in data_dict[standard_info_key].items():
+                                if torch.is_tensor(v):
+                                    v = v[idx].detach().cpu().numpy()
+                                ind_dict[standard_info_key+"_"+k] = v
+                        else:
 
-                        if torch.is_tensor(data_point):
-                            data_point = data_point.detach().cpu().numpy()
+                            data_point = data_dict[standard_info_key][idx]
 
-                        ind_dict[standard_info_key] = data_point
+                            if torch.is_tensor(data_point):
+                                data_point = data_point.detach().cpu().numpy()
+
+                            ind_dict[standard_info_key] = data_point
 
 
                     ind_dict["predicted_coords"] = ((pred_coords[idx].detach().cpu().numpy()))

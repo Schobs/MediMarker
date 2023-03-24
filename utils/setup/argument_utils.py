@@ -159,6 +159,24 @@ def argument_checking(yaml_args):
     except ValueError as e:
         all_errors.append(e)
 
+    # temp for not implemented yet
+    try:
+        if yaml_args.DATASET.STANDARDIZE_LANDMARKS and yaml_args.SAMPLER.SAMPLE_MODE != "patch_centred" and yaml_args.MODEL.ARCHITECTURE != "GPFlow":
+            raise ValueError(
+                'DATASET.STANDARDIZE_LANDMARKS can only be true if using GPFLow and sampler mode patch centered.'
+            )
+    except ValueError as e:
+        all_errors.append(e)
+
+     # temp for not implemented yet
+    try:
+        if yaml_args.SAMPLER.SAMPLE_MODE != "patch_centred" and yaml_args.MODEL.ARCHITECTURE != "GPFlow":
+            raise ValueError(
+                'SAMPLER.SAMPLER.SAMPLE_MODE can only be patch_centred when using GPFlow'
+            )
+    except ValueError as e:
+        all_errors.append(e)
+
     # Patch sampling cases to cover:
     # 1) General:
     #   a) ensure SAMPLER.PATCH.SAMPLE_PATCH_SIZE !=  DATASET.INPUT_SIZE if resizing images to input_size

@@ -262,10 +262,12 @@ class GPFlowLabelGenerator(LabelGenerator):
     ):
         """Simply returns the coordinates of the landmarks as the label."""
 
-        if to_tensor:
-            return_dict = {"landmarks": (landmarks)}
+        if isinstance(landmarks, dict):
+            return_dict = {"landmarks": landmarks["standardized"],
+                           "landmarks_unstandardized": landmarks["unstandardized"]}
+
         else:
-            return_dict = {"landmarks": landmarks}
+            return_dict = {"landmarks": (landmarks), "landmarks_unstandardized": landmarks}
 
         return return_dict
 

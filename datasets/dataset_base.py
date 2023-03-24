@@ -434,7 +434,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         # Can only standardize for patch_centred i.e. Gaussian Proccesses
         if self.standardize_landmarks:
-            input_coords = (input_coords - self.standardize_mean) / self.standardize_std
+            input_coords = {"standardized": (input_coords - self.standardize_mean) / self.standardize_std,
+                            "unstandardized": input_coords}
 
         if self.generate_hms_here:
 
@@ -449,14 +450,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             )
         else:
             label = []
-
-            # If coordinates are cutoff by augmentation throw a run time error.
-            # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
-            #     print("input coords: ", input_coords)
-            #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
-            # run_time_debug = True
-        # else:
-        #     print("ok")
 
         sample = {
             "image": input_image,

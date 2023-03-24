@@ -126,7 +126,7 @@ class GPFlowTrainer(NetworkTrainer):
                 for x in self.train_dataloader.dataset
             ]
             all_train_label = [
-                tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks"]), dtype=tf.float64), axis=0)
+                tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks_unstandardized"]), dtype=tf.float64), axis=0)
                 for x in self.train_dataloader.dataset
             ]
 
@@ -449,11 +449,10 @@ class GPFlowTrainer(NetworkTrainer):
         if log_coords:
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(data_dict, log_heatmaps)
 
-            if self.standardize_landmarks:
-                extra_info["target_coords_input_size"] = self.unstandardize_coords(
-                    data_dict["target_coords"].cpu().detach().numpy())
-            else:
-                extra_info["target_coords_input_size"] = data_dict["target_coords"]
+            # check here if landmarks unstandardized and target_coords manually unstandardized are the same please.
+
+            extra_info["target_coords_input_size"] = data_dict["label"]["landmarks"]
+
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
             if not torch.is_tensor(target_coords):
                 target_coords = torch.tensor(target_coords)
@@ -487,19 +486,15 @@ class GPFlowTrainer(NetworkTrainer):
 
         if self.standardize_landmarks:
             prediction = self.unstandardize_coords(prediction)
+        y_mean_unstandardized = np.squeeze(prediction, axis=1)
 
         # Need to add the corner point here before scaling. found in data_dict["x_y_corner"]
-        if self.inference_eval_mode == "scale_pred_coords" and not self.is_train:
-            # x_y_corner = np.expand_dims(np.stack(data_dict["x_y_corner"]), axis=1)
-            # x_y_corner =
+        if self.inference_eval_mode == "scale_pred_coords":
             x_y_corner = np.expand_dims(np.array(
                 [[data_dict["x_y_corner"][0][x], data_dict["x_y_corner"][1][x]] for x in range(len(data_dict["x_y_corner"][0]))]), axis=1)
 
-            # x_y_corner = np.expand_dims(np.stack([(np.flip(x.numpy())) for x in data_dict["x_y_corner"]]), axis=1)
             prediction = np.add(prediction, x_y_corner)
 
-        # lower = y_mean - 1.96 * np.array([np.sqrt(cov_matr[x, 0, x, 0]) for x in range(y_mean.shape[0])])
-        # upper = y_mean - 1.96 * [np.sqrt(cov_matr[x, 1, x, 1]) for x in range(y_mean.shape[0])]
         extra_info = {}
         extra_info["kernel_cov_matr"] = np.array([cov_matr[x, :, x, :] for x in range(len(y_mean))])
         extra_info["likelihood_noise"] = np.array([noise] * len(y_mean))
@@ -509,12 +504,14 @@ class GPFlowTrainer(NetworkTrainer):
         if log_heatmaps:
             extra_info["final_heatmaps"], extra_info["final_heatmaps_wo_like_noise"], extra_info["full_cov_matrix"] = multi_variate_hm(
                 data_dict,
-                y_mean,
+                y_mean_unstandardized,
                 cov_matr,
                 self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
                 noise=noise,
                 plot_targ=True,
-                plot_wo_noise_extra=not self.is_train
+                plot_wo_noise_extra=not self.is_train,
+
+
             )
 
         return prediction, extra_info
@@ -548,12 +545,9 @@ class GPFlowTrainer(NetworkTrainer):
         if self.use_full_res_coords:
             target_coords = data_dict["full_res_coords"].to(self.device)  # C1
         else:
-            if self.standardize_landmarks:
-                target_coords = np.round(self.unstandardize_coords(
-                    data_dict["target_coords"].cpu().detach().numpy()))
-            else:
-                target_coords = np.round(data_dict["target_coords"])  #
-                # C3 (and C1 if input size == full res size so full & target the same)
+
+            target_coords = np.round(data_dict["target_coords"]["unstandardized"])  #
+            # C3 (and C1 if input size == full res size so full & target the same)
 
         # C2
         if self.use_full_res_coords and not self.resize_first:
@@ -563,7 +557,7 @@ class GPFlowTrainer(NetworkTrainer):
             if not torch.is_tensor(pred_coords):
                 pred_coords = torch.tensor(pred_coords).to(self.device)
 
-            upscale_factor = torch.tensor(data_dict["resizing_factor"]).to(self.device)
+            upscale_factor = data_dict["resizing_factor"].to(self.device)
 
             upscaled_coords = torch.mul(pred_coords, upscale_factor)
             pred_coords = torch.round(upscaled_coords).to(self.device)
