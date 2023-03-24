@@ -26,7 +26,7 @@ SOLVER:
   DECAY_POLICY: "scheduled_3000"
 
 DATASET:
-    ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
   SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
@@ -67,7 +67,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_standardize/model_ep_450_fold0.model" #Change this to where you want to save model checkpoints/results
+  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_standardize/model_ep_450_fold0.model" #Change this to where you want to save model checkpoints/results
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     INDUCING_SAMPLE_VAR: 1
