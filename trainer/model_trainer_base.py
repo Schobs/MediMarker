@@ -301,10 +301,9 @@ class NetworkTrainer(ABC):
         """
         if log_coords:
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(output, data_dict["original_image_size"])
-
             if "individual_results_extra_keys" in logged_vars.keys() and "tta_augmentations" in logged_vars["individual_results_extra_keys"]:
                 pred_coords_input_size = invert_coordinates(pred_coords_input_size, logged_vars)
-            logged_vars["individual_results"] = logged_vars["individual_results"][:-(len(pred_coords_input_size))]
+            logged_vars["individual_results"] = logged_vars["individual_results"][-(len(pred_coords_input_size)):]
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
@@ -601,18 +600,14 @@ class NetworkTrainer(ABC):
                         augmented_dict, inverse_transformation = apply_tta_augmentation(
                             augmented_dict, aug_seed, idx)
                         all_inverse_transformations.append(inverse_transformation)
-
                     for i in range(num_tta_iterations+1):
                         batch = augmented_dict.copy()
-
                         batch['image'] = torch.stack(batch['image'][i::num_tta_iterations+1]).to(self.device)
                         inverse_transforms = all_inverse_transformations[i::num_tta_iterations+1]
-
                         # @ETHAN Add the inverse transforms to the individual results.
                         # Look for @ETHAN in dict_logger for where we use this.
                         [evaluation_logs["individual_results"].append(
                             {"transform": x}) for x in inverse_transforms]
-
                         l, _ = self.run_iteration(
                             generator,
                             self.test_dataloader,
@@ -623,7 +618,6 @@ class NetworkTrainer(ABC):
                             debug=debug,
                             direct_data_dict=batch,
                         )
-
                     # @ETHAN Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations).
                     # However, E-MHA and E-CPV results will be bad because they use the HEATMAPS to calcualte the coordinates.
                     # In our code we are only transforming the COORDS back to the original coordinate space, not the heatmap!

@@ -18,7 +18,7 @@ SOLVER:
 
 MODEL:
   GAUSS_SIGMA: 5 #The variance of the gaussian label, you can play around.
-  # CHECKPOINT: "/path_to/checkpoint" #Use this to resume training from a checkpoint, or load the checkpoint during inference
+  CHECKPOINT: "/home/aca19ej/LaNNU-Net/outputs/model_best_valid_coord_error_fold0.model"
 
 DATASET:
   ROOT: '/shared/ai4h/Shared/Data/medical/ISBI2015_landmarks/'
@@ -29,7 +29,7 @@ DATASET:
     
  
 TRAINER:
-  INFERENCE_ONLY: False # set to true if already trained and want to perform inference (testing) only.
+  INFERENCE_ONLY: True # set to true if already trained and want to perform inference (testing) only.
   CACHE_DATA: False #Ideally true, saves time from loading from disk.
   FOLD: 0 # Pick the fold. this dataset has folds 0,1,2,3. You can set to -1 and directly put the path to JSON in SRC_TARGETS if you want.
 
@@ -37,7 +37,6 @@ INFERENCE:
   EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set to true to get some visualization of predicted heatmaps!
   TTA_ENSEMBLE_INFERENCE: True
-  ENSEMBLE_CHECKPOINTS: ["/home/aca19ej/LaNNU-Net/outputs/model_best_valid_coord_error_fold0.model"]
 
 SAMPLER:
   NUM_WORKERS: 4 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down. 

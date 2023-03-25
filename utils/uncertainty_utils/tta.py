@@ -24,7 +24,7 @@ def invert_coordinates(orginal_coords, log_dict):
     """
     inverted_predicted_coords = []
     for funct, coords_all in zip(log_dict['individual_results'][-orginal_coords.shape[0]:], orginal_coords):
-        key = funct['transform'].keys()
+        key = list(funct['transform'].keys())[0]
         if "normal" in key:
             coords = coords_all
         elif "inverse_rotate" in key:
@@ -41,11 +41,9 @@ def invert_coordinates(orginal_coords, log_dict):
                                   for coords in coords_all])
 
         inverted_predicted_coords.append(coords)
-
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     inverted_predicted_coords = torch.stack(inverted_predicted_coords).to(device)
     return inverted_predicted_coords
-
 
 def extract_original_coords_from_rotation(rotation_mag, rotated_coords, training_resolution=[512, 512]):
     """
@@ -141,7 +139,6 @@ def apply_tta_augmentation(data, seed, idx):
         "inverse_flip": 1
     }
     transform = functions[function_name]
-    # transform = "inverse_flip"
 
     inverse_transform = {list(inverse_functions.keys())[function_index]:
                          list(inverse_functions.values())[function_index]}
