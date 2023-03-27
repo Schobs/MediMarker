@@ -19,9 +19,7 @@ _C.DATASET.DATASET_CLASS = "generic"  # see datasets.dataset_index for available
 
 _C.DATASET.ROOT = ""
 _C.DATASET.NAME = "ASPIRE"
-_C.DATASET.SRC_TARGETS = (
-    "/shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV"
-)
+_C.DATASET.SRC_TARGETS = "/shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV"
 _C.DATASET.IMAGE_MODALITY = "CMRI"
 _C.DATASET.LANDMARKS = []
 # _C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512] #legacy, can ignore.
@@ -118,9 +116,7 @@ _C.MODEL.UNET.INIT_FEATURES = 32
 _C.MODEL.PHDNET = CN()
 _C.MODEL.PHDNET.BRANCH_SCHEME = "multi"  # ['multi', 'heatmap', 'displacement']
 _C.MODEL.PHDNET.MAXPOOL_FACTOR = 3  # ['multi', 'heatmap', 'displacement']
-_C.MODEL.PHDNET.CLASS_LABEL_SCHEME = (
-    "gaussian"  # ['binary', 'binary_weighted', 'gaussian']
-)
+_C.MODEL.PHDNET.CLASS_LABEL_SCHEME = "gaussian"  # ['binary', 'binary_weighted', 'gaussian']
 _C.MODEL.PHDNET.WEIGHT_DISP_LOSS_BY_HEATMAP = True
 _C.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS = True
 
@@ -133,8 +129,8 @@ _C.MODEL.GPFLOW.NUM_INDUCING_POINTS = 100
 _C.MODEL.GPFLOW.KERN = "conv"  # possible values: ["conv", "rbf", "matern52"]
 _C.MODEL.GPFLOW.CONV_KERN_SIZE = [3, 3]  # Size of kernel for convolutional kernel gaussian process
 _C.MODEL.GPFLOW.CONV_KERN_STRIDE = 1  # Size of kernel for convolutional kernel gaussian process
-_C.MODEL.GPFLOW.CONV_KERN_LS = 5  # Size of kernel for convolutional kernel gaussian process
-_C.MODEL.GPFLOW.CONV_KERN_V = 5  # Size of kernel for convolutional kernel gaussian process
+_C.MODEL.GPFLOW.CONV_KERN_LS = 5.0  # Size of kernel for convolutional kernel gaussian process
+_C.MODEL.GPFLOW.CONV_KERN_V = 5.0  # Size of kernel for convolutional kernel gaussian process
 # ["rbf", "matern12", "matern32"] of kernel for convolutional kernel gaussian process
 _C.MODEL.GPFLOW.CONV_KERN_TYPE = "rbf"
 _C.MODEL.GPFLOW.MODEL_NOISE_INIT = 1.0
@@ -153,9 +149,7 @@ _C.INFERENCE = CN()
 _C.INFERENCE.SPLIT = "testing"  # Split/s of the data to perform inference. Can specify multiple splits.
 
 _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
-_C.INFERENCE.FIT_GAUSS = (
-    False  # If false, uses max, if true, first fits gaussian to output heatmap.
-)
+_C.INFERENCE.FIT_GAUSS = False  # If false, uses max, if true, first fits gaussian to output heatmap.
 _C.INFERENCE.LOG_HEATMAPS = False
 _C.INFERENCE.LOG_HEATMAP_PLOT_TARG = False
 
@@ -212,7 +206,7 @@ _C.OUTPUT.RESULTS_CSV_APPEND = None
 _C.SSH = CN()
 _C.SSH.AUTO_AMEND_PATHS = True
 _C.SSH.LOCAL_PATH_TO_SSH_MOUNT = "/mnt/bess"
-_C.SSH.MATCH_SSH_STRING_FOR_AMEND = '/shared/tale2/'
+_C.SSH.MATCH_SSH_STRING_FOR_AMEND = "/shared/tale2/"
 
 
 def get_cfg_defaults():

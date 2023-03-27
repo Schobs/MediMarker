@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/t2" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/AAG" #Change this to where you want to save model checkpoints/results
 
   # OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/standardized/t1' #change this to where you have the data
 
@@ -74,8 +74,8 @@ MODEL:
     KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
     CONV_KERN_SIZE: [5,5]  # size of kernel for convolutional kernel
     CONV_KERN_STRIDE: 5  #stride of convolutional kernel
-    CONV_KERN_LS: 0.5  # base kernel lengthscale
-    CONV_KERN_V: 1  # base kernel variance
+    CONV_KERN_LS: 1.0  # base kernel lengthscale
+    CONV_KERN_V: 40.0  # base kernel variance
     CONV_KERN_TYPE: "matern12"
     FIX_NOISE_UNTIL_EPOCH: 0 
     MODEL_NOISE_INIT: 0.01

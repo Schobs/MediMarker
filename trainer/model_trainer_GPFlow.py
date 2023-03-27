@@ -486,23 +486,42 @@ class GPFlowTrainer(NetworkTrainer):
 
         if self.standardize_landmarks:
             prediction = self.unstandardize_coords(prediction)
+            # for x in range(len(y_mean)):
+            #     cov_matr[x, :, x, :] = cov_matr[x, :, x, :]* [self.train_dataloader.dataset.standardize_std[0], self.train_dataloader.dataset.standardize_std[1]]
+
+            # print(cov_matr[0, :, 0, :])
+            # print(self.train_dataloader.dataset.standardize_std)
+            # noise = noise * self.train_dataloader.dataset.standardize_std
+
         y_mean_unstandardized = np.squeeze(prediction, axis=1)
 
         # Need to add the corner point here before scaling. found in data_dict["x_y_corner"]
         if self.inference_eval_mode == "scale_pred_coords":
-            x_y_corner = np.expand_dims(np.array(
-                [[data_dict["x_y_corner"][0][x], data_dict["x_y_corner"][1][x]] for x in range(len(data_dict["x_y_corner"][0]))]), axis=1)
+            x_y_corner = np.expand_dims(
+                np.array(
+                    [
+                        [data_dict["x_y_corner"][0][x], data_dict["x_y_corner"][1][x]]
+                        for x in range(len(data_dict["x_y_corner"][0]))
+                    ]
+                ),
+                axis=1,
+            )
 
             prediction = np.add(prediction, x_y_corner)
 
         extra_info = {}
+
         extra_info["kernel_cov_matr"] = np.array([cov_matr[x, :, x, :] for x in range(len(y_mean))])
         extra_info["likelihood_noise"] = np.array([noise] * len(y_mean))
 
         extra_info["pred_coords_input_size"] = y_mean.numpy()
 
         if log_heatmaps:
-            extra_info["final_heatmaps"], extra_info["final_heatmaps_wo_like_noise"], extra_info["full_cov_matrix"] = multi_variate_hm(
+            (
+                extra_info["final_heatmaps"],
+                extra_info["final_heatmaps_wo_like_noise"],
+                extra_info["full_cov_matrix"],
+            ) = multi_variate_hm(
                 data_dict,
                 y_mean_unstandardized,
                 cov_matr,
@@ -510,8 +529,6 @@ class GPFlowTrainer(NetworkTrainer):
                 noise=noise,
                 plot_targ=True,
                 plot_wo_noise_extra=not self.is_train,
-
-
             )
 
         return prediction, extra_info
@@ -939,12 +956,13 @@ class GPFlowTrainer(NetworkTrainer):
 
     def save_heatmaps(self, heatmaps):
         hm_dict = {"final_heatmaps": [], "final_heatmaps_wo_like_noise": []}
-        for idx, results_dict in enumerate(heatmaps['individual_results']):
+        for idx, results_dict in enumerate(heatmaps["individual_results"]):
             if "final_heatmaps" in results_dict.keys():
-                hm_dict["final_heatmaps"].append([results_dict["uid"]+"_eval_phase", results_dict["final_heatmaps"]])
+                hm_dict["final_heatmaps"].append([results_dict["uid"] + "_eval_phase", results_dict["final_heatmaps"]])
             if "final_heatmaps_wo_like_noise" in results_dict.keys():
                 hm_dict["final_heatmaps_wo_like_noise"].append(
-                    [results_dict["uid"]+"_eval_phase_nolike", results_dict["final_heatmaps_wo_like_noise"]])
+                    [results_dict["uid"] + "_eval_phase_nolike", results_dict["final_heatmaps_wo_like_noise"]]
+                )
         self.dict_logger.log_dict_to_comet(self.comet_logger, hm_dict, -1)
 
     def unstandardize_coords(self, stand_coords):
