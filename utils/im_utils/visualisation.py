@@ -623,7 +623,7 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
     for sample_idx, _ in enumerate(transformed_input_image):
         m1 = y_mean[sample_idx]
 
-        s1 = cov_matr[sample_idx, :, sample_idx, :]
+        s1 = cov_matr[sample_idx]
         if noise is not None:
             if isinstance(noise, list):
                 s1 += [[noise[0], 0], [0, noise[1]]]
@@ -635,7 +635,7 @@ def multi_variate_hm(data_dict, y_mean, cov_matr, heatmap_shape, noise=None, plo
         covariances = [multivariate_normal(mean=m1, cov=s1)]
 
         if plot_wo_noise_extra:
-            covariances.append(multivariate_normal(mean=m1, cov=cov_matr[sample_idx, :, sample_idx, :]))
+            covariances.append(multivariate_normal(mean=m1, cov=cov_matr[sample_idx]))
 
         for idx, k1 in enumerate(covariances):
             # create a grid of (x,y) coordinates at which to evaluate the kernels

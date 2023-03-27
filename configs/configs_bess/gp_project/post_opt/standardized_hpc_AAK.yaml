@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/AAGA" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/AAKA" #Change this to where you want to save model checkpoints/results
 
   # OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/standardized/t1' #change this to where you have the data
 
@@ -42,7 +42,7 @@ TRAINER:
   CACHE_DATA: True # Kind of irrelevant for ExactGP
   INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
   SAVE_EVERY: 100 # Saves checkpoint every X epochs
-  VALIDATE_EVERY: 5 #validation every X epochs
+  VALIDATE_EVERY: 25 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
 
 
@@ -74,17 +74,17 @@ MODEL:
     KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
     CONV_KERN_SIZE: [5,5]  # size of kernel for convolutional kernel
     CONV_KERN_STRIDE: 5  #stride of convolutional kernel
-    CONV_KERN_LS: 1.0  # base kernel lengthscale
-    CONV_KERN_V: 40.0  # base kernel variance
+    CONV_KERN_LS: 0.5  # base kernel lengthscale
+    CONV_KERN_V: 0.2 # base kernel variance
     CONV_KERN_TYPE: "matern12"
-    FIX_NOISE_UNTIL_EPOCH: 0 
+    # FIX_NOISE_UNTIL_EPOCH: 1000 
     MODEL_NOISE_INIT: 0.01
     TRAIN_IP: True
     INDEPENDENT_LIKELIHOODS: True
     LIKELIHOOD_NOISE_UPPER_BOUND: None
     LIKELIHOOD_NOISE_TRAINING_INTERVALS: None
     LIKELIHOOD_NOISE_SEPERATE_OPTIM: False
-    # KL_SCALE: 0.01
+    KL_SCALE: 0.001
 
 INFERENCE:
   EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]

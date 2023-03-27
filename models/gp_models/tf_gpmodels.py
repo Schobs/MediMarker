@@ -4,7 +4,7 @@ from typing import Optional
 import numpy as np
 # import gpflow as gpf
 import time
-
+from models.gp_models.register import *
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf

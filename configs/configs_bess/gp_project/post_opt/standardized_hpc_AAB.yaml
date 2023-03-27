@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/AAB" #Change this to where you want to save model checkpoints/results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/AABA" #Change this to where you want to save model checkpoints/results
 
   # OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/standardized/t1' #change this to where you have the data
 
@@ -80,6 +80,7 @@ MODEL:
     FIX_NOISE_UNTIL_EPOCH: 0 
     MODEL_NOISE_INIT: 0.01
     TRAIN_IP: True
+    FIX_NOISE_UNTIL_EPOCH: 1000
     INDEPENDENT_LIKELIHOODS: True
     LIKELIHOOD_NOISE_UPPER_BOUND: None
     LIKELIHOOD_NOISE_TRAINING_INTERVALS: None

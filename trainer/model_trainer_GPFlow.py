@@ -344,8 +344,20 @@ class GPFlowTrainer(NetworkTrainer):
             if self.independent_likelihoods:
                 loss_dict["x_noise"] = self.network.likelihood.likelihoods[0].variance.numpy()
                 loss_dict["y_noise"] = self.network.likelihood.likelihoods[1].variance.numpy()
+
+                if self.standardize_landmarks:
+                    std_x = self.train_dataloader.dataset.standardize_std[0]
+                    std_y = self.train_dataloader.dataset.standardize_std[1]
+                    loss_dict["x_noise"] = loss_dict["x_noise"] * (std_x**2)
+                    loss_dict["y_noise"] = loss_dict["y_noise"] * (std_y**2)
+
             else:
                 loss_dict["noise"] = self.network.likelihood.variance.numpy()
+                if self.standardize_landmarks:
+                    std_x = self.train_dataloader.dataset.standardize_std[0]
+                    std_y = self.train_dataloader.dataset.standardize_std[1]
+                    loss_dict["noise"] = loss_dict["noise"] * std_x*std_y
+
         else:
             l = 0
             loss_dict = {}
@@ -473,7 +485,7 @@ class GPFlowTrainer(NetworkTrainer):
             Tuple[np.ndarray, Dict[str, Any]]: A tuple of the predicted coordinates and additional information.
         """
 
-        y_mean, cov_matr = self.network.posterior().predict_f(data_dict["image"], full_cov=True, full_output_cov=True)
+        y_mean, cov_matr = self.network.posterior().predict_f(data_dict["image"], full_cov=False, full_output_cov=True)
 
         # get noise
 
@@ -486,12 +498,19 @@ class GPFlowTrainer(NetworkTrainer):
 
         if self.standardize_landmarks:
             prediction = self.unstandardize_coords(prediction)
-            # for x in range(len(y_mean)):
-            #     cov_matr[x, :, x, :] = cov_matr[x, :, x, :]* [self.train_dataloader.dataset.standardize_std[0], self.train_dataloader.dataset.standardize_std[1]]
+            new_cov_list = []
+            std_x = self.train_dataloader.dataset.standardize_std[0]
+            std_y = self.train_dataloader.dataset.standardize_std[1]
+            unstandardized_multiplier = np.array([[std_x**2, std_x*std_y], [std_x*std_y, std_y**2]])
+            for x in range(len(y_mean)):
+                new_cov_list.append(
+                    cov_matr[x] * unstandardized_multiplier)
+            cov_matr = tf.stack(new_cov_list)
 
-            # print(cov_matr[0, :, 0, :])
-            # print(self.train_dataloader.dataset.standardize_std)
-            # noise = noise * self.train_dataloader.dataset.standardize_std
+            if isinstance(noise, list):
+                noise = list(noise * np.array([std_x**2, std_y**2]))
+            else:
+                noise = noise * std_x*std_y
 
         y_mean_unstandardized = np.squeeze(prediction, axis=1)
 
@@ -511,7 +530,7 @@ class GPFlowTrainer(NetworkTrainer):
 
         extra_info = {}
 
-        extra_info["kernel_cov_matr"] = np.array([cov_matr[x, :, x, :] for x in range(len(y_mean))])
+        extra_info["kernel_cov_matr"] = np.array([cov_matr[x] for x in range(len(y_mean))])
         extra_info["likelihood_noise"] = np.array([noise] * len(y_mean))
 
         extra_info["pred_coords_input_size"] = y_mean.numpy()

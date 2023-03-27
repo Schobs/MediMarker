@@ -9,7 +9,7 @@ OUTPUT:
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
   VERBOSE: True #whether to print results every epoch
-  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round",  "7th_round", "64", "l11", "f0", "6th_round"]
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round",  "7th_round", "64", "f0", "6th_round", "test"]
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
@@ -31,7 +31,7 @@ DATASET:
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [8] #Choose landmark (between 0-17)
-  # TRAINSET_SIZE: 10 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
+  TRAINSET_SIZE: 10 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
   TO_PYTORCH_TENSOR: False  # True if using pytorch, False if using tensorflow
   STANDARDIZE_LANDMARKS: True
 
@@ -67,24 +67,25 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_standardize/model_ep_450_fold0.model" #Change this to where you want to save model checkpoints/results
+  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_standardize/model_ep_450_fold0.model" #Change this to where you want to save model checkpoints/results
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/AAG/model_latest_fold0.model"
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     INDUCING_SAMPLE_VAR: 1
     KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
     CONV_KERN_SIZE: [5,5]  # size of kernel for convolutional kernel
     CONV_KERN_STRIDE: 5  #stride of convolutional kernel
-    CONV_KERN_LS: 1  # base kernel lengthscale
-    CONV_KERN_V: 20  # base kernel variance
+    CONV_KERN_LS: 0.5  # base kernel lengthscale
+    CONV_KERN_V: 1.0  # base kernel variance
     CONV_KERN_TYPE: "matern12"
-    FIX_NOISE_UNTIL_EPOCH: None 
+    FIX_NOISE_UNTIL_EPOCH: 0 
     MODEL_NOISE_INIT: 0.01
     TRAIN_IP: True
     INDEPENDENT_LIKELIHOODS: True
     LIKELIHOOD_NOISE_UPPER_BOUND: None
     LIKELIHOOD_NOISE_TRAINING_INTERVALS: None
     LIKELIHOOD_NOISE_SEPERATE_OPTIM: False
-    KL_SCALE: 0.01
+    # KL_SCALE: 0.01
 
 INFERENCE:
   EVALUATION_MODE: "scale_pred_coords"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
