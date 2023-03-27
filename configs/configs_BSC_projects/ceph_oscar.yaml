@@ -12,9 +12,9 @@ SOLVER:
   DEEP_SUPERVISION: False
   NUM_RES_SUPERVISIONS: 1
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE_TRAIN: 4 #As high as will fit in gpu memory
-  DATA_LOADER_BATCH_SIZE_EVAL: 4 #As high as will fit in gpu memory
-  MAX_EPOCHS: 250 #How long you want to train? ideal is at least 150-250.
+  DATA_LOADER_BATCH_SIZE_TRAIN: 2 #As high as will fit in gpu memory
+  DATA_LOADER_BATCH_SIZE_EVAL: 2 #As high as will fit in gpu memory
+  MAX_EPOCHS: 25 #How long you want to train? ideal is at least 150-250.
 
 MODEL:
   GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.
@@ -43,4 +43,3 @@ SAMPLER:
   DATA_AUG: "AffineComplex" # set to None for no augmentation. for other schemes see the documentation.
   INPUT_SIZE: [512, 512]
   DEBUG: False #Set to true to get some visualization of data augmentation and the target heatmaps! Are they close to the predicted heatmaps after training?
-
