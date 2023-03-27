@@ -1,5 +1,5 @@
 OUTPUT:
-  OUTPUT_DIR: "../results" #Where to save models and results
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/M4CH/testing/unetr/" #Where to save models and results
   # /Users/oscargavin/Documents/AICS 3/dissertatione/LaNNU-Net/results
   #Logging stuff. HIGHLY RECOMMENDED. CHECK THE DOCS FOR INFO. Please use it, it will help you a LOT.
   # If not using set USE_COMETML_LOGGING to False.
@@ -9,12 +9,12 @@ OUTPUT:
   COMET_PROJECT_NAME: "dissertation"
 
 SOLVER:
-  DEEP_SUPERVISION: False
-  NUM_RES_SUPERVISIONS: 1
+  DEEP_SUPERVISION: True
+  NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE_TRAIN: 2 #As high as will fit in gpu memory
-  DATA_LOADER_BATCH_SIZE_EVAL: 2 #As high as will fit in gpu memory
+  DATA_LOADER_BATCH_SIZE: 12 #As high as will fit in gpu memory
   MAX_EPOCHS: 250 #How long you want to train? ideal is at least 150-250.
+  AUTO_MIXED_PRECISION: False
 
 MODEL:
   GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.
