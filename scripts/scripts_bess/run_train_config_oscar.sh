@@ -3,7 +3,7 @@
 #SBATCH --mail-user=ogavin1@sheffield.ac.uk
 #SBATCH --mail-type=FAIL
 # Rename the job
-#SBATCH --comment=unetr_model_test
+#SBATCH --comment=unetr_model_test``
 
 module load Anaconda3/5.3.0
 
@@ -12,4 +12,4 @@ module load cuDNN/7.6.4.38-gcccuda-2019b
 
 source activate my_env
 
-python ../../main.py --cfg configs/configs_BSC_projects/ceph_oscar.yaml
+python ../../main.py --cfg ../..configs/configs_BSC_projects/ceph_oscar.yaml
