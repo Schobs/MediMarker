@@ -1,37 +1,37 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/AAHA" #Change this to where you want to save model checkpoints/results
+  # OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized" #Change this to where you want to save model checkpoints/results
 
-  # OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/standardized/t1' #change this to where you have the data
+  OUTPUT_DIR: '/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/optim/cnn/t1' #change this to where you have the data
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp" #get a comet.ml account
   COMET_WORKSPACE: "schobs"
   VERBOSE: True #whether to print results every epoch
-  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round",  "7th_round", "64", "l11", "f0", "6th_round"]
+  COMET_TAGS: ["gp", "conv_gp", "gp_optimization", "4th_round", "5th_round",  "7th_round", "64", "f0", "6th_round", "test", "cnn"]
 
 SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
   NUM_RES_SUPERVISIONS: 1 # Leave this.
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE_TRAIN: 6 # indicates entire dataset for batch (needed for ExactGP)
+  DATA_LOADER_BATCH_SIZE_TRAIN: 32 # indicates entire dataset for batch (needed for ExactGP)
   MAX_EPOCHS: 10000
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
-  DATA_LOADER_BATCH_SIZE_EVAL: 6
-  BASE_LR: 0.001
+  DATA_LOADER_BATCH_SIZE_EVAL: 32
+  BASE_LR: 0.01
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 250 # epochs for validation loss not improving before stopping training
   DECAY_POLICY: "scheduled_3000"
 
 DATASET:
-  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
-  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  ROOT: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/' #change this to where you have the data
+  SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid' #change this
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
   LANDMARKS : [8] #Choose landmark (between 0-17)
-  # TRAINSET_SIZE: 10 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
+  TRAINSET_SIZE: 60 # -1 for full trainset size or int <= len(training_set). USeful for debugging if you don't wanna load entire dataset.
   TO_PYTORCH_TENSOR: False  # True if using pytorch, False if using tensorflow
   STANDARDIZE_LANDMARKS: True
 
@@ -42,7 +42,7 @@ TRAINER:
   CACHE_DATA: True # Kind of irrelevant for ExactGP
   INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
   SAVE_EVERY: 100 # Saves checkpoint every X epochs
-  VALIDATE_EVERY: 25 #validation every X epochs
+  VALIDATE_EVERY: 1 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
 
 
@@ -67,32 +67,32 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/t1/model_latest_fold0.model" #Change this to where you want to save model checkpoints/results
+  # CHECKPOINT: "/home/schobs/Documents/PhD/local_LaNNU-Net/outputs/gp/gpflow_conv_standardize/model_ep_450_fold0.model" #Change this to where you want to save model checkpoints/results
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/AAG/model_latest_fold0.model"
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     INDUCING_SAMPLE_VAR: 1
-    KERN: "conv"  # possible values: ["conv", "rbf", "matern52"]
+    KERN: "conv_backbone"  # possible values: ["conv", "rbf", "matern52", "conv_backbone"]
     CONV_KERN_SIZE: [5,5]  # size of kernel for convolutional kernel
     CONV_KERN_STRIDE: 5  #stride of convolutional kernel
     CONV_KERN_LS: 0.2  # base kernel lengthscale
     CONV_KERN_V: 0.2  # base kernel variance
     CONV_KERN_TYPE: "matern12"
-    FIX_NOISE_UNTIL_EPOCH: 3000 
-    MODEL_NOISE_INIT: 0.001
+    FIX_NOISE_UNTIL_EPOCH: 1000
+    MODEL_NOISE_INIT: 0.01
     TRAIN_IP: True
     INDEPENDENT_LIKELIHOODS: True
     LIKELIHOOD_NOISE_UPPER_BOUND: None
     LIKELIHOOD_NOISE_TRAINING_INTERVALS: None
     LIKELIHOOD_NOISE_SEPERATE_OPTIM: False
-    KL_SCALE: 0.001
+    # KL_SCALE: 0.01
 
 INFERENCE:
-  EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  EVALUATION_MODE: "scale_pred_coords"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
   LOG_HEATMAPS: True
-  LOG_HEATMAP_PLOT_TARG: True
 
 SSH:
-  AUTO_AMEND_PATHS: False
+  AUTO_AMEND_PATHS: True
 

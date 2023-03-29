@@ -217,8 +217,11 @@ def get_conv_SVGP_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim
         conv_k.weights = gpf.Parameter(conv_k.weights.numpy(), transform=max_abs_1())
         convs_k.append(conv_k)
 
+    # kernel = gpf.kernels.LinearCoregionalization(
+    #     convs_k, W=np.random.randn(2, 2)
+    # )
     kernel = gpf.kernels.LinearCoregionalization(
-        convs_k, W=np.random.randn(2, 2)
+        convs_k, W=np.array([[1, 0], [0, 1]])
     )
 
     inducing_patches = get_inducing_patches(X, Y, inp_dim, patch_shape, num_inducing_patches, std=inducing_sample_var)

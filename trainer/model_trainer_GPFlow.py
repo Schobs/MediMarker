@@ -3,6 +3,7 @@ from ast import Dict, Tuple
 import pickle
 from typing import Any, Generator, Optional
 from losses.GPLosses import GPFlowLoss
+from models.gp_models.cnn_gp import get_conv_backbone_model, get_conv_backbone_model_linear_coreg
 from transforms.generate_labels import GPFlowLabelGenerator
 from trainer.model_trainer_base import NetworkTrainer
 import copy
@@ -130,14 +131,6 @@ class GPFlowTrainer(NetworkTrainer):
                 for x in self.train_dataloader.dataset
             ]
 
-            # self.network = get_conv_SVGP(all_train_image, all_train_label,
-            #                              self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-            #                              self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE)
-
-            # self.network = conv_sgp_rbf_fix(all_train_image, all_train_label,
-            #                                 self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE, self.num_inducing_points,
-            #                                 self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE, kern_stride=self.kern_stride)
-
             self.network = get_conv_SVGP_linear_coreg(
                 all_train_image,
                 all_train_label,
@@ -163,21 +156,13 @@ class GPFlowTrainer(NetworkTrainer):
             if self.fix_noise_until > self.epoch:
                 self.logger.info("Fixing likelihood variance until Epoch %s" % self.fix_noise_until)
                 self._toggle_likelihood_noise_trainable()
-                # if self.independent_likelihoods:
-                #     [gpf.set_trainable(x.variance, False) for x in self.network.likelihood.likelihoods]
-                # else:
-                #     gpf.set_trainable(self.network.likelihood.variance, False)
+
             else:
                 self.logger.info(
                     "Not Fixing likelihood variance. Training. Learning independent likelihoods is %s."
                     % self.independent_likelihoods
                 )
                 self._set_likelihood_noise_trainable()
-
-                # if self.independent_likelihoods:
-                #     [gpf.set_trainable(x.variance, True) for x in self.network.likelihood.likelihoods]
-                # else:
-                #     gpf.set_trainable(self.network.likelihood.variance, True)
 
             # TODO set this false. add config for #epochs to turn back on try 10,50,100
 
@@ -186,6 +171,32 @@ class GPFlowTrainer(NetworkTrainer):
 
             del all_train_image
             del all_train_label
+
+        elif self.kern == "conv_backbone":
+            all_train_image = [
+                tf.squeeze(tf.convert_to_tensor((x["image"]), dtype=tf.float64), axis=0)
+                for x in self.train_dataloader.dataset
+            ]
+            all_train_label = [
+                tf.squeeze(tf.convert_to_tensor((x["label"]["landmarks_unstandardized"]), dtype=tf.float64), axis=0)
+                for x in self.train_dataloader.dataset
+            ]
+
+            self.network = get_conv_backbone_model_linear_coreg(
+                all_train_image,
+                all_train_label,
+                self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
+                self.num_inducing_points,
+                batch_size=self.data_loader_batch_size_train,
+                kern_type=self.conv_kern_type,
+                base_kern_ls=self.conv_kern_ls,
+                base_kern_var=self.conv_kern_var,
+                init_likelihood_noise=self.initial_likelihood_noise,
+                independent_likelihoods=self.independent_likelihoods,
+                likelihood_upper_bound=self.likelihood_noise_upper_bound,
+                kl_scale=self.kl_scale,
+            )
+
         else:
             if self.kern == "matern52":
                 # Mater52 kernel
@@ -231,11 +242,18 @@ class GPFlowTrainer(NetworkTrainer):
             self.initialize(True)
         step = 0
         continue_training = True
+
         while self.epoch < self.max_num_epochs and continue_training:
             self.epoch_start_time = time()
             epoch_loss = 0
             mb_step = 0
             per_epoch_logs = self.dict_logger.get_epoch_logger()
+
+            # Start by logging validation before any training.
+            if self.epoch == 0:
+                backprop_train = True
+            else:
+                backprop_train = True
 
             generator = iter(self.train_dataloader)
             for data_dict in iter(generator):
@@ -243,7 +261,7 @@ class GPFlowTrainer(NetworkTrainer):
                 l, generator = self.run_iteration(
                     generator,
                     self.train_dataloader,
-                    backprop=True,
+                    backprop=backprop_train,
                     split="training",
                     log_coords=False,
                     log_heatmaps=False,
@@ -259,7 +277,8 @@ class GPFlowTrainer(NetworkTrainer):
 
             if self.comet_logger:
                 self.comet_logger.log_metric("training loss epoch", epoch_loss / mb_step, self.epoch)
-            # We validate every 200 epochs
+
+            # We validate every X epochs
             if self.epoch % self.validate_every == 0:
 
                 generator = iter(self.valid_dataloader)
