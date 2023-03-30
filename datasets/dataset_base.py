@@ -98,7 +98,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         self.sample_patch_size = patch_sampler_args["generic"]["sample_patch_size"]
         self.sample_patch_bias = patch_sampler_args["biased"]["sampling_bias"]
-        self.sample_patch_from_resolution = patch_sampler_args["generic"]["sample_patch_from_resolution"]
+        self.sample_patch_from_resolution = patch_sampler_args[
+            "generic"]["sample_patch_from_resolution"]
         self.center_patch_on_coords_path = patch_sampler_args["centred"]["xlsx_path"]
         self.center_patch_sheet = patch_sampler_args["centred"]["xlsx_sheet"]
         self.center_patch_jitter = patch_sampler_args["centred"]["center_patch_jitter"]
@@ -131,7 +132,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # Lists to save the image paths (or images if caching), target coordinates (scaled to input size), and full resolution coords.
         self.images = []
         self.target_coordinates = []
-        self.full_res_coordinates = []  # full_res will be same as target if input and original image same size
+        # full_res will be same as target if input and original image same size
+        self.full_res_coordinates = []
         self.image_paths = []
         self.uids = []
         self.annotation_available = []
@@ -153,7 +155,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             self.load_im_size = input_size
             self.input_size = input_size
         else:
-            raise ValueError("sample mode %s not recognized." % self.sample_mode)
+            raise ValueError("sample mode %s not recognized." %
+                             self.sample_mode)
 
         self.heatmap_label_size = self.input_size
 
@@ -181,7 +184,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         if self.cv >= 0:
             label_std = os.path.join("fold" + str(self.cv) + ".json")
             self.logger.info(
-                "Loading %s data for CV %s ", self.split, os.path.join(self.annotation_path, label_std)
+                "Loading %s data for CV %s ", self.split, os.path.join(
+                    self.annotation_path, label_std)
             )
             datalist = load_aspire_datalist(
                 os.path.join(self.annotation_path, label_std),
@@ -203,7 +207,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # datalist = datalist[:20]
         if self.dataset_split_size != -1:
             datalist = datalist[: self.dataset_split_size]
-            self.logger.info("datalist truncated to length: %s, giving: %s", self.dataset_split_size, datalist)
+            self.logger.info(
+                "datalist truncated to length: %s, giving: %s", self.dataset_split_size, datalist)
 
         # based on first image extenstion, get the load function.
         self.datatype_load = get_datatype_load(datalist[0]["image"])
@@ -218,10 +223,12 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 # self.logger.info("idx: %s", idx)
                 # Add coordinate labels as sample attribute, if annotations available
                 if (not isinstance(data["coordinates"], list)) or (
-                    "has_annotation" in data.keys() and data["has_annotation"] == False
+                    "has_annotation" in data.keys(
+                    ) and data["has_annotation"] == False
                 ):
                     # Case when data has no annotation, i.e. inference only, just set target coords to 0,0 and annotation_available to False
-                    interested_landmarks = np.array([[0, 0]] * len(self.landmarks))
+                    interested_landmarks = np.array(
+                        [[0, 0]] * len(self.landmarks))
                     self.annotation_available.append(False)
                     self.full_res_coordinates.append(interested_landmarks)
 
@@ -232,8 +239,10 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                         )
                 else:
                     # Case when we have annotations.
-                    interested_landmarks = np.array(data["coordinates"])[self.landmarks, :2]
-                    self.full_res_coordinates.append(np.array(data["coordinates"])[self.landmarks, :2])
+                    interested_landmarks = np.array(data["coordinates"])[
+                        self.landmarks, :2]
+                    self.full_res_coordinates.append(
+                        np.array(data["coordinates"])[self.landmarks, :2])
                     self.annotation_available.append(True)
 
                 if self.cache_data:
@@ -268,11 +277,13 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         if self.cache_data:
             self.logger.info(
-                "Cached all %s data in memory. Length of %s", self.split,  len(self.images)
+                "Cached all %s data in memory. Length of %s", self.split,  len(
+                    self.images)
             )
         else:
             self.logger.info(
-                "Not caching %s image data in memory, will load on the fly. Length of %s", self.split, len(self.images)
+                "Not caching %s image data in memory, will load on the fly. Length of %s", self.split, len(
+                    self.images)
             )
 
         self.check_uids_unique()
@@ -366,7 +377,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
             # Sample a patch centred on given coordinates for this sample.
             elif self.sample_mode == "patch_centred":
-                coords_to_centre_around = resize_coordinates(self.patch_centring_coords[this_uid],  resized_factor[0])
+                coords_to_centre_around = resize_coordinates(
+                    self.patch_centring_coords[this_uid],  resized_factor[0])
                 (
                     untransformed_im,
                     untransformed_coords,
@@ -379,16 +391,22 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 shape=untransformed_im[0].shape,
             )
 
+            # command here for oscar
+
             # list where [0] is image and [1] are coords.
-            transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
+            transformed_sample = self.transform(
+                image=untransformed_im[0], keypoints=kps)
 
             # TODO: try and not renormalize if we're patch sampling, maybe?
             if self.sample_mode != "patch_bias":
-                input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
+                input_image = normalize_cmr(
+                    transformed_sample[0], to_tensor=True)
             else:
-                input_image = torch.from_numpy(np.expand_dims(transformed_sample[0], axis=0)).float()
+                input_image = torch.from_numpy(np.expand_dims(
+                    transformed_sample[0], axis=0)).float()
 
-            input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
+            input_coords = np.array([[coo.x, coo.y]
+                                    for coo in transformed_sample[1]])
 
             # Recalculate indicators incase transform pushed out/in coords.
             landmarks_in_indicator = [

@@ -2,6 +2,7 @@
 #SBATCH --mem=32G
 #SBATCH --mail-user=ogavin1@sheffield.ac.uk
 #SBATCH --mail-type=FAIL
+#SBATCH --gpus-per-node=1
 # Rename the job
 #SBATCH --comment=unetr_model_test``
 
