@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --mem=32G
+#SBATCH --gpus-per-node=1
 #SBATCH --mail-user=ogavin1@sheffield.ac.uk
 #SBATCH --mail-type=FAIL
-#SBATCH --gpus-per-node=1
 # Rename the job
-#SBATCH --comment=unetr_model_test``
+#SBATCH --comment=unetr_model_test
 
 module load Anaconda3/5.3.0
 
