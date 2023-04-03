@@ -1,5 +1,6 @@
 import imgaug.augmenters as iaa
 import imgaug
+from imgaug.augmentables.kps import Keypoint, KeypointsOnImage
 import torchio as tio
 import albumentations as A
 import albumentations.augmentations.functional as F
@@ -263,12 +264,11 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
 
     # torchIO transforms
     elif data_augmentation == "Spatial":
-        transform = tio.Compose([
+        ftransform = tio.Compose([
             tio.RandomAffine(degrees=(-45, 45), isotropic=True, p=0.75),
             tio.RandomFlip(axes=(0, 1), p=0.5),
             tio.Resample(final_im_size),
         ])
-
     # elif data_augmentation == "Intensity":
     #     transform = tio.Compose([
     #         tio.OneOf({

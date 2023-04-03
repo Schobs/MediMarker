@@ -5,12 +5,14 @@ from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_ce
 import numpy as np
 import torch
 from imgaug.augmentables import Keypoint, KeypointsOnImage
+import torchio as tio
 from torch.utils import data
 from torchvision import transforms
 from transforms.transformations import (
     HeatmapsToTensor,
     normalize_cmr,
 )
+from transforms.dataloader_transforms import get_imgaug_transforms
 
 from tqdm import tqdm
 from transforms.dataloader_transforms import get_aug_package_loader
@@ -362,6 +364,31 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         untransformed_coords = coords
         untransformed_im = image
 
+        def torchio_transform_wrapper(image, keypoints, transform):
+            # Convert the input image and keypoints to a torchIO subject
+            input_image = torch.from_numpy(
+                np.expand_dims(image, axis=0)).float()
+            subject = tio.Subject(
+                img=tio.ScalarImage(tensor=input_image.unsqueeze(0)),
+                keypoints=tio.Points(
+                    np.array([[kp.x, kp.y] for kp in keypoints])),
+            )
+
+            # Apply the torchIO transform
+            transformed_subject = transform(subject)
+
+            # Convert the transformed_subject back to image and keypoints
+            output_image = transformed_subject['img']['data'][0].numpy(
+            ).squeeze()
+            output_keypoints = transformed_subject['keypoints']['data'][0].numpy(
+            )
+            output_keypoints_on_image = KeypointsOnImage(
+                [Keypoint(x=coo[0], y=coo[1]) for coo in output_keypoints],
+                shape=output_image.shape,
+            )
+
+            return output_image, output_keypoints_on_image
+
         # Do data augmentation (always minimum of centre crop if patch sampling).
         if self.data_augmentation_strategy is not None:
 
@@ -394,30 +421,37 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             # command here for oscar
 
             # list where [0] is image and [1] are coords.
-            transformed_sample = self.transform(
-                image=untransformed_im[0], keypoints=kps)
+            # Get torchIO transforms
+            torchio_transform = get_imgaug_transforms(
+                self.data_augmentation_strategy, self.input_size)
 
-            # TODO: try and not renormalize if we're patch sampling, maybe?
-            if self.sample_mode != "patch_bias":
-                input_image = normalize_cmr(
-                    transformed_sample[0], to_tensor=True)
-            else:
-                input_image = torch.from_numpy(np.expand_dims(
-                    transformed_sample[0], axis=0)).float()
-
-            input_coords = np.array([[coo.x, coo.y]
-                                    for coo in transformed_sample[1]])
-
-            # Recalculate indicators incase transform pushed out/in coords.
-            landmarks_in_indicator = [
-                1
-                if (
-                    (0 <= xy[0] <= self.input_size[0])
-                    and (0 <= xy[1] <= self.input_size[1])
+            # Apply torchIO transform
+            if torchio_transform is not None:
+                kps = KeypointsOnImage(
+                    [Keypoint(x=coo[0], y=coo[1])
+                     for coo in untransformed_coords],
+                    shape=untransformed_im[0].shape,
                 )
-                else 0
-                for xy in input_coords
-            ]
+
+                # Apply the torchIO transform using the wrapper function
+                transformed_image, transformed_keypoints = torchio_transform_wrapper(
+                    untransformed_im[0], kps, torchio_transform)
+
+                input_image = torch.from_numpy(
+                    np.expand_dims(transformed_image, axis=0)).float()
+                input_coords = np.array([[coo.x, coo.y]
+                                        for coo in transformed_keypoints])
+
+                # Recalculate indicators in case the transform pushed out/in coords
+                landmarks_in_indicator = [
+                    1
+                    if (
+                        (0 <= xy[0] <= self.input_size[0])
+                        and (0 <= xy[1] <= self.input_size[1])
+                    )
+                    else 0
+                    for xy in input_coords
+                ]
 
         # Don't do data augmentation.
         else:
