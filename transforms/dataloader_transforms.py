@@ -1,5 +1,6 @@
 import imgaug.augmenters as iaa
 import imgaug
+import torchio as tio
 import albumentations as A
 import albumentations.augmentations.functional as F
 from albumentations.pytorch import ToTensorV2
@@ -93,7 +94,8 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
                     0.5,
                     iaa.Affine(
                         scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        translate_percent={
+                            "x": (-0.07, 0.07), "y": (-0.07, 0.07)},
                         rotate=(-45, 45),
                         shear=(-16, 16),
                         order=[0, 1],
@@ -110,7 +112,8 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
                     0.5,
                     iaa.Affine(
                         scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        translate_percent={
+                            "x": (-0.07, 0.07), "y": (-0.07, 0.07)},
                         rotate=(-45, 45),
                         shear=(-16, 16),
                         order=[0, 1],
@@ -118,7 +121,8 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
                 ),
                 iaa.flip.Flipud(p=0.5),
                 iaa.Sometimes(
-                    0.5, iaa.ElasticTransformation(alpha=(0, 200), sigma=(9, 13))
+                    0.5, iaa.ElasticTransformation(
+                        alpha=(0, 200), sigma=(9, 13))
                 ),
                 iaa.CenterCropToFixedSize(final_im_size[0], final_im_size[1]),
             ]
@@ -130,7 +134,8 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
                     0.5,
                     iaa.Affine(
                         scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        translate_percent={
+                            "x": (-0.07, 0.07), "y": (-0.07, 0.07)},
                         rotate=(-45, 45),
                         shear=(-16, 16),
                         order=[0, 1],
@@ -138,7 +143,8 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
                 ),
                 iaa.flip.Flipud(p=0.5),
                 iaa.Sometimes(
-                    0.5, iaa.ElasticTransformation(alpha=(0, 50), sigma=(5, 10))
+                    0.5, iaa.ElasticTransformation(
+                        alpha=(0, 50), sigma=(5, 10))
                 ),
                 iaa.CenterCropToFixedSize(final_im_size[0], final_im_size[1]),
             ]
@@ -150,7 +156,8 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
                     0.5,
                     iaa.Affine(
                         scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        translate_percent={
+                            "x": (-0.07, 0.07), "y": (-0.07, 0.07)},
                         rotate=(-45, 45),
                         shear=(-16, 16),
                         order=[0, 1],
@@ -181,7 +188,8 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
                     0.5,
                     iaa.Affine(
                         scale={"x": (0.8, 1.2), "y": (0.8, 1.2)},
-                        translate_percent={"x": (-0.07, 0.07), "y": (-0.07, 0.07)},
+                        translate_percent={
+                            "x": (-0.07, 0.07), "y": (-0.07, 0.07)},
                         rotate=(-45, 45),
                         shear=(-16, 16),
                         order=[0, 1],
@@ -253,10 +261,73 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
             [iaa.CenterCropToFixedSize(final_im_size[0], final_im_size[1])]
         )
 
+    # torchIO transforms
+    elif data_augmentation == "Spatial":
+        transform = tio.Compose([
+            tio.RandomTransform(tio.RandomAffine(
+                degrees=(-45, 45), isotropic=True), p=0.75),
+            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
+            tio.Resample(final_im_size),
+        ])
+    elif data_augmentation == "Intensity":
+        transform = tio.Compose([
+            tio.OneOf({
+                tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
+                tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
+            }),
+            tio.Resample(final_im_size),
+        ])
+    elif data_augmentation == "Noise":
+        transform = tio.Compose([
+            tio.OneOf({
+                tio.RandomNoise(std=(0, 0.1)): 0.5,
+                tio.RandomBlur(std=(0, 1.0)): 0.5,
+            }),
+            tio.Resample(final_im_size),
+        ])
+    elif data_augmentation == "SpatialIntensityNoise":
+        transform = tio.Compose([
+            tio.RandomTransform(tio.RandomAffine(
+                degrees=(-45, 45), isotropic=True), p=0.75),
+            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
+            tio.OneOf({
+                tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
+                tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
+            }),
+            tio.OneOf({
+                tio.RandomNoise(std=(0, 0.1)): 0.5,
+                tio.RandomBlur(std=(0, 1.0)): 0.5,
+            }),
+            tio.Resample(final_im_size),
+        ])
+    elif data_augmentation == "SpatialIntensity":
+        transform = tio.Compose([
+            tio.RandomTransform(tio.RandomAffine(
+                degrees=(-45, 45), isotropic=True), p=0.75),
+            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
+            tio.OneOf({
+                tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
+                tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
+            }),
+            tio.Resample(final_im_size),
+        ])
+    elif data_augmentation == "SpatialNoise":
+        transform = tio.Compose([
+            tio.RandomTransform(tio.RandomAffine(
+                degrees=(-45, 45), isotropic=True), p=0.75),
+            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
+            tio.OneOf({
+                tio.RandomNoise(std=(0, 0.1)): 0.5,
+                tio.RandomBlur(std=(0, 1.0)): 0.5,
+            }),
+            tio.Resample(final_im_size),
+        ])
     else:
-        raise ValueError("transformations mode for dataaugmentation not recognised.")
+        raise ValueError(
+            "transformations mode for dataaugmentation not recognised.")
 
     return transform
+
 
 def get_albumentation_transforms(data_augmentation):
     """Returns a data augmentation sequence from the albumentation package
