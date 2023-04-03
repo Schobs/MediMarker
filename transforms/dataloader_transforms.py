@@ -264,64 +264,64 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
     # torchIO transforms
     elif data_augmentation == "Spatial":
         transform = tio.Compose([
-            tio.RandomTransform(tio.RandomAffine(
-                degrees=(-45, 45), isotropic=True), p=0.75),
-            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
+            tio.RandomAffine(degrees=(-45, 45), isotropic=True, p=0.75),
+            tio.RandomFlip(axes=(0, 1), p=0.5),
             tio.Resample(final_im_size),
         ])
-    elif data_augmentation == "Intensity":
-        transform = tio.Compose([
-            tio.OneOf({
-                tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
-                tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
-            }),
-            tio.Resample(final_im_size),
-        ])
-    elif data_augmentation == "Noise":
-        transform = tio.Compose([
-            tio.OneOf({
-                tio.RandomNoise(std=(0, 0.1)): 0.5,
-                tio.RandomBlur(std=(0, 1.0)): 0.5,
-            }),
-            tio.Resample(final_im_size),
-        ])
-    elif data_augmentation == "SpatialIntensityNoise":
-        transform = tio.Compose([
-            tio.RandomTransform(tio.RandomAffine(
-                degrees=(-45, 45), isotropic=True), p=0.75),
-            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
-            tio.OneOf({
-                tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
-                tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
-            }),
-            tio.OneOf({
-                tio.RandomNoise(std=(0, 0.1)): 0.5,
-                tio.RandomBlur(std=(0, 1.0)): 0.5,
-            }),
-            tio.Resample(final_im_size),
-        ])
-    elif data_augmentation == "SpatialIntensity":
-        transform = tio.Compose([
-            tio.RandomTransform(tio.RandomAffine(
-                degrees=(-45, 45), isotropic=True), p=0.75),
-            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
-            tio.OneOf({
-                tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
-                tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
-            }),
-            tio.Resample(final_im_size),
-        ])
-    elif data_augmentation == "SpatialNoise":
-        transform = tio.Compose([
-            tio.RandomTransform(tio.RandomAffine(
-                degrees=(-45, 45), isotropic=True), p=0.75),
-            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
-            tio.OneOf({
-                tio.RandomNoise(std=(0, 0.1)): 0.5,
-                tio.RandomBlur(std=(0, 1.0)): 0.5,
-            }),
-            tio.Resample(final_im_size),
-        ])
+
+    # elif data_augmentation == "Intensity":
+    #     transform = tio.Compose([
+    #         tio.OneOf({
+    #             tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
+    #             tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
+    #         }),
+    #         tio.Resample(final_im_size),
+    #     ])
+    # elif data_augmentation == "Noise":
+    #     transform = tio.Compose([
+    #         tio.OneOf({
+    #             tio.RandomNoise(std=(0, 0.1)): 0.5,
+    #             tio.RandomBlur(std=(0, 1.0)): 0.5,
+    #         }),
+    #         tio.Resample(final_im_size),
+    #     ])
+    # elif data_augmentation == "SpatialIntensityNoise":
+    #     transform = tio.Compose([
+    #         tio.RandomTransform(tio.RandomAffine(
+    #             degrees=(-45, 45), isotropic=True), p=0.75),
+    #         tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
+    #         tio.OneOf({
+    #             tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
+    #             tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
+    #         }),
+    #         tio.OneOf({
+    #             tio.RandomNoise(std=(0, 0.1)): 0.5,
+    #             tio.RandomBlur(std=(0, 1.0)): 0.5,
+    #         }),
+    #         tio.Resample(final_im_size),
+    #     ])
+    # elif data_augmentation == "SpatialIntensity":
+    #     transform = tio.Compose([
+    #         tio.RandomTransform(tio.RandomAffine(
+    #             degrees=(-45, 45), isotropic=True), p=0.75),
+    #         tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
+    #         tio.OneOf({
+    #             tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
+    #             tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
+    #         }),
+    #         tio.Resample(final_im_size),
+    #     ])
+    # elif data_augmentation == "SpatialNoise":
+    #     transform = tio.Compose([
+    #         tio.RandomTransform(tio.RandomAffine(
+    #             degrees=(-45, 45), isotropic=True), p=0.75),
+    #         tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
+    #         tio.OneOf({
+    #             tio.RandomNoise(std=(0, 0.1)): 0.5,
+    #             tio.RandomBlur(std=(0, 1.0)): 0.5,
+    #         }),
+    #         tio.Resample(final_im_size),
+    #     ])
     else:
         raise ValueError(
             "transformations mode for dataaugmentation not recognised.")

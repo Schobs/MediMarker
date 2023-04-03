@@ -39,7 +39,7 @@ dependencies:
   - nettle=3.7.3=hbbd107a_1
   - numpy=1.21.2=py39h20f2e39_0
   - numpy-base=1.21.2=py39h79a1101_0
-  - openh264=2.1.1=h4ff587b_0
+  - openh264=2.1.1=h4ff587b_0`
   - openssl=1.1.1m=h7f8727e_0
   - pillow=9.0.1=py39h22f2fdc_0
   - pip=21.2.4=py39h06a4308_0
