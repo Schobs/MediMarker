@@ -2,12 +2,49 @@ import random
 import numpy as np
 import torch
 import math
+from scipy import ndimage
 from imgaug import augmenters as iaa
+import matplotlib.pyplot as plt
 
-
-def invert_coordinates(orginal_coords, log_dict):
+def inverse_heatmaps(logged_vars, output, data_dict):
     """
-    A function to invert the TTA processes laid out in a previous function. Note that only teh rotate function has an effect of transforming the coords therefore it is the
+    Wrapper function to invert a batch of heatmaps, depending on its transformation.
+    """
+    batch_size = len(data_dict['image'])
+    for img_count in range(len(output)):
+        try:
+            transformation = logged_vars[img_count]['transform']
+        except:
+            transformation = logged_vars[img_count+batch_size]['transform']
+        if "normal" in transformation:
+            continue
+        for heatmap_count in range(len(output[img_count])):
+            heatmap = output[img_count][heatmap_count]
+            org_heatmap = invert_heatmap(heatmap, transformation)
+            output[img_count][heatmap_count] = org_heatmap
+    return output
+
+def invert_heatmap(heatmap, transformation):
+    """
+    Function to invert a heatmap from an applied transformation.
+    """
+    transform = list(transformation.keys())[0]
+    if transform is "inverse_rotate":
+        mag = transformation[transform] * -1
+        temp = heatmap.cpu().numpy()
+        new_heatmap = torch.from_numpy(ndimage.rotate(temp, mag, reshape=False))
+        return new_heatmap
+    elif transform is "inverse_flip":
+        new_heatmap = torch.flipud(heatmap)
+        return new_heatmap
+    elif transform is "inverse_fliplr":
+        new_heatmap = torch.fliplr(heatmap)
+        return new_heatmap
+    return heatmap
+
+def invert_coordinates(orginal_coords, log_dict, img_size=[512, 512]):
+    """
+    A function to invert the TTA processes laid out in a previous function. Note that only the rotate function has an effect of transforming the coords therefore it is the
     only function that needs inversing.
     Parameters
     ----------
@@ -23,23 +60,21 @@ def invert_coordinates(orginal_coords, log_dict):
         The now altered evaluation logs with the updated, and inversed, coordinates from the TTA processes.
     """
     inverted_predicted_coords = []
-    for funct, coords_all in zip(log_dict['individual_results'][-orginal_coords.shape[0]:], orginal_coords):
+    for funct, coords_all, img_shape in zip(log_dict['individual_results'][-orginal_coords.shape[0]:], orginal_coords, img_size):
+        if type(img_shape) == int:
+            img_shape = [512, 512]
         key = list(funct['transform'].keys())[0]
         if "normal" in key:
             coords = coords_all
         elif "inverse_rotate" in key:
             coords = torch.stack([extract_original_coords_from_rotation(
-                funct['transform']["inverse_rotate"], coords) for coords in coords_all])
+                funct['transform']["inverse_rotate"], coords, img_shape) for coords in coords_all])
         elif "inverse_flip" in key:
-            coords = torch.stack([extract_original_coords_from_flipud(coords)
-                                  for coords in coords_all])
-        elif "inverse_scalex" in key:
-            coords = torch.stack([extract_original_coords_from_scale_x(funct['transform']["inverse_scalex"], coords)
+            coords = torch.stack([extract_original_coords_from_flipud(coords, img_shape)
                                   for coords in coords_all])
         else:
-            coords = torch.stack([extract_original_coords_from_scale_y(funct['transform']["inverse_scaley"], coords)
+            coords = torch.stack([extract_original_coords_from_fliplr(coords, img_shape)
                                   for coords in coords_all])
-
         inverted_predicted_coords.append(coords)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     inverted_predicted_coords = torch.stack(inverted_predicted_coords).to(device)
@@ -48,9 +83,7 @@ def invert_coordinates(orginal_coords, log_dict):
 def extract_original_coords_from_rotation(rotation_mag, rotated_coords, training_resolution=[512, 512]):
     """
     Extracts the original coords from a rotated image - does assume the layout of eval_log to contain the coords in the eval_log["individual_results"]['predicted_coords'] section
-    to be in a tuple i.e. [(x1, y1)].
-    References:
-    - https://study.com/skill/learn/how-to-find-the-coordinates-of-a-polygon-after-a-rotation-explanation.html
+    to be in a tuple i.e. (x1, y1).
     Parameters:
     -----------
     `rotation_mag` : Float
@@ -63,45 +96,51 @@ def extract_original_coords_from_rotation(rotation_mag, rotated_coords, training
         Again assumes the layout of the evaluation log as mentioned above. A tuple containing the converted coordinates now relating to the
         original image.
     """
-    deg = math.radians(-1 * rotation_mag)
+    rotation_mag = rotation_mag * -1
+    if type(rotated_coords) == torch.Tensor:
+        rotated_coords = rotated_coords.cpu().numpy()
     x = rotated_coords[0]
     y = rotated_coords[1]
-    xo = training_resolution[0] / 2
-    yo = training_resolution[1] / 2
-    x_final = math.cos(deg) * (x - xo) - math.sin(deg) * (y - yo) + xo
-    y_final = math.sin(deg) * (x - xo) + math.cos(deg) * (y - yo) + yo
-    conv_coords = torch.tensor([x_final, y_final])
+    try:
+        x_scale = training_resolution[0][0]
+        y_scale = training_resolution[1][0]
+    except:
+        x_scale = training_resolution[0]
+        y_scale = training_resolution[1]
+    centre_x = x_scale / 2
+    centre_y = y_scale / 2
+    theta_rad = np.deg2rad(rotation_mag)
+    rot_mat = np.array([[np.cos(theta_rad), -np.sin(theta_rad)],
+                        [np.sin(theta_rad), np.cos(theta_rad)]])
+    p = np.array([x - centre_x, y - centre_y])
+    p = rot_mat.dot(p)
+    p = p + np.array([centre_x, centre_y])
+    x_new = p[0]
+    y_new = p[1]
+    conv_coords = torch.tensor([x_new, y_new])
     return conv_coords
-
-
-def extract_original_coords_from_scale_x(scale_mag, scaled_coords, training_resolution=[512, 512]):
-    """"""
-    original_x = scaled_coords[0] / scale_mag
-    original_y = scaled_coords[1]
-    conv_coords = torch.tensor([original_x, original_y])
-    return conv_coords
-
-
-def extract_original_coords_from_scale_y(scale_mag, scaled_coords, training_resolution=[512, 512]):
-    """"""
-    original_x = scaled_coords[0]
-    original_y = scaled_coords[1] / scale_mag
-    conv_coords = torch.tensor([original_x, original_y])
-    return conv_coords
-
 
 def extract_original_coords_from_flipud(flip_coords, training_resolution=[512, 512]):
     """"""
+    if type(flip_coords) == torch.Tensor:
+        flip_coords = flip_coords.cpu().numpy()
     original_x = flip_coords[0]
     original_y = training_resolution[1] - flip_coords[1]
     conv_coords = torch.tensor([original_x, original_y])
-    #import pdb; pdb.set_trace()
     return conv_coords
 
+def extract_original_coords_from_fliplr(flip_coords, training_resolution=[512, 512]):
+    """"""
+    if type(flip_coords) == torch.Tensor:
+        flip_coords = flip_coords.cpu().numpy()
+    original_x = training_resolution[0] - flip_coords[0]
+    original_y = flip_coords[1]
+    conv_coords = torch.tensor([original_x, original_y])
+    return conv_coords
 
-def apply_tta_augmentation(data, seed, idx):
+def apply_tta_augmentation(data, seed):
     """
-    A function that applies a random TTA trnasformation on an inputted image. Takes a random seed to determine the specific transformation and
+    A function that applies a random TTA transformation on an inputted image. Takes a random seed to determine the specific transformation and
     the magnitude of such transformation using a basic mapping function with the boundaries provided by the imgaug documentation for each
     specific transformation (hence the difference in allowed values). Also determines randomly whether the allowed transformations should be
     multiplied by -1 to allow for wider range of possible transforms.
@@ -118,34 +157,31 @@ def apply_tta_augmentation(data, seed, idx):
     `inverse_transform` : Dict
         With the key being the name of the augmentation transform, and the value being the magnitude with which the transform was applied.
     """
-    functs_list = ["rotate", "scalex", "scaley", "flipud"]
-    # function_index = 3
-    function_index = math.floor(seed / 100000 * 4)
+    functs_list = ["flipud", "fliplr"] #rotate
+    function_index = math.floor(seed / 100000 * 2)
     function_name = functs_list[function_index]
-    negative_sign = True if seed / 2 == 0 else False
-    rotate_magnitude = math.floor(seed / 10000 * 360) if function_name == "rotate" else 0
-    scale_magnitude = round(random.uniform(0.8, 1.2), 2) if function_name == "scalex" or "scaley" else 0
-    rotate_magnitude = rotate_magnitude * -1 if negative_sign and rotate_magnitude != 0 else rotate_magnitude
-    functions = {
-        "rotate": iaa.Sequential([iaa.Rotate(rotate_magnitude)]),
-        "scalex": iaa.Sequential([iaa.ScaleX(scale_magnitude)]),
-        "scaley": iaa.Sequential([iaa.ScaleY(scale_magnitude)]),
-        "flipud": iaa.Sequential([iaa.Flipud(1)])
-    }
-    inverse_functions = {
-        "inverse_rotate": rotate_magnitude,
-        "inverse_scalex": scale_magnitude,
-        "inverse_scaley": scale_magnitude,
-        "inverse_flip": 1
-    }
-    transform = functions[function_name]
-
-    inverse_transform = {list(inverse_functions.keys())[function_index]:
-                         list(inverse_functions.values())[function_index]}
-    img = data['image'][idx].cpu().detach().numpy()
+    img = data.cpu().detach().numpy()
     img_dims = img.shape
     img = np.reshape(img, (img_dims[1], img_dims[2], img_dims[0]))
-    augemented_img = transform.augment_image(img)
+    if function_name == "rotate":
+        negative_sign = True if math.floor(seed / 2) == 0 else False
+        rotate_magnitude = math.floor(seed / 100000 * 45) if function_name == "rotate" else 0
+        rotate_magnitude = rotate_magnitude * -1 if negative_sign and rotate_magnitude != 0 else rotate_magnitude
+        inverse_transform = {"inverse_rotate": rotate_magnitude}
+        augemented_img = iaa.Rotate(rotate_magnitude).augment_image(img)
+    elif function_name == "flipud":
+        augemented_img = iaa.Flipud(1).augment_image(img)
+        inverse_transform = {
+            "inverse_flip": 1
+        }
+    elif function_name == "fliplr":
+        augemented_img = iaa.Fliplr(1).augment_image(img)
+        inverse_transform = {
+            "inverse_fliplr": 1
+        }
+    else:
+        return data, {"normal": None}
+    print(inverse_transform)
     augemented_img = np.reshape(augemented_img, (img_dims[0], img_dims[1], img_dims[2]))
-    data['image'][idx] = torch.from_numpy(augemented_img.copy())
+    data = torch.from_numpy(augemented_img.copy())
     return data, inverse_transform
