@@ -558,7 +558,7 @@ class NetworkTrainer(ABC):
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         self.test_dataloader = DataLoader(
             test_dataset,
-            batch_size=int(np.floor(self.data_loader_batch_size/(10))),
+            batch_size=self.data_loader_batch_size,
             shuffle=False,
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
@@ -584,13 +584,14 @@ class NetworkTrainer(ABC):
         if inference_full_image:
             while generator != None:
                 try:
+                    num_vers = 5
                     evaluation_logs = self.dict_logger.ensemble_inference_log_template()
                     direct_data_dict = next(generator)
                     augmented_dict = direct_data_dict.copy()
-                    augmented_dict['image'] = [x for x in augmented_dict['image'] for i in range(10)]
-                    for i in range(10):
+                    augmented_dict['image'] = [x for x in augmented_dict['image'] for i in range(num_vers)]
+                    for i in range(num_vers):
                         batch = augmented_dict.copy()
-                        batch['image'] = torch.stack(batch['image'][i::10]).to(self.device)
+                        batch['image'] = torch.stack(batch['image'][i::num_vers]).to(self.device)
                         l, _ = self.run_iteration(
                             generator,
                             self.test_dataloader,
@@ -599,8 +600,7 @@ class NetworkTrainer(ABC):
                             log_coords=True,
                             logged_vars=evaluation_logs,
                             debug=debug,
-                            direct_data_dict=direct_data_dict,
-                            restart_dataloader=False
+                            direct_data_dict=batch
                         )
                         (
                             ensembles_analyzed,
@@ -617,11 +617,11 @@ class NetworkTrainer(ABC):
                 except StopIteration:
                     generator = None
                     print("-", end="")
-                print("No more in generator")
-                del generator
-            else:
-                # this is where we patchify and stitch the input image
-                raise NotImplementedError()
+            print("No more in generator")
+            del generator
+        else:
+            # this is where we patchify and stitch the input image
+            raise NotImplementedError()
         ind_results = {}
         all_summary_results = {}
         for u_key in uncertainty_estimation_keys:
@@ -677,7 +677,6 @@ class NetworkTrainer(ABC):
             for uncert_key in self.ensemble_handler.uncertainty_keys
         }
         generator = iter(self.test_dataloader)
-        img_num = 0
         if inference_full_image:
             while generator != None:
                 try:
@@ -722,7 +721,6 @@ class NetworkTrainer(ABC):
                     for ens_key, coord_extact_methods in ind_landmark_errors.items():
                         for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
                             all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
-                    img_num +=1
                 except StopIteration:
                     generator = None
                     print("-", end="")

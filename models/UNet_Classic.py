@@ -17,7 +17,7 @@ class ConvNormNonlin(nn.Module):
     def __init__(self, input_channels, output_channels,
                  conv_op=nn.Conv2d, conv_kwargs=None,
                  norm_op=nn.InstanceNorm2d, norm_op_kwargs=None,
-                 nonlin=nn.LeakyReLU, nonlin_kwargs=None, dropout=False):
+                 nonlin=nn.LeakyReLU, nonlin_kwargs=None, dropout=0.05):
         super(ConvNormNonlin, self).__init__()
         if nonlin_kwargs is None:
             nonlin_kwargs = {'negative_slope': 1e-2, 'inplace': True}
@@ -34,7 +34,7 @@ class ConvNormNonlin(nn.Module):
         self.conv_kwargs = conv_kwargs
         self.conv_op = conv_op
         self.norm_op = norm_op
-        self.dropout = self.dropout = nn.Dropout(p=0.1) if dropout is True else False
+        self.dropout = nn.Dropout(p=dropout)
 
         # Convolutional operation
         self.convolution = self.conv_op(input_channels, output_channels, **self.conv_kwargs)
@@ -49,7 +49,7 @@ class ConvNormNonlin(nn.Module):
 
     def forward(self, x):
         x = self.convolution(x)
-        if self.dropout is not False:
+        if self.dropout is not None:
             x = self.dropout(x)
         x = self.activation(self.normalization(x))
         return x
@@ -65,11 +65,11 @@ class UNet(nn.Module):
         n_class (int, optional): the number of classes. Defaults to 8.
     """
 
-    def __init__(self, dropout, input_channels, base_num_features, num_out_heatmaps,
+    def __init__(self, input_channels, base_num_features, num_out_heatmaps,
                  num_resolution_levels, conv_operation, normalization_operation,
                  normalization_operation_config, activation_function, activation_func_config,
                  weight_initialization, strided_convolution_kernels, convolution_kernels, convolution_config,
-                 upsample_operation, deep_supervision, max_features=512, ):
+                 upsample_operation, deep_supervision, max_features=512, dropout=0.05):
 
         super(UNet, self).__init__()
 
@@ -89,7 +89,7 @@ class UNet(nn.Module):
         self.upsample_operation = upsample_operation
         self.max_features = max_features
         self.deep_supervision = deep_supervision
-        self.dropout = nn.Dropout(p=0.1) if dropout is True else False
+        self.dropout = nn.Dropout(p=dropout)
 
         # Define the network
         self.conv_blocks_encoder = []
