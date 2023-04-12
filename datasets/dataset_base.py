@@ -366,48 +366,21 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         # Do data augmentation (always minimum of centre crop if patch sampling).
         if self.data_augmentation_strategy is not None:
 
-            # By default, the origin is 0,0 unless we sample from the middle of the image somewhere.
-            # If sampling patches we first sample the patch with a little wiggle room, & normalize the lms. The transform center-crops it back.
-            if self.sample_mode == "patch_bias":
-                (
-                    untransformed_im,
-                    untransformed_coords,
-                    landmarks_in_indicator,
-                    x_y_corner,
-                ) = sample_patch_with_bias(untransformed_im, untransformed_coords, self.sample_patch_bias, self.load_im_size,  self.sample_patch_size, self.logger, self.debug)
+            kps = tio.Points(untransformed_coords)
 
-            # Sample a patch centred on given coordinates for this sample.
-            elif self.sample_mode == "patch_centred":
-                coords_to_centre_around = resize_coordinates(
-                    self.patch_centring_coords[this_uid],  resized_factor[0])
-                (
-                    untransformed_im,
-                    untransformed_coords,
-                    landmarks_in_indicator,
-                    x_y_corner,
-                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords)
-
-            kps = KeypointsOnImage(
-                [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
-                shape=untransformed_im[0].shape,
+            # Create a TorchIO Subject with the input image and keypoints
+            subject = tio.Subject(
+                input_image=tio.ScalarImage(
+                    tensor=torch.from_numpy(image).float()),
+                landmarks=kps
             )
 
-            # command here for oscar
+            # Apply data augmentation using TorchIO
+            augmented_subject = self.transform(subject)
 
-            # list where [0] is image and [1] are coords.
-            transformed_sample = self.transform(
-                image=untransformed_im[0], keypoints=kps)
-
-            # TODO: try and not renormalize if we're patch sampling, maybe?
-            if self.sample_mode != "patch_bias":
-                input_image = normalize_cmr(
-                    transformed_sample[0], to_tensor=True)
-            else:
-                input_image = torch.from_numpy(np.expand_dims(
-                    transformed_sample[0], axis=0)).float()
-
-            input_coords = np.array([[coo.x, coo.y]
-                                    for coo in transformed_sample[1]])
+            # Extract the augmented input image and landmark keypoints
+            augmented_input_image = augmented_subject['input_image'].data
+            augmented_landmarks = augmented_subject['landmarks'].numpy()
 
             # Recalculate indicators incase transform pushed out/in coords.
             landmarks_in_indicator = [
@@ -417,12 +390,18 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     and (0 <= xy[1] <= self.input_size[1])
                 )
                 else 0
-                for xy in input_coords
+                for xy in augmented_landmarks
             ]
+
+            if self.sample_mode != "patch_bias":
+                input_image = normalize_cmr(augmented_input_image)
+            else:
+                input_image = augmented_input_image.unsqueeze(0)
+
+            input_coords = augmented_landmarks
 
         # Don't do data augmentation.
         else:
-
             input_coords = coords
             input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
