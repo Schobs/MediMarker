@@ -259,7 +259,7 @@ def argument_checking(yaml_args):
     try:
         if (
             yaml_args.SAMPLER.DATA_AUG != None
-            and yaml_args.SAMPLER.DATA_AUG_PACKAGE != "imgaug"
+            and (yaml_args.SAMPLER.DATA_AUG_PACKAGE != "imgaug" or yaml_args.SAMPLER.DATA_AUG_PACKAGE != "torchio")
         ):
             raise ValueError(
                 "Only the imgaug data augmentation package (SAMPLER.DATA_AUG_PACKAGE) is supported, you chose %s. Try 'imgaug' or set SAMPLER.DATA_AUG to None for no data augmentation."
