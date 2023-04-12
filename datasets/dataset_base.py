@@ -426,9 +426,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
 
-        # Load the input image
-        input_image = torch.from_numpy(image[0]).float().unsqueeze(0)
-
         # Generate heatmaps before applying data augmentation
         if self.generate_hms_here:
             label = self.LabelGenerator.generate_labels(
@@ -443,29 +440,28 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         else:
             label = []
 
-        # Stack the heatmaps along a new dimension to create a single tensor
-        heatmap_tensors = [torch.tensor(hm["heatmap"]) for hm in label]
-        heatmap_stack = torch.stack(heatmap_tensors, dim=0)
-
         # Create a TorchIO Subject with the input image and landmark heatmaps tensor
+        heatmap_stack = torch.stack(
+            [torch.from_numpy(hm["heatmap"]) for hm in label])
         subject = tio.Subject(
             input_image=tio.ScalarImage(tensor=input_image),
             landmark_heatmaps=tio.Image(
                 tensor=heatmap_stack, type=tio.INTENSITY)
         )
 
-        # Apply data augmentation using TorchIO
-        augmented_subject = self.transform(subject)
+        # Apply the TorchIO transform to the subject
+        if self.transform is not None:
+            transformed_subject = self.transform(subject)
 
-        # Extract the augmented input image and landmark heatmaps tensor
-        augmented_input_image = augmented_subject['input_image'].data
-        augmented_heatmap_stack = augmented_subject['landmark_heatmaps'].data
+            # Get the transformed input image and landmark heatmaps back
+            input_image = transformed_subject['input_image'].data
+            heatmap_stack = transformed_subject['landmark_heatmaps'].data
 
         # Unstack the augmented landmark heatmaps tensor and convert them back to the original format as a list of dictionaries
         augmented_label = []
         for i, hm in enumerate(label):
             augmented_hm = {
-                "heatmap": augmented_heatmap_stack[i].numpy(),
+                "heatmap": heatmap_stack[i].numpy(),
                 "landmark_num": hm["landmark_num"],
                 "is_visible": hm["is_visible"],
             }
@@ -473,9 +469,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         # Update the sample dictionary with the augmented data
         sample = {
-            "image": augmented_input_image,
+            "image": input_image,
             "label": augmented_label,
-            "target_coords": coords,
+            "target_coords": input_coords,
             "landmarks_in_indicator": landmarks_in_indicator,
             "full_res_coords": full_res_coods,
             "image_path": im_path,
