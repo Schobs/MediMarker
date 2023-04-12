@@ -4,15 +4,14 @@ from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_ce
 
 import numpy as np
 import torch
-from imgaug.augmentables import Keypoint, KeypointsOnImage
 import torchio as tio
+from imgaug.augmentables import Keypoint, KeypointsOnImage
 from torch.utils import data
 from torchvision import transforms
 from transforms.transformations import (
     HeatmapsToTensor,
     normalize_cmr,
 )
-from transforms.dataloader_transforms import get_imgaug_transforms
 
 from tqdm import tqdm
 from transforms.dataloader_transforms import get_aug_package_loader
@@ -364,31 +363,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         untransformed_coords = coords
         untransformed_im = image
 
-        def torchio_transform_wrapper(image, keypoints, transform):
-            # Convert the input image and keypoints to a torchIO subject
-            input_image = torch.from_numpy(
-                np.expand_dims(image, axis=0)).float()
-            subject = tio.Subject(
-                img=tio.ScalarImage(tensor=input_image.unsqueeze(0)),
-                keypoints=tio.Points(
-                    np.array([[kp.x, kp.y] for kp in keypoints])),
-            )
-
-            # Apply the torchIO transform
-            transformed_subject = transform(subject)
-
-            # Convert the transformed_subject back to image and keypoints
-            output_image = transformed_subject['img']['data'][0].numpy(
-            ).squeeze()
-            output_keypoints = transformed_subject['keypoints']['data'][0].numpy(
-            )
-            output_keypoints_on_image = KeypointsOnImage(
-                [Keypoint(x=coo[0], y=coo[1]) for coo in output_keypoints],
-                shape=output_image.shape,
-            )
-
-            return output_image, output_keypoints_on_image
-
         # Do data augmentation (always minimum of centre crop if patch sampling).
         if self.data_augmentation_strategy is not None:
 
@@ -421,37 +395,30 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             # command here for oscar
 
             # list where [0] is image and [1] are coords.
-            # Get torchIO transforms
-            torchio_transform = get_imgaug_transforms(
-                self.data_augmentation_strategy, self.input_size)
+            transformed_sample = self.transform(
+                image=untransformed_im[0], keypoints=kps)
 
-            # Apply torchIO transform
-            if torchio_transform is not None:
-                kps = KeypointsOnImage(
-                    [Keypoint(x=coo[0], y=coo[1])
-                     for coo in untransformed_coords],
-                    shape=untransformed_im[0].shape,
+            # TODO: try and not renormalize if we're patch sampling, maybe?
+            if self.sample_mode != "patch_bias":
+                input_image = normalize_cmr(
+                    transformed_sample[0], to_tensor=True)
+            else:
+                input_image = torch.from_numpy(np.expand_dims(
+                    transformed_sample[0], axis=0)).float()
+
+            input_coords = np.array([[coo.x, coo.y]
+                                    for coo in transformed_sample[1]])
+
+            # Recalculate indicators incase transform pushed out/in coords.
+            landmarks_in_indicator = [
+                1
+                if (
+                    (0 <= xy[0] <= self.input_size[0])
+                    and (0 <= xy[1] <= self.input_size[1])
                 )
-
-                # Apply the torchIO transform using the wrapper function
-                transformed_image, transformed_keypoints = torchio_transform_wrapper(
-                    untransformed_im[0], kps, torchio_transform)
-
-                input_image = torch.from_numpy(
-                    np.expand_dims(transformed_image, axis=0)).float()
-                input_coords = np.array([[coo.x, coo.y]
-                                        for coo in transformed_keypoints])
-
-                # Recalculate indicators in case the transform pushed out/in coords
-                landmarks_in_indicator = [
-                    1
-                    if (
-                        (0 <= xy[0] <= self.input_size[0])
-                        and (0 <= xy[1] <= self.input_size[1])
-                    )
-                    else 0
-                    for xy in input_coords
-                ]
+                else 0
+                for xy in input_coords
+            ]
 
         # Don't do data augmentation.
         else:
@@ -460,8 +427,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
 
+        # Generate heatmaps before applying data augmentation
         if self.generate_hms_here:
-
             label = self.LabelGenerator.generate_labels(
                 input_coords,
                 x_y_corner,
@@ -474,17 +441,38 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         else:
             label = []
 
-            # If coordinates are cutoff by augmentation throw a run time error.
-            # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
-            #     print("input coords: ", input_coords)
-            #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
-            # run_time_debug = True
-        # else:
-        #     print("ok")
+        # Stack the heatmaps along a new dimension to create a single tensor
+        heatmap_tensors = [torch.tensor(hm["heatmap"]) for hm in label]
+        heatmap_stack = torch.stack(heatmap_tensors, dim=0)
 
+        # Create a TorchIO Subject with the input image and landmark heatmaps tensor
+        subject = tio.Subject(
+            input_image=tio.ScalarImage(tensor=input_image),
+            landmark_heatmaps=tio.Image(
+                tensor=heatmap_stack, type=tio.INTENSITY)
+        )
+
+        # Apply data augmentation using TorchIO
+        augmented_subject = self.transform(subject)
+
+        # Extract the augmented input image and landmark heatmaps tensor
+        augmented_input_image = augmented_subject['input_image'].data
+        augmented_heatmap_stack = augmented_subject['landmark_heatmaps'].data
+
+        # Unstack the augmented landmark heatmaps tensor and convert them back to the original format as a list of dictionaries
+        augmented_label = []
+        for i, hm in enumerate(label):
+            augmented_hm = {
+                "heatmap": augmented_heatmap_stack[i].numpy(),
+                "landmark_num": hm["landmark_num"],
+                "is_visible": hm["is_visible"],
+            }
+            augmented_label.append(augmented_hm)
+
+        # Update the sample dictionary with the augmented data
         sample = {
-            "image": input_image,
-            "label": label,
+            "image": augmented_input_image,
+            "label": augmented_label,
             "target_coords": input_coords,
             "landmarks_in_indicator": landmarks_in_indicator,
             "full_res_coords": full_res_coods,
