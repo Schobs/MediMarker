@@ -256,17 +256,17 @@ def argument_checking(yaml_args):
     except ValueError as e:
         all_errors.append(e)
 
-    try:
-        if (
-            yaml_args.SAMPLER.DATA_AUG != None
-            and (yaml_args.SAMPLER.DATA_AUG_PACKAGE != "imgaug" or yaml_args.SAMPLER.DATA_AUG_PACKAGE != "torchio")
-        ):
-            raise ValueError(
-                "Only the imgaug data augmentation package (SAMPLER.DATA_AUG_PACKAGE) is supported, you chose %s. Try 'imgaug' or set SAMPLER.DATA_AUG to None for no data augmentation."
-                % yaml_args.SAMPLER.DATA_AUG_PACKAGE
-            )
-    except ValueError as e:
-        all_errors.append(e)
+    # try:
+    #     if (
+    #         yaml_args.SAMPLER.DATA_AUG != None
+    #         and (yaml_args.SAMPLER.DATA_AUG_PACKAGE != "imgaug" or yaml_args.SAMPLER.DATA_AUG_PACKAGE != "torchio")
+    #     ):
+    #         raise ValueError(
+    #             "Only the imgaug data augmentation package (SAMPLER.DATA_AUG_PACKAGE) is supported, you chose %s. Try 'imgaug' or set SAMPLER.DATA_AUG to None for no data augmentation."
+    #             % yaml_args.SAMPLER.DATA_AUG_PACKAGE
+    #         )
+    # except ValueError as e:
+    #     all_errors.append(e)
 
     # Warnings
     if (
