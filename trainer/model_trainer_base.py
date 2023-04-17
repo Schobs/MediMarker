@@ -199,7 +199,7 @@ class NetworkTrainer(ABC):
             len(self.generic_dataset_args["landmarks"]),
             self.regress_sigma,
             self.loss.loss_seperated_keys,
-            # self.dataset_class.additional_sample_attribute_keys,
+            self.dataset_class.additional_sample_attribute_keys,
         )
 
         self.was_initialized = True
