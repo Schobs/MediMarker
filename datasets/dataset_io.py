@@ -395,8 +395,8 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             # Create an indicator map for landmarks
             indicator_map = np.zeros(
                 (len(untransformed_coords), 1, self.input_size[0], self.input_size[1]))
-            for idx, landmark in enumerate(untransformed_coords):
-                indicator_map[idx, 0, int(landmark[0]), int(landmark[1])] = 1
+            indicator_map[np.arange(len(untransformed_coords)), 0, untransformed_coords[:, 0].astype(
+                int), untransformed_coords[:, 1].astype(int)] = 1
 
             # Create a TorchIO subject with the image and landmarks
             subject = tio.Subject(
