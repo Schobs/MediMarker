@@ -46,6 +46,13 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
         #TO DO
     """
 
+    additional_sample_attribute_keys = []
+
+    def add_additional_sample_attributes(self, data):
+
+        # Extended dataset class can add more attributes to each sample here
+        return data
+
     def __init__(
         self,
         sigmas,
