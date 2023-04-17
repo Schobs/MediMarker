@@ -282,7 +282,7 @@ def get_torchio_transforms(data_augmentation, final_im_size):
                 tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
                 tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
             }),
-            tio.Resample(final_im_size),
+            tio.Resample(1, 512, 512),
         ])
     elif data_augmentation == "Noise":
         transform = tio.Compose([
