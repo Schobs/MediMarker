@@ -401,7 +401,7 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             # Create a TorchIO subject with the image and landmarks
             subject = tio.Subject(
                 image=tio.ScalarImage(tensor=torch.from_numpy(
-                    untransformed_im).float().unsqueeze(0)),
+                    untransformed_im).float().unsqueeze(0).unsqueeze(0)),
                 landmark_indicators=tio.LabelMap(
                     tensor=torch.from_numpy(indicator_map).float())
             )
@@ -420,7 +420,7 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
                 transformed_indicator, axis=(2, 3)), transformed_indicator.shape[2:]))
 
             # Set transformed_sample
-            transformed_sample = [transformed_image, new_coords]
+            transformed_sample = [transformed_image.squeeze(), new_coords]
 
             # TODO: try and not renormalize if we're patch sampling, maybe?
             if self.sample_mode != "patch_bias":

@@ -277,7 +277,7 @@ def get_torchio_transforms(data_augmentation, final_im_size):
             tio.RandomFlip(axes=(1,), p=0.5),
             tio.RandomElasticDeformation(
                 num_control_points=(9, 13), locked_borders=2, p=0.5),
-            tio.CropOrPad((final_im_size[0], final_im_size[1])),
+            tio.CropOrPad((final_im_size[0], final_im_size[1], 1)),
         ]
 
         transform = tio.Compose(transforms)
