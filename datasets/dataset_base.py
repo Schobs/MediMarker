@@ -422,14 +422,15 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         # Don't do data augmentation.
         else:
+
             input_coords = coords
             input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
 
-        # Generate heatmaps before applying data augmentation
         if self.generate_hms_here:
+
             label = self.LabelGenerator.generate_labels(
-                coords,
+                input_coords,
                 x_y_corner,
                 landmarks_in_indicator,
                 self.heatmap_label_size,
@@ -440,37 +441,17 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         else:
             label = []
 
-        # Create a TorchIO Subject with the input image and landmark heatmaps tensor
-        heatmap_stack = torch.stack(
-            [torch.from_numpy(hm["heatmap"]) for hm in label])
-        subject = tio.Subject(
-            input_image=tio.ScalarImage(tensor=input_image),
-            landmark_heatmaps=tio.Image(
-                tensor=heatmap_stack, type=tio.INTENSITY)
-        )
+            # If coordinates are cutoff by augmentation throw a run time error.
+            # if len(np.array(input_coords)) <len(coords) or (len([n for n in (input_coords).flatten() if n < 0])>0) :
+            #     print("input coords: ", input_coords)
+            #     print("some coords have been cut off! You need to change the data augmentation, it's too strong.")
+            # run_time_debug = True
+        # else:
+        #     print("ok")
 
-        # Apply the TorchIO transform to the subject
-        if self.transform is not None:
-            transformed_subject = self.transform(subject)
-
-            # Get the transformed input image and landmark heatmaps back
-            input_image = transformed_subject['input_image'].data
-            heatmap_stack = transformed_subject['landmark_heatmaps'].data
-
-        # Unstack the augmented landmark heatmaps tensor and convert them back to the original format as a list of dictionaries
-        augmented_label = []
-        for i, hm in enumerate(label):
-            augmented_hm = {
-                "heatmap": heatmap_stack[i].numpy(),
-                "landmark_num": hm["landmark_num"],
-                "is_visible": hm["is_visible"],
-            }
-            augmented_label.append(augmented_hm)
-
-        # Update the sample dictionary with the augmented data
         sample = {
             "image": input_image,
-            "label": augmented_label,
+            "label": label,
             "target_coords": input_coords,
             "landmarks_in_indicator": landmarks_in_indicator,
             "full_res_coords": full_res_coods,
