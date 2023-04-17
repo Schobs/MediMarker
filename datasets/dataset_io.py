@@ -385,49 +385,36 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
                     x_y_corner,
                 ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords)
 
-                # edit code here
+                # Create an indicator map for landmarks
+                indicator_map = np.zeros(
+                    (len(untransformed_coords), 1, self.input_size[0], self.input_size[1]))
+                for idx, landmark in enumerate(untransformed_coords):
+                    indicator_map[idx, 0, int(
+                        landmark[0]), int(landmark[1])] = 1
 
-                # Create a custom transformation for landmarks
-                class LandmarkTransform(tio.Transform):
-                    def __init__(self, coords, *args, **kwargs):
-                        super().__init__(*args, **kwargs)
-                        self.coords = coords
+            # Create a TorchIO subject with the image and landmarks
+            subject = tio.Subject(
+                image=tio.ScalarImage(tensor=torch.from_numpy(
+                    untransformed_im).float().unsqueeze(0)),
+                landmark_indicators=tio.LabelMap(
+                    tensor=torch.from_numpy(indicator_map).float())
+            )
 
-                    def apply_transform(self, subject):
-                        for i, landmark in enumerate(self.coords):
-                            subject[f"landmark_{i}"] = tio.ScalarImage(
-                                tensor=torch.tensor(landmark))
-                        return subject
+            # Apply the transformations to the subject
+            transformed_subject = self.transform(subject)
 
-                # Convert the numpy array to torch tensor
-                untransformed_coords_tensor = torch.tensor(
-                    untransformed_coords, dtype=torch.float32)
+            # Extract the transformed image and landmarks
+            transformed_image = transformed_subject["image"].data.squeeze(
+                0).numpy()
+            transformed_indicator = transformed_subject["landmark_indicators"].data.numpy(
+            )
 
-                # Initialize the landmark transformation
-                landmark_transform = LandmarkTransform(
-                    untransformed_coords_tensor)
+            # Get the new coordinates from the transformed_indicator
+            new_coords = np.column_stack(np.unravel_index(np.argmax(
+                transformed_indicator, axis=(2, 3)), transformed_indicator.shape[2:]))
 
-                # Add the custom landmark transformation to the existing transforms
-                transform = tio.Compose([
-                    landmark_transform,
-                    *self.transform.transforms,  # Add the existing transformations from self.transform
-                ])
-
-                # Create a TorchIO subject with the image and landmarks
-                subject = tio.Subject(image=tio.ScalarImage(
-                    tensor=torch.from_numpy(untransformed_im).float().unsqueeze(0)))
-
-                # Apply the transformations to the subject
-                transformed_subject = transform(subject)
-
-                # Extract the transformed image and landmarks
-                transformed_image = transformed_subject["image"].data.squeeze(
-                    0).numpy()
-                transformed_coords = np.array([[transformed_subject[f"landmark_{i}"].data[0].item(),
-                                                transformed_subject[f"landmark_{i}"].data[1].item()] for i in range(len(untransformed_coords))])
-
-                # Set transformed_sample
-                transformed_sample = [transformed_image, transformed_coords]
+            # Set transformed_sample
+            transformed_sample = [transformed_image, new_coords]
 
             # TODO: try and not renormalize if we're patch sampling, maybe?
             if self.sample_mode != "patch_bias":
