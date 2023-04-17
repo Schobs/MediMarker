@@ -59,7 +59,8 @@ class NetworkTrainer(ABC):
         patch_sampler_generic_args = {"sample_patch_size": self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
                                       "sample_patch_from_resolution": self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM}
 
-        patch_sampler_bias_args = {"sampling_bias": self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS}
+        patch_sampler_bias_args = {
+            "sampling_bias": self.trainer_config.SAMPLER.PATCH.SAMPLER_BIAS}
 
         patch_sampler_centring_args = {"xlsx_path": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH,
                                        "xlsx_sheet": self.trainer_config.SAMPLER.PATCH.CENTRED_PATCH_COORDINATE_PATH_SHEET,
@@ -117,7 +118,8 @@ class NetworkTrainer(ABC):
             torch.tensor(x, dtype=float, device=self.device,
                          requires_grad=True)
             for x in np.repeat(
-                self.trainer_config.MODEL.GAUSS_SIGMA, len(self.generic_dataset_args["landmarks"])
+                self.trainer_config.MODEL.GAUSS_SIGMA, len(
+                    self.generic_dataset_args["landmarks"])
             )
         ]
 
@@ -197,7 +199,7 @@ class NetworkTrainer(ABC):
             len(self.generic_dataset_args["landmarks"]),
             self.regress_sigma,
             self.loss.loss_seperated_keys,
-            self.dataset_class.additional_sample_attribute_keys,
+            # self.dataset_class.additional_sample_attribute_keys,
         )
 
         self.was_initialized = True
@@ -426,7 +428,8 @@ class NetworkTrainer(ABC):
                     if backprop:
                         self.amp_grad_scaler.scale(l).backward()
                         self.amp_grad_scaler.unscale_(self.optimizer)
-                        torch.nn.utils.clip_grad_norm_(self.learnable_params, 12)
+                        torch.nn.utils.clip_grad_norm_(
+                            self.learnable_params, 12)
                         self.amp_grad_scaler.step(self.optimizer)
                         self.amp_grad_scaler.update()
                         if self.regress_sigma:
@@ -610,7 +613,8 @@ class NetworkTrainer(ABC):
                 )
             )
 
-            self.logger.info("saved checkpoint at new best valid loss: %s", self.best_valid_loss)
+            self.logger.info(
+                "saved checkpoint at new best valid loss: %s", self.best_valid_loss)
 
         if new_best_valid_coord_bool:
             self.save_checkpoint(
@@ -620,7 +624,8 @@ class NetworkTrainer(ABC):
                 )
             )
 
-            self.logger.info("saved checkpoint at new best valid coord error: %s", self.best_valid_coord_error)
+            self.logger.info(
+                "saved checkpoint at new best valid coord error: %s", self.best_valid_coord_error)
 
     def maybe_rescale_coords(self, pred_coords, data_dict):
         """Maybe rescale coordinates based on evaluation parameters, and decide which target coords to evaluate against.
@@ -704,7 +709,8 @@ class NetworkTrainer(ABC):
         inference_resolution = self.training_resolution
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
-        test_batch_size = self.maybe_alter_batch_size(test_dataset, self.data_loader_batch_size_eval)
+        test_batch_size = self.maybe_alter_batch_size(
+            test_dataset, self.data_loader_batch_size_eval)
 
         test_dataloader = DataLoader(
             test_dataset,
@@ -822,7 +828,8 @@ class NetworkTrainer(ABC):
         inference_resolution = self.training_resolution
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
-        test_batch_size = self.maybe_alter_batch_size(test_dataset, self.data_loader_batch_size_eval)
+        test_batch_size = self.maybe_alter_batch_size(
+            test_dataset, self.data_loader_batch_size_eval)
 
         test_dataloader = DataLoader(
             test_dataset,
@@ -850,7 +857,8 @@ class NetworkTrainer(ABC):
             uncert_key: [] for uncert_key in ensemble_handler.uncertainty_keys
         }
         all_ind_errors = {
-            uncert_key: [[] for x in range(len(self.generic_dataset_args["landmarks"]))]
+            uncert_key: [[] for x in range(
+                len(self.generic_dataset_args["landmarks"]))]
             for uncert_key in ensemble_handler.uncertainty_keys
         }
 
@@ -967,7 +975,8 @@ class NetworkTrainer(ABC):
         else:
             self.training_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
 
-        checkpoint_loading_checking(self.trainer_config, self.sampler_mode, self.training_resolution)
+        checkpoint_loading_checking(
+            self.trainer_config, self.sampler_mode, self.training_resolution)
 
         if self.auto_mixed_precision:
             self._maybe_init_amp()
@@ -977,7 +986,8 @@ class NetworkTrainer(ABC):
                     checkpoint_info["amp_grad_scaler"])
 
         if self.print_initiaization_info:
-            self.logger.info("Loaded checkpoint %s. Epoch: %s, ", model_path, self.epoch)
+            self.logger.info("Loaded checkpoint %s. Epoch: %s, ",
+                             model_path, self.epoch)
 
     def initialize_dataloader_settings(self):
         """Initializes dataloader settings. If debug use only main thread to load data bc we only
@@ -1034,15 +1044,18 @@ class NetworkTrainer(ABC):
         else:
             img_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
 
-        valid_dataset = self.get_evaluation_dataset(validation_split, img_resolution)
+        valid_dataset = self.get_evaluation_dataset(
+            validation_split, img_resolution)
 
         #### Create DataLoaders ####
 
         self.logger.info("Using %s Dataloader workers and persist workers bool : %s ",
                          self.num_workers_cfg, self.persist_workers)
 
-        train_batch_size = self.maybe_alter_batch_size(train_dataset, self.data_loader_batch_size_train)
-        valid_batch_size = self.maybe_alter_batch_size(valid_dataset, self.data_loader_batch_size_eval)
+        train_batch_size = self.maybe_alter_batch_size(
+            train_dataset, self.data_loader_batch_size_train)
+        valid_batch_size = self.maybe_alter_batch_size(
+            valid_dataset, self.data_loader_batch_size_eval)
 
         self.train_dataloader = DataLoader(
             train_dataset,
