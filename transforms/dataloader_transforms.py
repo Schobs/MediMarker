@@ -271,11 +271,17 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
 def get_torchio_transforms(data_augmentation, final_im_size):
     # torchIO transforms
     if data_augmentation == "Spatial":
-        transform = tio.Compose([
-            tio.RandomAffine(degrees=(-45, 45), isotropic=True, p=0.75),
-            tio.RandomFlip(axes=(0, 1), p=0.5),
-            iaa.CenterCropToFixedSize(final_im_size[0], final_im_size[1]),
-        ])
+        transforms = [
+            tio.RandomAffine(scales=(0.8, 1.2), degrees=(-45, 45),
+                             translation=(-0.07, 0.07), p=0.5),
+            tio.RandomFlip(axes=(1,), p=0.5),
+            tio.RandomElasticDeformation(
+                num_control_points=(9, 13), locked_borders=2, p=0.5),
+            tio.CropOrPad((final_im_size[0], final_im_size[1])),
+        ]
+
+        transform = tio.Compose(transforms)
+
     elif data_augmentation == "Intensity":
         transform = tio.Compose([
             tio.OneOf({
