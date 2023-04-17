@@ -274,7 +274,7 @@ def get_torchio_transforms(data_augmentation, final_im_size):
         transform = tio.Compose([
             tio.RandomAffine(degrees=(-45, 45), isotropic=True, p=0.75),
             tio.RandomFlip(axes=(0, 1), p=0.5),
-            tio.Resample(final_im_size[0], final_im_size[1]),
+            tio.Resample(final_im_size),
         ])
     elif data_augmentation == "Intensity":
         transform = tio.Compose([
