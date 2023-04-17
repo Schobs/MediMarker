@@ -271,12 +271,10 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
 def get_torchio_transforms(data_augmentation, final_im_size):
     # torchIO transforms
     if data_augmentation == "Spatial":
-        final_im_size = (512, 512)  # Use a tuple with two values for 2D images
-
         transform = tio.Compose([
             tio.RandomAffine(degrees=(-45, 45), isotropic=True, p=0.75),
             tio.RandomFlip(axes=(0, 1), p=0.5),
-            tio.Resample(final_im_size),
+            tio.Resample(final_im_size[0], final_im_size[1]),
         ])
     elif data_augmentation == "Intensity":
         transform = tio.Compose([
