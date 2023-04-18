@@ -418,8 +418,9 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             print("transformed_indicator shape:", transformed_indicator.shape)
 
             # Get the new coordinates from the transformed_indicator
-            new_coords = np.column_stack(np.unravel_index(np.argmax(
-                transformed_indicator, axis=(2, 3)), transformed_indicator.shape[2:]))
+            intermediate_max = np.argmax(transformed_indicator, axis=2)
+            new_coords = np.column_stack(np.unravel_index(
+                np.argmax(intermediate_max, axis=1), intermediate_max.shape[1:]))
 
             # Set transformed_sample
             transformed_sample = [transformed_image, new_coords]
