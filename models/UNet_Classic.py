@@ -67,7 +67,6 @@ class UNet(nn.Module):
                  normalization_operation_config, activation_function, activation_func_config,
                  weight_initialization, strided_convolution_kernels, convolution_kernels, convolution_config,
                  upsample_operation, deep_supervision, max_features=512, dropout=0):
-
         super(UNet, self).__init__()
 
         self.input_channels = input_channels

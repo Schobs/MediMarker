@@ -179,21 +179,17 @@ def extract_original_coords_from_rotation(rotation_mag : float, rotated_coords :
     conv_coords = torch.tensor([x_new, y_new])
     return conv_coords
 
-def extract_original_coords_from_flipud(flip_coords : Union[torch.Tensor, np.ndarray], training_resolution : list = [512, 512]) -> torch.Tensor:
+
+def extract_original_coords_from_flipud(flip_coords, training_resolution=[512, 512]):
     """
     Extracts the original coordinates of a flipped image based on the flipped coordinates and the training resolution.
 
-    Parameters
-    ----------
-    `flip_coords` :  Union[torch.Tensor, np.ndarray]
-        A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
-    `training_resolution` : List
-        The resolution of the training images, represented as a list of width and height. Default is [512, 512].
-
-    Return
-    ------
-    `conv_coords` : torch.Tensor
-        A tensor representing the original coordinates of the flipped image, with shape (2,).
+    :param flip_coords: A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
+    :type flip_coords: torch.Tensor or numpy.ndarray
+    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
+    :type training_resolution: list
+    :return: A tensor representing the original coordinates of the flipped image, with shape (2,).
+    :rtype: torch.Tensor
     """
     if type(flip_coords) == torch.Tensor:
         flip_coords = flip_coords.cpu().numpy()
@@ -202,21 +198,17 @@ def extract_original_coords_from_flipud(flip_coords : Union[torch.Tensor, np.nda
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def extract_original_coords_from_fliplr(flip_coords : Union[torch.Tensor, np.ndarray], training_resolution : list = [512, 512]) -> torch.Tensor:
+
+def extract_original_coords_from_fliplr(flip_coords, training_resolution=[512, 512]):
     """
     Extracts the original coordinates of a flipped image based on the flipped coordinates and the training resolution.
 
-    Parameters
-    ----------
-    `flip_coords` :  Union[torch.Tensor, np.ndarray]
-        A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
-    `training_resolution` : List
-        The resolution of the training images, represented as a list of width and height. Default is [512, 512].
-
-    Return
-    ------
-    `conv_coords` : torch.Tensor
-        A tensor representing the original coordinates of the flipped image, with shape (2,).
+    :param flip_coords: A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
+    :type flip_coords: torch.Tensor or numpy.ndarray
+    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
+    :type training_resolution: list
+    :return: A tensor representing the original coordinates of the flipped image, with shape (2,).
+    :rtype: torch.Tensor
     """
     if type(flip_coords) == torch.Tensor:
         flip_coords = flip_coords.cpu().numpy()
@@ -225,20 +217,19 @@ def extract_original_coords_from_fliplr(flip_coords : Union[torch.Tensor, np.nda
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def extract_coords_from_movevertical(magnitude : float, coords : Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
+
+def extract_coords_from_movevertical(magnitude, coords):
     """
     Extracts the coordinates of an image moved vertically based on the input magnitude and original coordinates.
 
-    Parameters
-    ----------
-    `magnitude` : Float
-        The magnitude of the vertical movement.
-    `coords` : Union[torch.Tensor, np.ndarray])
-
-    Return
-    ------
-    `conv_coords` : torch.Tensor
-        A tensor representing the original coordinates of the flipped image, with shape (2,).
+    :param magnitude: The magnitude of the vertical movement.
+    :type magnitude: float
+    :param coords: A tensor or numpy array representing the original coordinates of an image, with shape (2,).
+    :type coords: torch.Tensor or numpy.ndarray
+    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
+    :type training_resolution: list
+    :return: A tensor representing the coordinates of the moved image, with shape (2,).
+    :rtype: torch.Tensor
     """
     if type(coords) == torch.Tensor:
         coords = coords.cpu().numpy()
@@ -247,20 +238,17 @@ def extract_coords_from_movevertical(magnitude : float, coords : Union[torch.Ten
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def extract_coords_from_movehorizontal(magnitude : float, coords : Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
+
+def extract_coords_from_movehorizontal(magnitude, coords):
     """
     Extracts new coordinates by moving the input coordinates horizontally by a certain magnitude.
 
-    Parameters
-    ----------
-    `magnitude` : Float
-        The magnitude of the vertical movement.
-    `coords` : Union[torch.Tensor, np.ndarray])
+    Parameters:
+        magnitude (int or float): The amount to move the coordinates horizontally.
+        coords (torch.Tensor or numpy.ndarray): The original coordinates to move.
 
-    Return
-    ------
-    `conv_coords` : torch.Tensor
-        A tensor representing the original coordinates of the flipped image, with shape (2,).
+    Returns:
+        torch.Tensor: The new coordinates after moving horizontally.
     """
     if type(coords) == torch.Tensor:
         coords = coords.cpu().numpy()
@@ -269,7 +257,7 @@ def extract_coords_from_movehorizontal(magnitude : float, coords : Union[torch.T
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def apply_tta_augmentation(data : list, seed : int) -> tuple(dict, dict):
+def apply_tta_augmentation(data, seed):
     """
     A function that applies a random TTA transformation on an inputted image. Takes a random seed to determine the specific transformation and
     the magnitude of such transformation using a basic mapping function with the boundaries provided by the imgaug documentation for each
