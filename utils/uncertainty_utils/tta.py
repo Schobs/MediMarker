@@ -143,7 +143,16 @@ def extract_original_coords_from_rotation(rotation_mag, rotated_coords, training
     return conv_coords
 
 def extract_original_coords_from_flipud(flip_coords, training_resolution=[512, 512]):
-    """"""
+    """
+    Extracts the original coordinates of a flipped image based on the flipped coordinates and the training resolution.
+
+    :param flip_coords: A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
+    :type flip_coords: torch.Tensor or numpy.ndarray
+    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
+    :type training_resolution: list
+    :return: A tensor representing the original coordinates of the flipped image, with shape (2,).
+    :rtype: torch.Tensor
+    """
     if type(flip_coords) == torch.Tensor:
         flip_coords = flip_coords.cpu().numpy()
     original_x = flip_coords[0]
@@ -152,7 +161,16 @@ def extract_original_coords_from_flipud(flip_coords, training_resolution=[512, 5
     return conv_coords
 
 def extract_original_coords_from_fliplr(flip_coords, training_resolution=[512, 512]):
-    """"""
+    """
+    Extracts the original coordinates of a flipped image based on the flipped coordinates and the training resolution.
+
+    :param flip_coords: A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
+    :type flip_coords: torch.Tensor or numpy.ndarray
+    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
+    :type training_resolution: list
+    :return: A tensor representing the original coordinates of the flipped image, with shape (2,).
+    :rtype: torch.Tensor
+    """
     if type(flip_coords) == torch.Tensor:
         flip_coords = flip_coords.cpu().numpy()
     original_x = training_resolution[0] - flip_coords[0]
@@ -160,7 +178,19 @@ def extract_original_coords_from_fliplr(flip_coords, training_resolution=[512, 5
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def extract_coords_from_movevertical(magnitude, coords,training_resolution=[512, 512]):
+def extract_coords_from_movevertical(magnitude, coords):
+    """
+    Extracts the coordinates of an image moved vertically based on the input magnitude and original coordinates.
+
+    :param magnitude: The magnitude of the vertical movement.
+    :type magnitude: float
+    :param coords: A tensor or numpy array representing the original coordinates of an image, with shape (2,).
+    :type coords: torch.Tensor or numpy.ndarray
+    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
+    :type training_resolution: list
+    :return: A tensor representing the coordinates of the moved image, with shape (2,).
+    :rtype: torch.Tensor
+    """
     if type(coords) == torch.Tensor:
         coords = coords.cpu().numpy()
     original_x = coords[0]
@@ -168,7 +198,30 @@ def extract_coords_from_movevertical(magnitude, coords,training_resolution=[512,
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def extract_coords_from_movehorizontal(magnitude, coords,training_resolution=[512, 512]):
+def extract_coords_from_movehorizontal(magnitude, coords):
+    """
+    Extracts new coordinates by moving the input coordinates horizontally by a certain magnitude.
+
+    Parameters:
+        magnitude (int or float): The amount to move the coordinates horizontally.
+        coords (torch.Tensor or numpy.ndarray): The original coordinates to move.
+
+    Returns:
+        torch.Tensor: The new coordinates after moving horizontally.
+
+    Examples:
+        >>> coords = torch.tensor([100, 200])
+        >>> magnitude = 50
+        >>> output = extract_coords_from_movehorizontal(magnitude, coords)
+        >>> print(output)
+        tensor([150, 200])
+
+        >>> coords = torch.tensor([300, 400])
+        >>> magnitude = -100
+        >>> output = extract_coords_from_movehorizontal(magnitude, coords)
+        >>> print(output)
+        tensor([200, 400])
+    """
     if type(coords) == torch.Tensor:
         coords = coords.cpu().numpy()
     original_x = coords[0] + magnitude
@@ -197,6 +250,7 @@ def apply_tta_augmentation(data, seed):
     """
     functs_list = ["flipud", "fliplr", "movevertical", "movehorizontal"]
     function_index = math.floor(seed / 100000 * len(functs_list))
+    function_index = 0
     function_name = functs_list[function_index]
     img = data.cpu().detach().numpy()
     img_dims = img.shape

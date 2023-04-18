@@ -54,13 +54,13 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
 
     elif data_augmentation == "TTA":
       transform = iaa.Sequential([
-            iaa.Sometimes(
-                0.6,
-                iaa.TranslateY(px=(-10, 10)),
-                iaa.TranslateX(px=(-10, 10)),
-            ),
             iaa.flip.Flipud(p=0.5),
             iaa.flip.Fliplr(p=0.5),
+            iaa.Sometimes(
+                0.4,
+                iaa.TranslateY(px=(-5, 5)),
+                iaa.TranslateX(px=(-5, 5)),
+            ),
         ])
 
     elif data_augmentation =="AffineComplex":

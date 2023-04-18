@@ -68,7 +68,7 @@ _C.TRAINER.SAVE_LATEST_ONLY = True
 _C.TRAINER.CACHE_DATA = True
 _C.TRAINER.FOLD = 0
 _C.TRAINER.INFERENCE_ONLY = False
-_C.TRAINER.MC_DROPOUT = False
+_C.TRAINER.MCDROP_RATE = None
 
 # ----------------------------------------------------------------------------
 # Model settings settings
@@ -100,10 +100,10 @@ _C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first" # ["scale_heatmap_first", "
 _C.INFERENCE.FIT_GAUSS = False # If false, uses max, if true, first fits gaussian to output heatmap.
 _C.INFERENCE.ENSEMBLE_INFERENCE = False # average predictions from multiple models
 _C.INFERENCE.TTA_ENSEMBLE_INFERENCE = False # average predictions from multiple augmented image samples
-_C.INFERENCE.TTA_ITERATIONS = 4
 _C.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS = ["smha", "emha", "ecpv"] #keys for uncertainty estimation. 
 _C.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX = 0 #keys for uncertainty estimation. 
 _C.INFERENCE.ENSEMBLE_CHECKPOINTS = [] # list of checkpoints to ensemble
+_C.INFERENCE.MCDROP_ENSEMBLE_INFERENCE = False
 _C.INFERENCE.DEBUG = False
 
 # ---------------------------------------------------------------------------- #

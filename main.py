@@ -56,6 +56,7 @@ def main():
         trainer = trainer(trainer_config=cfg, is_train=True,
                           dataset_class=dataset_class, output_folder=cfg.OUTPUT.OUTPUT_DIR,
                           comet_logger=writer)
+        
         trainer.initialize(training_bool=True)
         trainer.train()
         if writer is not None:
@@ -63,7 +64,6 @@ def main():
     else:
         if writer is not None:
             writer.add_tag("inference only")
-
         trainer = trainer(trainer_config=cfg, is_train=False, dataset_class=dataset_class,
                           output_folder=cfg.OUTPUT.OUTPUT_DIR, comet_logger=writer)
         trainer.initialize(training_bool=False)
@@ -94,13 +94,32 @@ def main():
                 df.to_excel(writer_, n)
         writer.add_tag("completed ensemble_inference")
         writer.add_tag("completed inference")
+    elif cfg.INFERENCE.MCDROP_ENSEMBLE_INFERENCE:
+        if writer is not None:
+                writer.add_tag("mcdrop_inference")
+                trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
+                all_summary_results, ind_results = trainer.run_inference_mcdrop("testing", cfg.INFERENCE.ENSEMBLE_CHECKPOINTS,
+                                                                                cfg.INFERENCE.DEBUG)
+                html_to_log = save_comet_html(all_summary_results, ind_results)
+                writer.log_html(html_to_log)
+                if cfg.OUTPUT.RESULTS_CSV_APPEND is not None:
+                    output_append = "_" + str(cfg.OUTPUT.RESULTS_CSV_APPEND)
+                else:
+                    output_append = ""
+                print("Saving summary of results locally to: {local_sum_path}")
+                with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "mcdrop_summary_results_fold"+fold+output_append+".xlsx")) as writer_:
+                    for n, df in (all_summary_results).items():
+                        df.to_excel(writer_, n)
+                print("Saving individual sample results locally to: {indv_sample_sum_path}")
+                with ExcelWriter(os.path.join(cfg.OUTPUT.OUTPUT_DIR, "mcdrop_summary_results_fold"+fold+output_append+".xlsx")) as writer_:
+                    for n, df in (ind_results).items():
+                        df.to_excel(writer_, n)
+                writer.add_tag("completed mcdrop_inference")
+                writer.add_tag("completed inference")
     else:
         if cfg.INFERENCE.TTA_ENSEMBLE_INFERENCE:
             if writer is not None:
                 writer.add_tag("tta_inference")
-                # @ETHAN : i load the checkpoint here, can ignore the ensemble_checkpoints,
-                # just MODEL.CHECKPOINT, see the config ceph_cv_lawrence.yaml
-                # Please try and combine this with the below if statemenht to reduce redundancy, as we discussed.
                 trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
                 all_summary_results, ind_results = trainer.run_inference_tta("testing", cfg.INFERENCE.ENSEMBLE_CHECKPOINTS,
                                                                              cfg.INFERENCE.DEBUG)

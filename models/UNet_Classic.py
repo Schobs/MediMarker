@@ -17,7 +17,7 @@ class ConvNormNonlin(nn.Module):
     def __init__(self, input_channels, output_channels,
                  conv_op=nn.Conv2d, conv_kwargs=None,
                  norm_op=nn.InstanceNorm2d, norm_op_kwargs=None,
-                 nonlin=nn.LeakyReLU, nonlin_kwargs=None, dropout=0.05):
+                 nonlin=nn.LeakyReLU, nonlin_kwargs=None, dropout=None):
         super(ConvNormNonlin, self).__init__()
         if nonlin_kwargs is None:
             nonlin_kwargs = {'negative_slope': 1e-2, 'inplace': True}
@@ -34,7 +34,7 @@ class ConvNormNonlin(nn.Module):
         self.conv_kwargs = conv_kwargs
         self.conv_op = conv_op
         self.norm_op = norm_op
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = nn.Dropout(p=dropout) if dropout is not None else None
 
         # Convolutional operation
         self.convolution = self.conv_op(input_channels, output_channels, **self.conv_kwargs)
@@ -44,8 +44,6 @@ class ConvNormNonlin(nn.Module):
 
         # Activation function
         self.activation = self.nonlin(**self.nonlin_kwargs)
-
-        #self.dropout = nn.Dropout(dropout_rate) if dropout_rate is not None else None
 
     def forward(self, x):
         x = self.convolution(x)
@@ -69,7 +67,7 @@ class UNet(nn.Module):
                  num_resolution_levels, conv_operation, normalization_operation,
                  normalization_operation_config, activation_function, activation_func_config,
                  weight_initialization, strided_convolution_kernels, convolution_kernels, convolution_config,
-                 upsample_operation, deep_supervision, max_features=512, dropout=0.05):
+                 upsample_operation, deep_supervision, max_features=512, dropout=None):
 
         super(UNet, self).__init__()
 
@@ -89,7 +87,7 @@ class UNet(nn.Module):
         self.upsample_operation = upsample_operation
         self.max_features = max_features
         self.deep_supervision = deep_supervision
-        self.dropout = nn.Dropout(p=dropout)
+        self.dropout = nn.Dropout(p=dropout) if dropout is not None else None
 
         # Define the network
         self.conv_blocks_encoder = []
@@ -204,6 +202,8 @@ class UNet(nn.Module):
         # Encoder
         for encoder_lvl in range(len(self.conv_blocks_encoder)-1):
             x = self.conv_blocks_encoder[encoder_lvl](x)
+            if self.dropout is not None:
+                x = self.dropout(x)
             # print("encoder lvl %s : %s " % (encoder_lvl, x.shape))
 
             skips.append(x)
@@ -223,6 +223,8 @@ class UNet(nn.Module):
             # print("decoder_lvl %s, concat with skip: %s " % (decoder_lvl, x.shape))
 
             x = self.conv_blocks_decoder[decoder_lvl](x)
+            if self.dropout is not None:
+                x = self.dropout(x)
             # print("decoder_lvl %s,after decoder convs: %s " % (decoder_lvl, x.shape))
 
             if self.deep_supervision:
@@ -232,28 +234,3 @@ class UNet(nn.Module):
             seg_outputs.append((self.intermediate_outputs[-1](x)))  # if not deep supervision, only use the final layer
 
         return seg_outputs
-
-    # def get_resolutions_feature_levels(self, input_size, start_features=32, max_features=512):
-    #     if input_size[0] != input_size[1]:
-    #         raise NotImplementedError("only square inputs currently configured.")
-
-    #     num_features = start_features
-    #     res_layers = []
-    #     feature_levels = []
-
-    #     res = input_size[0]
-    #     while res > 4:
-    #         res_layers.append(input)
-    #         feature_levels.append(num_features)
-
-    #         if num_features < 512:
-    #             num_features = num_features*2
-
-    #         res = res/2
-    #     return res_layers, feature_levels
-
-    # def get_activation_function(str_):
-    #     if str_.lower() == "leaky_relu":
-    #         return nn.LeakyReLU(negative_slope=0.01)
-    #     else:
-    #         raise NotImplementedError("the only activation function supported is leaky_relu")
