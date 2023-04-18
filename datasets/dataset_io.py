@@ -433,8 +433,7 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
                 input_image = torch.from_numpy(np.expand_dims(
                     transformed_sample[0], axis=0)).float()
 
-            input_coords = np.array([[coo.x, coo.y]
-                                    for coo in transformed_sample[1]])
+            input_coords = np.array([[coo[0], coo[1]] for coo in coords])
 
             # Recalculate indicators incase transform pushed out/in coords.
             landmarks_in_indicator = [
