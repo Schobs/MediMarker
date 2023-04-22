@@ -34,7 +34,7 @@ DATASET:
 TRAINER:
   INFERENCE_ONLY: False # set to true if already trained and want to perform inference (testing) only.
   CACHE_DATA: True #Ideally true, saves time from loading from disk.
-  FOLD: 0 # Pick the fold. this dataset has folds 0,1,2,3. You can set to -1 and directly put the path to JSON in SRC_TARGETS if you want.
+  FOLD: 1 # Pick the fold. this dataset has folds 0,1,2,3. You can set to -1 and directly put the path to JSON in SRC_TARGETS if you want.
 
 INFERENCE:
   EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
