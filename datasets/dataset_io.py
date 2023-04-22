@@ -406,8 +406,18 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
                     tensor=torch.from_numpy(indicator_map).float())
             )
 
+            # Determine the device (GPU if available, else CPU)
+            device = torch.device(
+                "cuda" if torch.cuda.is_available() else "cpu")
+
+            # Move the subject to the device (GPU or CPU)
+            subject = subject.to(device)
+
             # Apply the transformations to the subject
             transformed_subject = self.transform(subject)
+
+            # Move the transformed subject back to CPU for further processing
+            transformed_subject = transformed_subject.to("cpu")
 
             # Extract the transformed image and landmarks
             transformed_image = transformed_subject["image"].data.squeeze(
@@ -415,9 +425,7 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             transformed_indicator = transformed_subject["landmark_indicators"].data.numpy(
             )
             transformed_indicator = transformed_indicator.reshape(
-                transformed_indicator.shape[:-1])  # Remove the extra dimension
-
-            # print("transformed_indicator shape:", transformed_indicator.shape)
+                transformed_indicator.shape[:-1])
 
             # Get the new coordinates from the transformed_indicator
             intermediate_max = np.argmax(transformed_indicator, axis=2)
