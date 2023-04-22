@@ -4,8 +4,6 @@
 #SBATCH --nodes=1
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=34G
-#SBATCH --cpus-per-task=12
-#SBATCH --time=30:00:00
 #SBATCH --mail-user=ogavin1@sheffield.ac.uk
 #SBATCH --mail-type=FAIL
 #SBATCH --comment=unetr_model_test
