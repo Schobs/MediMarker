@@ -415,11 +415,11 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             transformed_indicator = transformed_subject["landmark_indicators"].data.numpy(
             )
             # Remove the extra dimension
-            transformed_indicator = transformed_indicator.squeeze(1)
-            print("transformed_image shape:", transformed_image.shape)
-            print("transformed_indicator shape:", transformed_indicator.shape)
-
-            print("transformed_indicator shape:", transformed_indicator.shape)
+            if transformed_indicator.shape[1] == 1:
+                transformed_indicator = transformed_indicator.squeeze(1)
+            else:
+                print("Warning: Extra dimension has a size different than one. Shape:",
+                      transformed_indicator.shape)
 
             # Get the new coordinates from the transformed_indicator
             intermediate_max = np.argmax(transformed_indicator, axis=2)
