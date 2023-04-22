@@ -15,7 +15,7 @@ SOLVER:
   # MINI_BATCH_SIZE: 50 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_TRAIN: 2 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_EVAL: 2 #As high as will fit in gpu memory
-  MAX_EPOCHS: 25 #How long you want to train? ideal is at least 150-250.
+  MAX_EPOCHS: 500 #How long you want to train? ideal is at least 150-250.
 
 MODEL:
   GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.
