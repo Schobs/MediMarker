@@ -12,9 +12,9 @@ SOLVER:
   DEEP_SUPERVISION: False
   NUM_RES_SUPERVISIONS: 1
   LOSS_FUNCTION: "mse"
-  MINI_BATCH_SIZE: 50 #As high as will fit in gpu memory
-  DATA_LOADER_BATCH_SIZE_TRAIN: 1 #As high as will fit in gpu memory
-  DATA_LOADER_BATCH_SIZE_EVAL: 1 #As high as will fit in gpu memory
+  # MINI_BATCH_SIZE: 50 #As high as will fit in gpu memory
+  DATA_LOADER_BATCH_SIZE_TRAIN: 0 #As high as will fit in gpu memory
+  DATA_LOADER_BATCH_SIZE_EVAL: 0 #As high as will fit in gpu memory
   MAX_EPOCHS: 250 #How long you want to train? ideal is at least 150-250.
 
 MODEL:
