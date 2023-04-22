@@ -397,7 +397,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             # list where [0] is image and [1] are coords.
             transformed_sample = self.transform(
                 image=untransformed_im[0], keypoints=kps)
-            print(transformed_sample[0].shape)
+            print(transformed_sample[1].shape)
 
             # TODO: try and not renormalize if we're patch sampling, maybe?
             if self.sample_mode != "patch_bias":
