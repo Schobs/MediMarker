@@ -411,10 +411,11 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
 
             # Extract the transformed image and landmarks
             transformed_image = transformed_subject["image"].data.squeeze(
-                0).numpy()
+            ).numpy()
             transformed_indicator = transformed_subject["landmark_indicators"].data.numpy(
             )
-            transformed_indicator = transformed_indicator.squeeze(-1)  # Remove the extra dimension
+            transformed_indicator = np.squeeze(
+                transformed_indicator, axis=(-1, -2))  # Remove the extra dimensions
 
             print("transformed_indicator shape:", transformed_indicator.shape)
 
