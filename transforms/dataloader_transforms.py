@@ -270,69 +270,47 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
 
 def get_torchio_transforms(data_augmentation, final_im_size):
     # torchIO transforms
-    if data_augmentation == "Spatial":
+    if data_augmentation == "AffineSimple":
         transforms = [
-            tio.RandomAffine(scales=(0.9, 1.1), degrees=(-45,
-                             45), isotropic=True, p=0.75),
+            tio.RandomAffine(scales=(0.8, 1.2), degrees=(-45, 45), p=0.75),
             tio.RandomFlip(axes=(0, 1), p=0.5),
             tio.CropOrPad((final_im_size[0], final_im_size[1], 1)),
         ]
-
         transform = tio.Compose(transforms)
 
-    elif data_augmentation == "Intensity":
-        transform = tio.Compose([
-            tio.OneOf({
-                tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
-                tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
-            }),
-            tio.Resample(1, 512, 512),
-        ])
-    elif data_augmentation == "Noise":
-        transform = tio.Compose([
-            tio.OneOf({
-                tio.RandomNoise(std=(0, 0.1)): 0.5,
-                tio.RandomBlur(std=(0, 1.0)): 0.5,
-            }),
-            tio.Resample(final_im_size),
-        ])
-    elif data_augmentation == "SpatialIntensityNoise":
-        transform = tio.Compose([
-            tio.RandomTransform(tio.RandomAffine(
-                degrees=(-45, 45), isotropic=True), p=0.75),
-            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
-            tio.OneOf({
-                tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
-                tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
-            }),
-            tio.OneOf({
-                tio.RandomNoise(std=(0, 0.1)): 0.5,
-                tio.RandomBlur(std=(0, 1.0)): 0.5,
-            }),
-            tio.Resample(final_im_size),
-        ])
-    elif data_augmentation == "SpatialIntensity":
-        transform = tio.Compose([
-            tio.RandomTransform(tio.RandomAffine(
-                degrees=(-45, 45), isotropic=True), p=0.75),
-            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
-            tio.OneOf({
-                tio.RandomIntensity(shift=(-0.1, 0.1)): 0.5,
-                tio.RandomGamma(log_gamma=(-0.3, 0.3)): 0.5,
-            }),
-            tio.Resample(final_im_size),
-        ])
-    elif data_augmentation == "SpatialNoise":
-        transform = tio.Compose([
-            tio.RandomTransform(tio.RandomAffine(
-                degrees=(-45, 45), isotropic=True), p=0.75),
-            tio.RandomTransform(tio.RandomFlip(axes=(0, 1)), p=0.5),
-            tio.OneOf({
-                tio.RandomNoise(std=(0, 0.1)): 0.5,
-                tio.RandomBlur(std=(0, 1.0)): 0.5,
-            }),
-            tio.Resample(final_im_size),
-        ])
+    elif data_augmentation == "AffineComplex":
+        transforms = [
+            tio.RandomAffine(
+                scales={'x': (0.8, 1.2), 'y': (0.8, 1.2)},
+                translation=(-0.07, 0.07),
+                degrees=(-45, 45),
+                shear=(-16, 16),
+                p=0.5
+            ),
+            tio.RandomFlip(axes=(0, 1), p=0.5),
+            tio.CropOrPad((final_im_size[0], final_im_size[1], 1)),
+        ]
+        transform = tio.Compose(transforms)
+
+    elif data_augmentation == "AffineComplexElastic":
+        transforms = [
+            tio.RandomAffine(
+                scales={'x': (0.8, 1.2), 'y': (0.8, 1.2)},
+                translation=(-0.07, 0.07),
+                degrees=(-45, 45),
+                shear=(-16, 16),
+                p=0.5
+            ),
+            tio.RandomFlip(axes=(0, 1), p=0.5),
+            tio.RandomElasticDeformation(
+                num_control_points=(7, 7, 1),
+                locked_borders=1,
+                p=0.5
+            ),
+            tio.CropOrPad((final_im_size[0], final_im_size[1], 1)),
+        ]
+        transform = tio.Compose(transforms)
+
     return transform
 
 
