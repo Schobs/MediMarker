@@ -417,7 +417,7 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             transformed_indicator = transformed_indicator.reshape(
                 transformed_indicator.shape[:-1])  # Remove the extra dimension
 
-            print("transformed_indicator shape:", transformed_indicator.shape)
+            # print("transformed_indicator shape:", transformed_indicator.shape)
 
             # Get the new coordinates from the transformed_indicator
             intermediate_max = np.argmax(transformed_indicator, axis=2)

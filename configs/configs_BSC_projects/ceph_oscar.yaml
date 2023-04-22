@@ -15,7 +15,7 @@ SOLVER:
   # MINI_BATCH_SIZE: 50 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_TRAIN: 1 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_EVAL: 1 #As high as will fit in gpu memory
-  MAX_EPOCHS: 250 #How long you want to train? ideal is at least 150-250.
+  MAX_EPOCHS: 150 #How long you want to train? ideal is at least 150-250.
 
 MODEL:
   GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.
@@ -29,7 +29,7 @@ DATASET:
   IMAGE_MODALITY: "Cephalometric"
   LANDMARKS: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
   DATASET_CLASS: "torchio"
-  TRAINSET_SIZE: 5
+  # TRAINSET_SIZE: 5
 
 TRAINER:
   INFERENCE_ONLY: False # set to true if already trained and want to perform inference (testing) only.
