@@ -42,7 +42,7 @@ INFERENCE:
 
 SAMPLER:
   NUM_WORKERS: 1 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down.
-  DATA_AUG_PACKAGE: "torchio"
-  DATA_AUG: "Spatial" # set to None for no augmentation. for other schemes see the documentation.
+  # DATA_AUG_PACKAGE: "torchio"
+  # DATA_AUG: "Spatial" # set to None for no augmentation. for other schemes see the documentation.
   INPUT_SIZE: [512, 512]
   DEBUG: False #Set to true to get some visualization of data augmentation and the target heatmaps! Are they close to the predicted heatmaps after training?
