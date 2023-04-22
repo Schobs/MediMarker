@@ -28,7 +28,7 @@ DATASET:
   NAME: "ISBI"
   IMAGE_MODALITY: "Cephalometric"
   LANDMARKS: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
-  DATASET_CLASS: "torchio"
+  # DATASET_CLASS: "torchio"
   # TRAINSET_SIZE: 5
 
 TRAINER:
@@ -41,8 +41,8 @@ INFERENCE:
   DEBUG: False #Set to true to get some visualization of predicted heatmaps!
 
 SAMPLER:
-  NUM_WORKERS: 1 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down.
-  DATA_AUG_PACKAGE: "torchio"
-  DATA_AUG: "AffineSimple" # set to None for no augmentation. for other schemes see the documentation.
+  NUM_WORKERS: 8 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down.
+  # DATA_AUG_PACKAGE: "torchio"
+  # DATA_AUG: "AffineSimple" # set to None for no augmentation. for other schemes see the documentation.
   INPUT_SIZE: [512, 512]
   DEBUG: False #Set to true to get some visualization of data augmentation and the target heatmaps! Are they close to the predicted heatmaps after training?
