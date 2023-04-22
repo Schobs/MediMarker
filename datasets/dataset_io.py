@@ -415,7 +415,7 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             transformed_indicator = transformed_subject["landmark_indicators"].data.numpy(
             )
             # Remove the extra dimension
-            transformed_indicator = np.squeeze(transformed_indicator, axis=1)
+            transformed_indicator = transformed_indicator.squeeze(1)
 
             print("transformed_indicator shape:", transformed_indicator.shape)
 
