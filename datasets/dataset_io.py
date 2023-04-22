@@ -416,6 +416,8 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             )
             # Remove the extra dimension
             transformed_indicator = transformed_indicator.squeeze(1)
+            print("transformed_image shape:", transformed_image.shape)
+            print("transformed_indicator shape:", transformed_indicator.shape)
 
             print("transformed_indicator shape:", transformed_indicator.shape)
 
