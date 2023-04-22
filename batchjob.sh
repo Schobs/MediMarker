@@ -7,8 +7,12 @@
 #SBATCH --cpus-per-task=12
 #SBATCH --time=30:00:00
 #SBATCH --mail-user=ogavin1@sheffield.ac.uk
+#SBATCH --mail-type=FAIL
+#SBATCH --comment=unetr_model_test
 
 export SLURM_EXPORT_ENV=ALL
+
 module load Anaconda3/5.3.0
+module load cuDNN/7.6.4.38-gcccuda-2019b
 source activate my_env
-srun python main.py --cfg "configs/configs_BSC_projects/cephalometric_cv.yaml"
+srun python main.py --cfg "configs/configs_BSC_projects/ceph_oscar.yaml"
