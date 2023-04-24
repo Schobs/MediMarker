@@ -13,6 +13,8 @@ from transforms.transformations import (
     normalize_cmr,
 )
 
+import time
+
 from tqdm import tqdm
 from transforms.dataloader_transforms import get_aug_package_loader
 
@@ -392,6 +394,7 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
                     x_y_corner,
                 ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords)
 
+            time_start = time.time()
             # Create an indicator map for landmarks
             indicator_map = np.zeros(
                 (len(untransformed_coords), 1, self.input_size[0], self.input_size[1]))
@@ -409,15 +412,13 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             # Determine the device (GPU if available, else CPU)
             device = torch.device(
                 "cuda" if torch.cuda.is_available() else "cpu")
+            print("==> Using device " + device)
 
             # Move the subject to the device (GPU or CPU)
             subject = subject.to(device)
 
             # Apply the transformations to the subject
             transformed_subject = self.transform(subject)
-
-            # Move the transformed subject back to CPU for further processing
-            transformed_subject = transformed_subject.to("cpu")
 
             # Extract the transformed image and landmarks
             transformed_image = transformed_subject["image"].data.squeeze(
@@ -434,6 +435,9 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
 
             # Set transformed_sample
             transformed_sample = [transformed_image, new_coords]
+
+            time_end = time.time() - time_start
+            print(time_end)
 
             # TODO: try and not renormalize if we're patch sampling, maybe?
             if self.sample_mode != "patch_bias":
