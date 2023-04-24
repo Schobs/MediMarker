@@ -409,7 +409,7 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             # Determine the device (GPU if available, else CPU)
             device = torch.device(
                 "cuda" if torch.cuda.is_available() else "cpu")
-            print("==> Using device " + device)
+            print("==> Using device " + str(device))
 
             # Move the tensors in the subject to the device (GPU or CPU)
             subject["image"].data = subject["image"].data.to(device)
