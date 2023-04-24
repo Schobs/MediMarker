@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_centred, get_patch_stitching_info
+from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_centred
 
 import numpy as np
 import torch
@@ -12,11 +12,9 @@ from transforms.transformations import (
     normalize_cmr,
 )
 
-from tqdm import tqdm
 from transforms.dataloader_transforms import get_aug_package_loader
 
 from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image, maybe_get_coordinates_from_xlsx, resize_coordinates
-from utils.im_utils.visualisation import visualize_patch
 
 
 import logging

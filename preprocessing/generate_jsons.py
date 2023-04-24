@@ -148,7 +148,6 @@ def ISBI2015_to_json_with_vals(
     val_size=0.2,
     num_folds=4,
 ):
-
     """
     generate json from annotations of ISBI 2015 cephalometric dataset.
     We randomly pick 20% of the training set for validation for early stopping.
@@ -250,7 +249,6 @@ def ISBI2015_to_json_with_vals_vary_train(
     val_size=0.1,
     num_folds=4,
 ):
-
     """
     generate json from annotations of ISBI 2015 cephalometric dataset.
     We randomly pick 10% of the training set for validation for early stopping.
@@ -396,7 +394,6 @@ def ISBI2015_to_json_with_vals_challenge(
     output_path,
     val_size=0.1,
 ):
-
     """
     generate json from annotations of ISBI 2015 cephalometric dataset.
     We randomly pick 20% of the training set for validation for early stopping.
@@ -569,7 +566,6 @@ def ASPIRE_MEDIUM_to_JSON(
     num_folds=5,
     debug=False,
 ):
-
     """
     Generate json from annotations of Medium ASPIRE dataset (~700 images for SA ~700 images for 4CH).
     For each fold: 80% is training, 20% is validation, 20% is testing.
@@ -774,7 +770,6 @@ def ASPIRE_FOLLOWUP_to_JSON(
     landmark_names,
     debug=False,
 ):
-
     """
     Data source: https://drive.google.com/drive/u/0/folders/1NBLdv7-ohcy23RyqTPpVS1YG65rjPcAh
     Generate json from annotations of followup ASPIRE dataset (~700 images for SA ~700 images for 4CH).
@@ -1029,7 +1024,6 @@ def ASPIRE_FOLLOWUP_to_JSON_careful(
     landmark_names,
     debug=False,
 ):
-
     """
     Data source: https://drive.google.com/drive/u/0/folders/1NBLdv7-ohcy23RyqTPpVS1YG65rjPcAh
     Generate json from annotations of followup ASPIRE dataset (~700 images for SA ~700 images for 4CH).
@@ -1184,7 +1178,6 @@ def ASPIRE_FOLLOWUP_to_JSON_careful(
 def ASPIRE_LARGE_no_annotations(
     path_to_images, output_path, modality, manual_omissions_uid, debug=False
 ):
-
     """
     Data source: https://drive.google.com/drive/folders/1NKM87o8gkHmrPuQMOYVo_3-Dv0kgas69
     Generate json from annotations of followup ASPIRE dataset (~unknown images for SA ~unknown images for 4CH).
@@ -1192,7 +1185,7 @@ def ASPIRE_LARGE_no_annotations(
     We have no annotations.
     """
 
-    assert modality in ["SA", "4ch"]
+    assert modality in ["SA", "4ch", "4C"]
 
     data = OrderedDict()
 
@@ -1235,11 +1228,12 @@ def ASPIRE_LARGE_no_annotations(
         xnat_id = ep_dcm.PatientID
 
         inner_dict = {}
-        inner_dict["id"] = xnat_id
+        inner_dict["patient_id"] = xnat_id
+        inner_dict["id"] = suid
         inner_dict["suid"] = suid
+
         inner_dict["image"] = ep_dcm.file_path
         inner_dict["modality"] = modality
-
         inner_dict["has_annotation"] = False
         inner_dict["coordinates"] = None
         data["testing"].append(inner_dict)
@@ -1526,3 +1520,17 @@ def combine_gen():
 #     path_to_images =  os.path.join("/mnt/tale_shared/data/CMRI/PAH-Baseline/Proc/", modality)
 #     output_path ="/mnt/tale_shared/data/CMRI/PAH-Baseline/Proc/landmark_localisation_annotations/"+ modality
 #     ASPIRE_MEDIUM_to_JSON(path_to_annotations, path_to_images, output_path, modality, manual_omissions, num_folds=6, debug=False )
+
+
+# April 2023 for prasun
+
+for modality in ["4C", "SA"]:
+    if modality == "SA":
+        manual_omissions = []
+    else:
+        manual_omissions = []
+    path_to_images = os.path.join("/mnt/tale_shared/data/CMRI/new scans", modality)
+    output_path = os.path.join("/mnt/tale_shared/data/CMRI/new scans", modality+"recipe")
+
+    ASPIRE_LARGE_no_annotations(path_to_images, output_path, modality, manual_omissions, debug=False)
+    # ASPIRE_MEDIUM_to_JSON(path_to_annotations, path_to_images, output_path, modality, manual_omissions, num_folds=6, debug=False )
