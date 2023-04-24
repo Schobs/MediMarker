@@ -412,7 +412,7 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             # Determine the device (GPU if available, else CPU)
             device = torch.device(
                 "cuda" if torch.cuda.is_available() else "cpu")
-            print("==> Using device " + device)
+            # print("==> Using device " + device)
 
             # Move the subject to the device (GPU or CPU)
             subject = subject.to(device)
