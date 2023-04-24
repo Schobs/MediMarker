@@ -212,7 +212,8 @@ def analyse_all_folds(
             df.to_excel(writer, n, index=False)
 
     with ExcelWriter(
-        os.path.join(collation_location, name_of_exp + "_summary_results_allfolds.xlsx")
+        os.path.join(collation_location, name_of_exp +
+                     "_summary_results_allfolds.xlsx")
     ) as writer:
         for n, df in (summary_dicts).items():
             df.to_excel(writer, n, index=False)
@@ -222,7 +223,8 @@ def analyse_all_folds(
 
 # root_path = "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2"
 # root_path = "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22"
-root_path = "/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22"
+# root_path = "/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22"
+root_path = "../results/fold_analyses"
 # /mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22
 # name_of_exp = "ISBI_256F_512Res_8GS_32MFR_AugACEL_DS3"
 models_to_test = [
