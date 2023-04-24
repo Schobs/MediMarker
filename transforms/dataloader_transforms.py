@@ -8,7 +8,6 @@ from albumentations.pytorch import ToTensorV2
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from transforms.custom_pad_to_size import CustomPadToSize
 
 
 def custom_flatten(iaaa_return):
@@ -275,7 +274,7 @@ def get_torchio_transforms(data_augmentation, final_im_size):
         transforms = [
             tio.RandomAffine(scales=(0.8, 1.2), degrees=(-45, 45), p=0.75),
             tio.RandomFlip(axes=(0, 1), p=0.5),
-            CustomPadToSize((final_im_size[0], final_im_size[1])),
+            tio.CropOrPad((final_im_size[0], final_im_size[1], 1)),
         ]
         transform = tio.Compose(transforms)
 
