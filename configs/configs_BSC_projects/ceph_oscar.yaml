@@ -45,4 +45,4 @@ SAMPLER:
   # DATA_AUG_PACKAGE: "torchio"
   # DATA_AUG: "AffineSimple" # set to None for no augmentation. for other schemes see the documentation.
   INPUT_SIZE: [512, 512]
-  DEBUG: True #Set to true to get some visualization of data augmentation and the target heatmaps! Are they close to the predicted heatmaps after training?
+  DEBUG: False #Set to true to get some visualization of data augmentation and the target heatmaps! Are they close to the predicted heatmaps after training?
