@@ -5,6 +5,7 @@ from utils.im_utils.visualisation import visualize_patch
 from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image, maybe_get_coordinates_from_xlsx, resize_coordinates
 from transforms.dataloader_transforms import get_aug_package_loader
 from tqdm import tqdm
+import time
 from transforms.transformations import (
     HeatmapsToTensor,
     normalize_cmr,
@@ -415,8 +416,11 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             # subject["landmark_indicators"].data = subject["landmark_indicators"].data.to(
             #     device)
 
+            start_time = time.time()
             # Apply the transformations to the subject
             transformed_subject = self.transform(subject)
+            time_elapsed = time.time() - start_time
+            print("Time elapsed: " + str(time_elapsed) + " seconds")
 
             # Extract the transformed image and landmarks
             transformed_image = transformed_subject["image"].data.squeeze(
