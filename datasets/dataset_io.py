@@ -20,8 +20,8 @@ from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_ce
 import numpy as np
 import torch
 
-import torch.multiprocessing as mp
-mp.set_start_method('spawn', force=True)
+# import torch.multiprocessing as mp
+# mp.set_start_method('spawn', force=True)
 
 
 class DatasetMeta(ABCMeta, type(data.Dataset)):
@@ -406,14 +406,14 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             )
 
             # Determine the device (GPU if available, else CPU)
-            device = torch.device(
-                "cuda" if torch.cuda.is_available() else "cpu")
-            print("==> Using device " + str(device))
+            # device = torch.device(
+            #     "cuda" if torch.cuda.is_available() else "cpu")
+            # print("==> Using device " + str(device))
 
             # Move the tensors in the subject to the device (GPU or CPU)
-            subject["image"].data = subject["image"].data.to(device)
-            subject["landmark_indicators"].data = subject["landmark_indicators"].data.to(
-                device)
+            # subject["image"].data = subject["image"].data.to(device)
+            # subject["landmark_indicators"].data = subject["landmark_indicators"].data.to(
+            #     device)
 
             # Apply the transformations to the subject
             transformed_subject = self.transform(subject)
