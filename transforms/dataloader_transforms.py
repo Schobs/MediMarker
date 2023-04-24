@@ -281,14 +281,15 @@ def get_torchio_transforms(data_augmentation, final_im_size):
     elif data_augmentation == "AffineComplex":
         transforms = [
             tio.RandomAffine(
-                scales=(0.8, 1.2),  # Adjusted the scales parameter
+                scales=(0.8, 1.2),
                 translation=(-0.07, 0.07),
                 degrees=(-45, 45),
                 p=0.5
             ),
             tio.RandomElasticDeformation(
                 num_control_points=(4, 4),
-                max_displacement=(-16, 16),
+                # Fixed the max_displacement parameter
+                max_displacement=(0, 16),
                 locked_borders=1,
                 p=0.5
             ),
