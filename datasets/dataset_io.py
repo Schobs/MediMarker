@@ -418,9 +418,6 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             # Apply the transformations to the subject
             transformed_subject = self.transform(subject)
 
-            # Move the transformed subject back to CPU for further processing
-            transformed_subject = transformed_subject.to("cpu")
-
             # Extract the transformed image and landmarks
             transformed_image = transformed_subject["image"].data.squeeze(
             ).numpy()
