@@ -20,7 +20,7 @@ SOLVER:
 MODEL:
   GAUSS_SIGMA: 8 #The variance of the gaussian label, you can play around.
   # CHECKPOINT: "/path_to/checkpoint" #Use this to resume training from a checkpoint, or load the checkpoint during inference
-  ARCHITECTURE: "U-NET"
+  ARCHITECTURE: "U-Net"
 
 DATASET:
   ROOT: "/shared/ai4h/Shared/Data/medical/ISBI2015_landmarks/"
