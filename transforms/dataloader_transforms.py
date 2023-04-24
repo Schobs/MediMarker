@@ -281,7 +281,7 @@ def get_torchio_transforms(data_augmentation, final_im_size):
     elif data_augmentation == "AffineComplex":
         transforms = [
             tio.RandomAffine(
-                scales={'x': (0.8, 1.2), 'y': (0.8, 1.2)},
+                scales=(0.8, 1.2),  # Adjusted the scales parameter
                 translation=(-0.07, 0.07),
                 degrees=(-45, 45),
                 p=0.5
