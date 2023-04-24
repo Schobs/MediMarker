@@ -288,7 +288,6 @@ def get_torchio_transforms(data_augmentation, final_im_size):
             ),
             tio.RandomElasticDeformation(
                 num_control_points=(4, 4),
-                # Fixed the max_displacement parameter
                 max_displacement=(16, 16),
                 locked_borders=1,
                 p=0.5
