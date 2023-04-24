@@ -6,7 +6,7 @@ OUTPUT:
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "yncS2q9q4j8UPdveJP0yEmka2"
   COMET_WORKSPACE: "oscargavin"
-  COMET_PROJECT_NAME: "dissertation"
+  COMET_PROJECT_NAME: "formal-results"
 
 SOLVER:
   DEEP_SUPERVISION: False
