@@ -1,28 +1,27 @@
+from alive_progress import alive_bar
+from abc import ABC, ABCMeta
+import logging
+from utils.im_utils.visualisation import visualize_patch
+from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image, maybe_get_coordinates_from_xlsx, resize_coordinates
+from transforms.dataloader_transforms import get_aug_package_loader
+from tqdm import tqdm
+from transforms.transformations import (
+    HeatmapsToTensor,
+    normalize_cmr,
+)
+from torchvision import transforms
+from torch.utils import data
+from imgaug.augmentables import Keypoint, KeypointsOnImage
+import torchio as tio
 import os
 from pathlib import Path
 from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_centred, get_patch_stitching_info
 
 import numpy as np
 import torch
-import torchio as tio
-from imgaug.augmentables import Keypoint, KeypointsOnImage
-from torch.utils import data
-from torchvision import transforms
-from transforms.transformations import (
-    HeatmapsToTensor,
-    normalize_cmr,
-)
 
-from tqdm import tqdm
-from transforms.dataloader_transforms import get_aug_package_loader
-
-from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image, maybe_get_coordinates_from_xlsx, resize_coordinates
-from utils.im_utils.visualisation import visualize_patch
-
-
-import logging
-from abc import ABC, ABCMeta
-from alive_progress import alive_bar
+import torch.multiprocessing as mp
+mp.set_start_method('spawn', force=True)
 
 
 class DatasetMeta(ABCMeta, type(data.Dataset)):
