@@ -410,14 +410,14 @@ class NetworkTrainer(ABC):
 
         data = (data_dict["image"]).to(self.device)
 
-        if "047" not in data_dict["uid"] and "47" not in data_dict["uid"] and "370" not in data_dict["uid"] and "347" not in data_dict["uid"]:
-            self.logger.info("no found uid: %s ", data_dict["uid"])
+        # if "047" not in data_dict["uid"] and "47" not in data_dict["uid"] and "370" not in data_dict["uid"] and "347" not in data_dict["uid"]:
+        #     self.logger.info("no found uid: %s ", data_dict["uid"])
 
-            return 0, generator
-        else:
-            self.logger.info("found uid: %s ", data_dict["uid"])
+        #     return 0, generator
+        # else:
+        #     self.logger.info("found uid: %s ", data_dict["uid"])
 
-        # This happens when we regress sigma with >0 workers due to multithreading issues.
+        # This happens when we regress sigma with > 0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
         if self.gen_hms_in_mainthread:
             data_dict["label"] = self.generate_heatmaps_batch(data_dict, dataloader)

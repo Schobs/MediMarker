@@ -28,7 +28,6 @@ from gpflow.utilities import print_summary
 from torch.utils.data import DataLoader
 from utils.im_utils.visualisation import multi_variate_hm
 from utils.setup.argument_utils import checkpoint_loading_checking
-from models.gp_models.register import *
 from models.gp_models.tf_gpmodels import (
     conv_sgp_rbf_fix,
     get_SVGP_model,
@@ -188,12 +187,14 @@ class GPFlowTrainer(NetworkTrainer):
                 self.trainer_config.SAMPLER.PATCH.SAMPLE_PATCH_SIZE,
                 self.num_inducing_points,
                 batch_size=self.data_loader_batch_size_train,
-                kern_type=self.conv_kern_type,
+                patch_shape=self.trainer_config.MODEL.GPFLOW.CONV_KERN_SIZE,
+                inducing_sample_var=self.ip_sample_var,
                 base_kern_ls=self.conv_kern_ls,
                 base_kern_var=self.conv_kern_var,
                 init_likelihood_noise=self.initial_likelihood_noise,
                 independent_likelihoods=self.independent_likelihoods,
                 likelihood_upper_bound=self.likelihood_noise_upper_bound,
+                kern_type=self.conv_kern_type,
                 kl_scale=self.kl_scale,
             )
 

@@ -162,11 +162,11 @@ def UNetCompiled(output_channels, input_shape, image_shape, out_dim, batch_size,
                                    padding='same',
                                    kernel_initializer='he_normal')(ublock9)
 
-    conv10 = tf.keras.layers.Conv2D(n_classes, 1, padding='same')(conv9)
+    x = tf.keras.layers.Conv2D(n_classes, 1, padding='same')(conv9)
 
-    x = tf.keras.layers.Flatten()(conv10)
-    x = tf.keras.layers.Dense(out_dim, activation="relu")(x)
-    x = tf.keras.layers.Lambda(to_default_float)(x)
+    # x = tf.keras.layers.Flatten()(conv10)
+    # x = tf.keras.layers.Dense(out_dim, activation="relu")(x)
+    # x = tf.keras.layers.Lambda(to_default_float)(x)
 
     # Define the model
     model = tf.keras.Model(inputs=inputs, outputs=x)

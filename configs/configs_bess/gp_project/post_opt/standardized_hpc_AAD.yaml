@@ -77,7 +77,7 @@ MODEL:
     CONV_KERN_LS: 0.5  # base kernel lengthscale
     CONV_KERN_V: 1.0  # base kernel variance
     CONV_KERN_TYPE: "matern12"
-    FIX_NOISE_UNTIL_EPOCH: 3000 
+    FIX_NOISE_UNTIL_EPOCH: 6000 
     MODEL_NOISE_INIT: 0.001
     TRAIN_IP: True
     INDEPENDENT_LIKELIHOODS: True

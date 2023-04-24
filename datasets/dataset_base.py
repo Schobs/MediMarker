@@ -272,9 +272,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.original_image_sizes.append(original_size)
 
                 else:
-                    if self.standardize_landmarks:
-                        raise ValueError(
-                            "cannot standardize landmarks if not caching data right now. future work to implement.")
+                    # if self.standardize_landmarks:
+                    #     raise ValueError(
+                    #         "cannot standardize landmarks if not caching data right now. future work to implement.")
                     # Not caching, so just append image path.
                     self.images.append(data["image"])
 
@@ -407,6 +407,25 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
             # list where [0] is image and [1] are coords.
             transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
+
+            # image = (1,512,512)
+            # heatmap for 1st landmark = (19, 1, 512 , 512)
+
+            # input_size  = [512,512]
+            # num_landmarks = 19
+            # np.zeros((19,1, 512,512))
+
+            # 1) indicator_map = np.zeros((num_landmarks, 1, self.input_size[0], self.input_size[1])) # (19, 1, 512, 512)
+            # for  idx, landmark in enumerate(untransformed_coords):
+            #     indicator_map[idx, 0, landmark[0], landmark[1]] = 1
+            # transformed_indicator = self.transform(image=indicator_map)
+            # new_coords = np.argmax(transformed_indicator, axis=(1, 2))
+            # label = self.LabelGenerator.generate_labels(new_coords)
+            # in this case, the label will be your normal circular/isotropic gaussian heatmap.
+
+            # 2) First turn the landmarks into a heatmap using
+            # heatmap = self.LabelGenerator.generate_labels(untransformed_coords)
+            # label = self.transform(image=heatmap)
 
             input_image = normalize_cmr(transformed_sample[0], to_tensor=self.to_pytorch)
             input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])

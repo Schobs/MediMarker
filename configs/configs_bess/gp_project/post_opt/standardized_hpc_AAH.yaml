@@ -15,11 +15,11 @@ SOLVER:
   DEEP_SUPERVISION: False  # Leave this.
   NUM_RES_SUPERVISIONS: 1 # Leave this.
   LOSS_FUNCTION: "mse"
-  DATA_LOADER_BATCH_SIZE_TRAIN: 6 # indicates entire dataset for batch (needed for ExactGP)
+  DATA_LOADER_BATCH_SIZE_TRAIN: 2 # indicates entire dataset for batch (needed for ExactGP)
   MAX_EPOCHS: 10000
   MINI_BATCH_SIZE: 1 # Leave this.
   # REGRESS_SIGMA: True
-  DATA_LOADER_BATCH_SIZE_EVAL: 6
+  DATA_LOADER_BATCH_SIZE_EVAL: 2
   BASE_LR: 0.001
   AUTO_MIXED_PRECISION: False
   EARLY_STOPPING_PATIENCE: 250 # epochs for validation loss not improving before stopping training
@@ -39,8 +39,8 @@ DATASET:
 TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
-  CACHE_DATA: True # Kind of irrelevant for ExactGP
-  INFERENCE_ONLY: False # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
+  CACHE_DATA: False # Kind of irrelevant for ExactGP
+  INFERENCE_ONLY: True # Set True and add a MODEL.CHECKPOINT to load a model and run inference only.
   SAVE_EVERY: 100 # Saves checkpoint every X epochs
   VALIDATE_EVERY: 25 #validation every X epochs
   VALIDATION_LOG_HEATMAPS: True
@@ -67,7 +67,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 2 #irrelevant
   ARCHITECTURE: "GPFlow"  # ["U-Net" , "PHD-Net"]
-  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/t1/model_latest_fold0.model" #Change this to where you want to save model checkpoints/results
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/optim/standardized/AAHA/model_best_valid_loss_fold0.model" #Change this to where you want to save model checkpoints/results
   GPFLOW:
     NUM_INDUCING_POINTS: 1000 # of inducing points or inducing patches
     INDUCING_SAMPLE_VAR: 1
@@ -87,12 +87,12 @@ MODEL:
     KL_SCALE: 0.001
 
 INFERENCE:
-  EVALUATION_MODE: "use_input_size"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  EVALUATION_MODE: "scale_pred_coords"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set True for plot of predictions with covariances plotted.
   SPLIT: "testing"
   LOG_HEATMAPS: True
   LOG_HEATMAP_PLOT_TARG: True
 
 SSH:
-  AUTO_AMEND_PATHS: False
+  AUTO_AMEND_PATHS: True
 

@@ -1,3 +1,4 @@
+import copy
 from typing import Dict, Optional, Tuple, List
 
 import numpy as np
@@ -8,7 +9,7 @@ import gpflow as gpf
 from gpflow.ci_utils import reduce_in_tests
 from gpflow.utilities import to_default_float
 
-from models.gp_models.tf_gpmodels import create_likelihood
+from models.gp_models.tf_gpmodels import constrained, create_likelihood, max_abs_1, positive_with_min
 from models.gp_models.unet_tf import UNetCompiled, unet_model_tf
 from utils.tensorflow_utils.conv_helpers import get_inducing_patches
 
@@ -74,7 +75,7 @@ class KernelSpaceInducingPoints(gpf.inducing_variables.InducingPoints):
 
 
 @gpf.covariances.Kuu.register(KernelSpaceInducingPoints, KernelWithConvNN)
-def Kuu(inducing_variable, kernel, jitter=None):
+def Kuu(inducing_variable, kernel, jitter=0.00001):
     func = gpf.covariances.Kuu.dispatch(
         gpf.inducing_variables.InducingPoints, gpf.kernels.Kernel
     )
@@ -150,9 +151,10 @@ def get_conv_backbone_model(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: T
 
 
 def get_conv_backbone_model_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray], inp_dim: Tuple[int, int], num_inducing_points: int, batch_size: int,
-                                         kern_type: str = "rbf", base_kern_ls: int = 3, base_kern_var: int = 3, init_likelihood_noise: float = 1.0,
+                                         patch_shape: List[int] = [3, 3], kern_type: str = "rbf", inducing_sample_var: int = 1,
+                                         base_kern_ls: int = 3, base_kern_var: int = 3, init_likelihood_noise: float = 1.0,
                                          independent_likelihoods: bool = False, likelihood_upper_bound: float = None,
-                                         kl_scale: float = 1.0, ) -> gpf.models.SVGP:
+                                         kl_scale: float = 1.0) -> gpf.models.SVGP:
     """
     Returns a Gaussian process with a Convolutional kernel as the covariance function.
 
@@ -191,13 +193,26 @@ def get_conv_backbone_model_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray
                        out_dim=64, batch_size=batch_size)
     convs_k = []
     for i in range((2)):
+
+        conv_k = gpf.kernels.Convolutional(
+            inner_kern, inp_dim, patch_shape
+        )
+        conv_k.base_kernel.lengthscales = gpf.Parameter(
+            [base_kern_ls] * int(patch_shape[0]*patch_shape[1]), transform=positive_with_min()
+        )
+
+        # Weight scale and variance are non-identifiable. We also need to prevent variance from shooting off crazily.
+        conv_k.base_kernel.variance = gpf.Parameter(base_kern_var, transform=constrained())
+        conv_k.weights = gpf.Parameter(conv_k.weights.numpy(), transform=max_abs_1())
+
         kernel = KernelWithConvNN(
             inp_dim + [1],
             2,
-            inner_kern,
+            conv_k,
             batch_size,
             cnn=cnn
         )
+
         convs_k.append(kernel)
 
     kernel = gpf.kernels.LinearCoregionalization(
@@ -206,22 +221,30 @@ def get_conv_backbone_model_linear_coreg(X: List[np.ndarray], Y: List[np.ndarray
 
     inducing_patches = get_inducing_patches(X, Y, inp_dim, inp_dim, num_inducing_points, std=1)
     # inducing_patches = inducing_patches.reshape(-1, inp_dim[0], inp_dim[1], 1)
-    inducing_variable_kmeans = kmeans2(
-        np.array(X), 10, minit="points"
-    )[0]
+    # inducing_variable_kmeans = kmeans2(
+    #     np.array(X), 10, minit="points"
+    # )[0]
 
     inducing_variable_cnn = kernel.kernels[0].cnn(inducing_patches)
-    inducing_variable = KernelSpaceInducingPoints(inducing_variable_cnn)
 
-    inducing_variable = gpf.inducing_variables.SharedIndependentInducingVariables(
-        inducing_variable
+    ivc_flat = inducing_variable_cnn.numpy().reshape(-1, patch_shape[0] * patch_shape[1])
+    conv_f_i = gpf.inducing_variables.InducingPatches(ivc_flat)
+
+    iv = gpf.inducing_variables.SharedIndependentInducingVariables(
+        conv_f_i
     )
+
+    # inducing_variable = KernelSpaceInducingPoints(inducing_variable_cnn)
+
+    # iv = gpf.inducing_variables.SharedIndependentInducingVariables(
+    #     inducing_variable
+    # )
     likelihood = create_likelihood(independent_likelihoods, init_likelihood_noise, likelihood_upper_bound)
 
     conv_m = gpf.models.SVGP(
         kernel,
         likelihood,
-        inducing_variable=inducing_variable,
+        inducing_variable=iv,
         num_data=len(X),
         num_latent_gps=2,
     )
