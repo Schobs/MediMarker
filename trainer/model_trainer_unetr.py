@@ -96,12 +96,8 @@ class UnetrTrainer(NetworkTrainer):
             self.individual_hm_loss = SoftDiceLoss()
         elif loss_str == "combined":
             self.individual_hm_loss = CombinedLoss2D()
-        elif loss_str == "l1":
-            self.individual_hm_loss = nn.SmoothL1Loss()
         elif loss_str == "awl":
-            self.individual_hm_loss = AdaptiveWingLoss(
-                hm_lambda_scale=self.trainer_config.MODEL.HM_LAMBDA_SCALE
-            )
+            self.individual_hm_loss = AdaptiveWingLoss()
         else:
             raise ValueError(
                 "the loss function %s is not implemented. Try mse or awl" % (

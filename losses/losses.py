@@ -5,50 +5,43 @@ import copy
 
 
 class AdaptiveWingLoss(nn.Module):
-    def __init__(self, hm_lambda_scale, omega=14, theta=0.5, epsilon=1, alpha=1.1):
+    def __init__(self, omega=14, epsilon=1, alpha=2.1, theta=0.5, w_init=None):
         super(AdaptiveWingLoss, self).__init__()
         self.omega = omega
-        self.theta = theta
         self.epsilon = epsilon
-        self.alpha = alpha + hm_lambda_scale
+        self.alpha = alpha
+        self.theta = theta
 
-    def forward(self, pred, target):
-        """
-        :param pred: BxNxHxH
-        :param target: BxNxHxH
-        :return:
-        """
+        if w_init is not None:
+            self.w = w_init
+        else:
+            self.w = self.calculate_w()
 
-        y = target
-        y_hat = pred
-        delta_y = (y - y_hat).abs()  # get error for each pixel
-        delta_y1 = delta_y[
-            delta_y < self.theta
-        ]  # get the low activation pixels (predicted background)
-        delta_y2 = delta_y[
-            delta_y >= self.theta
-        ]  # get the high activation pixels (predcited foreground)
-        # get the low act target pixels (background)
-        y1 = y[delta_y < self.theta]
-        # get the high act target pixels (foreground)
-        y2 = y[delta_y >= self.theta]
-        loss1 = self.omega * torch.log(
-            1 + torch.pow(delta_y1 / self.omega, self.alpha - y1)
-        )
-        A = (
-            self.omega
-            * (1 / (1 + torch.pow(self.theta / self.epsilon, self.alpha - y2)))
-            * (self.alpha - y2)
-            * (torch.pow(self.theta / self.epsilon, self.alpha - y2 - 1))
-            * (1 / self.epsilon)
-        )
-        C = self.theta * A - self.omega * torch.log(
-            1 + torch.pow(self.theta / self.epsilon, self.alpha - y2)
-        )
-        loss2 = A * delta_y2 - C
+    def calculate_w(self):
+        w = [1.0]
+        for k in range(1, 14):
+            w.append(1 + self.theta * (k ** self.alpha))
+        return torch.tensor(w)
 
-        # print("awl: ", (loss1.sum() + loss2.sum()) / (len(loss1) + len(loss2)))
-        return (loss1.sum() + loss2.sum()) / (len(loss1) + len(loss2))
+    def forward(self, net_output, target):
+        y = net_output - target
+        y_abs = torch.abs(y)
+
+        C = self.w[1:] - self.w[:-1] * (1 + self.theta)
+        C = F.pad(C, (1, 0))
+
+        T = y_abs - self.w
+        T = F.relu(T)
+        T = T + C
+
+        idx_smaller_than_w = (y_abs < self.w).float()
+        idx_larger_than_w = (y_abs >= self.w).float()
+
+        loss = self.omega * \
+            torch.log(1 + y_abs / self.epsilon) * idx_smaller_than_w
+        loss += T * idx_larger_than_w
+
+        return loss.mean()
 
 
 class MyWingLoss(nn.Module):
@@ -137,21 +130,6 @@ class HeatmapLoss(nn.Module):
     def forward(self, net_output, target):
         # print("in the single heatmap output loss the x and y shapes are: ", net_output.detach().cpu().numpy().shape, (target).detach().cpu().numpy().shape)
         return self.loss(net_output, target)
-
-
-class SmoothL1Loss(nn.Module):
-    """Custom implementation of the Smooth L1 Loss"""
-
-    def __init__(self, beta=1.0):
-        super(SmoothL1Loss, self).__init__()
-        self.beta = beta
-
-    def forward(self, net_output, target):
-        diff = net_output - target
-        abs_diff = torch.abs(diff)
-        loss = torch.where(abs_diff < self.beta, 0.5 * diff **
-                           2 / self.beta, abs_diff - 0.5 * self.beta)
-        return loss.mean()
 
 
 class SoftDiceLoss(nn.Module):
