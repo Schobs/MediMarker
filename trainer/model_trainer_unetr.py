@@ -93,6 +93,8 @@ class UnetrTrainer(NetworkTrainer):
             self.individual_hm_loss = HeatmapLoss()
         elif loss_str == "dice":
             self.individual_hm_loss = SoftDiceLoss()
+        elif loss_str == "combined":
+            self.individual_hm_loss = CombinedLoss2D()
         elif loss_str == "awl":
             self.individual_hm_loss = AdaptiveWingLoss(
                 hm_lambda_scale=self.trainer_config.MODEL.HM_LAMBDA_SCALE
