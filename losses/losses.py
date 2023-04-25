@@ -176,20 +176,16 @@ class CombinedLoss2D(nn.Module):
         self.dice_loss = SoftDiceLoss()
 
     def forward(self, net_output, target):
-        # Convert target tensor to float
-        target = target.float()
-
         # Soft Dice Loss
-        dice_loss_value = self.dice_loss(net_output, target)
+        dice_loss_value = self.dice_loss(net_output, target.float())
 
         # Cross Entropy Loss
         ce_loss = self.loss(net_output, target.argmax(
-            dim=0).long().unsqueeze(0))
+            dim=0).unsqueeze(0).float())
 
         # Combined Loss
         total_loss = dice_loss_value + ce_loss
         return total_loss
-
 
 # i need to think of a loss that normalises between 0-1
 
