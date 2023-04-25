@@ -6,8 +6,7 @@ from losses.losses import (
     AdaptiveWingLoss,
     SigmaLoss,
     SoftDiceLoss,
-    SoftDiceCrossEntropyLoss,
-    SmoothL1Loss,
+    WeightedCrossEntropyLoss,
 )
 from models.unetr import UNETR
 import torch
@@ -94,8 +93,8 @@ class UnetrTrainer(NetworkTrainer):
             self.individual_hm_loss = HeatmapLoss()
         elif loss_str == "dice":
             self.individual_hm_loss = SoftDiceLoss()
-        elif loss_str == "sdce":
-            self.individual_hm_loss = SoftDiceCrossEntropyLoss()
+        elif loss_str == "wce":
+            self.individual_hm_loss = WeightedCrossEntropyLoss()
         elif loss_str == "awl":
             self.individual_hm_loss = AdaptiveWingLoss()
         else:

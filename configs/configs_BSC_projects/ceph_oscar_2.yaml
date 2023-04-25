@@ -11,7 +11,7 @@ OUTPUT:
 SOLVER:
   DEEP_SUPERVISION: False
   NUM_RES_SUPERVISIONS: 1
-  LOSS_FUNCTION: "sdce"
+  LOSS_FUNCTION: "wce"
   # MINI_BATCH_SIZE: 50 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_TRAIN: 12 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_EVAL: 2 #As high as will fit in gpu memory

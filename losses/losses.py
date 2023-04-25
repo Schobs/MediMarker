@@ -1,4 +1,5 @@
 from torch import nn
+import torch.nn.functional as F
 import numpy as np
 import torch
 import copy
@@ -168,33 +169,56 @@ class SoftDiceLoss(nn.Module):
         return dice_loss
 
 
-class SoftDiceCrossEntropyLoss(nn.Module):
-    def __init__(self):
-        super(SoftDiceCrossEntropyLoss, self).__init__()
+class WeightedCrossEntropyLoss(torch.nn.Module):
+    """
+    WeightedCrossEntropyLoss (WCE) as described in https://arxiv.org/pdf/1707.03237.pdf
+    Network has to have NO LINEARITY!
+    copy from: https://github.com/wolny/pytorch-3dunet/blob/6e5a24b6438f8c631289c10638a17dea14d42051/unet3d/losses.py#L121
+    """
 
-    def forward(self, net_output, target):
-        target_one_hot = torch.eye(net_output.shape[1], device=net_output.device)[
-            target.squeeze().long()]
-        print("target_one_hot shape before permute:", target_one_hot.shape)
-        target_one_hot = target_one_hot.permute(0, 3, 1, 2).contiguous()
+    def forward(self, net_output, gt):
+        # compute weight
+        # shp_x = net_output.shape
+        # shp_y = gt.shape
+        # print(shp_x, shp_y)
+        # with torch.no_grad():
+        #     if len(shp_x) != len(shp_y):
+        #         gt = gt.view((shp_y[0], 1, *shp_y[1:]))
 
-        num_pixels = target_one_hot.shape[2] * target_one_hot.shape[3]
+        #     if all([i == j for i, j in zip(net_output.shape, gt.shape)]):
+        #         # if this is the case then gt is probably already a one hot encoding
+        #         y_onehot = gt
+        #     else:
+        #         gt = gt.long()
+        #         y_onehot = torch.zeros(shp_x)
+        #         if net_output.device.type == "cuda":
+        #             y_onehot = y_onehot.cuda(net_output.device.index)
+        #         y_onehot.scatter_(1, gt, 1)
+        # y_onehot = y_onehot.transpose(0,1).contiguous()
+        # class_weights = (torch.einsum("cbxyz->c", y_onehot).type(torch.float32) + 1e-10)/torch.numel(y_onehot)
+        # print('class_weights', class_weights)
+        # class_weights = class_weights.view(-1)
+        class_weights = torch.cuda.FloatTensor([0.2, 0.8])
+        gt = gt.long()
+        num_classes = net_output.size()[1]
+        # class_weights = self._class_weights(inp)
 
-        # Soft Dice Loss
-        intersection = torch.sum(net_output * target_one_hot, dim=(2, 3))
-        dice_denominator = torch.sum(net_output.pow(
-            2) + target_one_hot.pow(2), dim=(2, 3))
-        dice_loss = 1 - 2 * \
-            (intersection / dice_denominator).sum() / num_pixels
+        i0 = 1
+        i1 = 2
 
-        # Cross Entropy Loss
-        ce_loss = -torch.sum(target_one_hot *
-                             torch.log(net_output)) / num_pixels
+        # this is ugly but torch only allows to transpose two axes at once
+        while i1 < len(net_output.shape):
+            net_output = net_output.transpose(i0, i1)
+            i0 += 1
+            i1 += 1
 
-        # Combined Loss
-        total_loss = dice_loss + ce_loss
+        net_output = net_output.contiguous()
+        # shape=(vox_num, class_num)
+        net_output = net_output.view(-1, num_classes)
 
-        return total_loss
+        gt = gt.view(-1,)
+        # print('*'*20)
+        return F.cross_entropy(net_output, gt)
 
 # i need to think of a loss that normalises between 0-1
 
