@@ -142,20 +142,13 @@ class HeatmapLoss(nn.Module):
 class SmoothL1Loss(nn.Module):
     """Smooth L1 Loss wrapper"""
 
-    def __init__(self, beta=1.0):
+    def __init__(self, loss_func=nn.SmoothL1Loss()):
         super(SmoothL1Loss, self).__init__()
 
-        self.beta = beta
+        self.loss = loss_func
 
     def forward(self, net_output, target):
-        diff = net_output - target
-        abs_diff = torch.abs(diff)
-        mask = abs_diff < self.beta
-
-        smooth_l1_loss = torch.where(
-            mask, 0.5 * diff * diff / self.beta, abs_diff - 0.5 * self.beta)
-
-        return smooth_l1_loss.mean()
+        return self.loss(net_output, target)
 
 
 class SoftDiceLoss(nn.Module):
