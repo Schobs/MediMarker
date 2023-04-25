@@ -139,6 +139,39 @@ class HeatmapLoss(nn.Module):
         return self.loss(net_output, target)
 
 
+class SoftDiceLoss(nn.Module):
+    def __init__(self, epsilon=1e-6):
+        super(SoftDiceLoss, self).__init__()
+        self.epsilon = epsilon
+
+    def forward(self, output, target):
+        numerator = 2 * torch.sum(output * target)
+        denominator = torch.sum(output * output) + torch.sum(target * target)
+
+        dice_loss = 1 - (numerator + self.epsilon) / \
+            (denominator + self.epsilon)
+        return dice_loss
+
+
+class CombinedLoss2D(nn.Module):
+    def __init__(self, loss_func=nn.MSELoss()):
+        super(CombinedLoss2D, self).__init__()
+
+        self.loss = loss_func
+        self.dice_loss = SoftDiceLoss()
+
+    def forward(self, net_output, target):
+        # Soft Dice Loss
+        dice_loss_value = self.dice_loss(net_output, target)
+
+        # Cross Entropy Loss
+        ce_loss = self.loss(net_output, target.argmax(
+            dim=0).long().unsqueeze(0))
+
+        # Combined Loss
+        total_loss = dice_loss_value + ce_loss
+        return total_loss
+
 # i need to think of a loss that normalises between 0-1
 
 
