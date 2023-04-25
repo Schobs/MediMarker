@@ -175,6 +175,7 @@ class SoftDiceCrossEntropyLoss(nn.Module):
     def forward(self, net_output, target):
         target_one_hot = torch.eye(net_output.shape[1], device=net_output.device)[
             target.squeeze().long()]
+        print("target_one_hot shape before permute:", target_one_hot.shape)
         target_one_hot = target_one_hot.permute(0, 3, 1, 2).contiguous()
 
         num_pixels = target_one_hot.shape[2] * target_one_hot.shape[3]
