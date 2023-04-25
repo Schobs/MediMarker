@@ -14,5 +14,5 @@ module load cuDNN/7.6.4.38-gcccuda-2019b
 
 source activate my_env
 
-python ../../main.py --cfg ../../configs/configs_BSC_projects/ceph_oscar.yaml
-# python main.py --cfg configs/configs_BSC_projects/ceph_oscar.yaml
+# python ../../main.py --cfg ../../configs/configs_BSC_projects/ceph_oscar.yaml
+python main.py --cfg configs/configs_BSC_projects/ceph_oscar.yaml
