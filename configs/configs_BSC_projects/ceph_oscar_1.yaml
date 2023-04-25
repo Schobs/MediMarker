@@ -6,12 +6,12 @@ OUTPUT:
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "yncS2q9q4j8UPdveJP0yEmka2"
   COMET_WORKSPACE: "oscargavin"
-  COMET_PROJECT_NAME: "combined"
+  COMET_PROJECT_NAME: "Soft Dice Cross Entropy"
 
 SOLVER:
   DEEP_SUPERVISION: False
   NUM_RES_SUPERVISIONS: 1
-  LOSS_FUNCTION: "combined"
+  LOSS_FUNCTION: "sdce"
   # MINI_BATCH_SIZE: 50 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_TRAIN: 12 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_EVAL: 2 #As high as will fit in gpu memory
