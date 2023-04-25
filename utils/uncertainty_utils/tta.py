@@ -1,14 +1,35 @@
+"""
+Utility module containing methods for the TTA implementation for uncertinty estimation
+
+Author: Ethan Jones
+Date: 2023-04-25
+"""
+
 import random
+from typing import Union
+import math
+
 import numpy as np
 import torch
-import math
-from scipy import ndimage
 from imgaug import augmenters as iaa
-import matplotlib.pyplot as plt
 
-def inverse_heatmaps(logged_vars, output, data_dict):
+def inverse_heatmaps(logged_vars: dict, output: dict, data_dict: dict) -> dict:
     """
     Wrapper function to invert a batch of heatmaps, depending on its transformation.
+    
+    Parameters
+    ---------
+    `logged_vars` : Dict 
+        Dictionary with logged transformation information for each image.
+    `output`: Dict
+        Batch of heatmaps to be inverted.
+    `data_dict` : Dict
+        Dictionary with data related to the batch of heatmaps, including the image data.
+    
+    Returns
+    -------
+    `output` : Dict
+        Batch of inverted heatmaps.
     """
     batch_size = len(data_dict['image'])
     for img_count in range(len(output)):
@@ -24,9 +45,21 @@ def inverse_heatmaps(logged_vars, output, data_dict):
             output[img_count][heatmap_count] = org_heatmap
     return output
 
-def invert_heatmap(heatmap, transformation):
+def invert_heatmap(heatmap : Union[torch.Tensor, np.ndarray], transformation: dict) -> torch.Tensor:
     """
     Function to invert a heatmap from an applied transformation.
+
+    Parameters
+    --------
+    `heatmap` : Union[torch.Tensor, np.ndarray]
+        Heatmap to be inverted.
+    `transformation` : Dict
+        Dictionary with information about the applied transformation.
+    
+    Returns
+    -------
+    `heatmap` : torch.Tensor
+        Inverted heatmap.
     """
     transform = list(transformation.keys())[0]
     if transform is "inverse_rotate":
@@ -59,22 +92,26 @@ def invert_heatmap(heatmap, transformation):
         new_heatmap = torch.from_numpy(iaa.TranslateX(px=(mag)).augment_image(temp))
     return heatmap
 
-def invert_coordinates(orginal_coords, log_dict, img_size=[512, 512]):
+def invert_coordinates(orginal_coords : list, log_dict : dict, img_size : list = [512, 512]) -> list:
     """
-    A function to invert the TTA processes laid out in a previous function. Note that only the rotate function has an effect of transforming the coords therefore it is the
+    A function to invert the TTA processes laid out in a previous function. 
+    
+    Note that only the rotate function has an effect of transforming the coords therefore it is the
     only function that needs inversing.
+
     Parameters
     ----------
-    `eval_logs` : List of Dicts
-        The evaluation logs of layout: {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
-                                        "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
-                                        "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['hm_max', 'coords_og_size']}.
-    `inverse_functs` : Dict
-        A dict containing the names and magnitudes of each applied TTA function.
+    `orginal_coords` : list
+        List of coordinates.
+    `log_dict` : Dict
+        Dictionary containing the results and transformation information.
+    `img_size` : list (defaults to [512,512])
+        Size of the image.
+    
     Returns
     -------
-    `eval_logs` : List of Dicts
-        The now altered evaluation logs with the updated, and inversed, coordinates from the TTA processes.
+    `inverted_predicted_coords` : list
+        List of inverted coords.
     """
     inverted_predicted_coords = []
     for funct, coords_all, img_shape in zip(log_dict['individual_results'][-orginal_coords.shape[0]:], orginal_coords, img_size):
@@ -103,7 +140,7 @@ def invert_coordinates(orginal_coords, log_dict, img_size=[512, 512]):
     inverted_predicted_coords = torch.stack(inverted_predicted_coords).to(device)
     return inverted_predicted_coords
 
-def extract_original_coords_from_rotation(rotation_mag, rotated_coords, training_resolution=[512, 512]):
+def extract_original_coords_from_rotation(rotation_mag : float, rotated_coords : tuple, training_resolution : list = [512, 512]) -> torch.Tensor:
     """
     Extracts the original coords from a rotated image - does assume the layout of eval_log to contain the coords in the eval_log["individual_results"]['predicted_coords'] section
     to be in a tuple i.e. (x1, y1).
@@ -115,7 +152,7 @@ def extract_original_coords_from_rotation(rotation_mag, rotated_coords, training
         The coords from the rotated image i.e. (x1, y1)
     Returns
     -------
-    `conv_coords` : Tuple
+    `conv_coords` : torch.Tensor
         Again assumes the layout of the evaluation log as mentioned above. A tuple containing the converted coordinates now relating to the
         original image.
     """
@@ -142,16 +179,21 @@ def extract_original_coords_from_rotation(rotation_mag, rotated_coords, training
     conv_coords = torch.tensor([x_new, y_new])
     return conv_coords
 
-def extract_original_coords_from_flipud(flip_coords, training_resolution=[512, 512]):
+def extract_original_coords_from_flipud(flip_coords : Union[torch.Tensor, np.ndarray], training_resolution : list = [512, 512]) -> torch.Tensor:
     """
     Extracts the original coordinates of a flipped image based on the flipped coordinates and the training resolution.
 
-    :param flip_coords: A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
-    :type flip_coords: torch.Tensor or numpy.ndarray
-    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
-    :type training_resolution: list
-    :return: A tensor representing the original coordinates of the flipped image, with shape (2,).
-    :rtype: torch.Tensor
+    Parameters
+    ----------
+    `flip_coords` :  Union[torch.Tensor, np.ndarray]
+        A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
+    `training_resolution` : List
+        The resolution of the training images, represented as a list of width and height. Default is [512, 512].
+
+    Return
+    ------
+    `conv_coords` : torch.Tensor
+        A tensor representing the original coordinates of the flipped image, with shape (2,).
     """
     if type(flip_coords) == torch.Tensor:
         flip_coords = flip_coords.cpu().numpy()
@@ -160,16 +202,21 @@ def extract_original_coords_from_flipud(flip_coords, training_resolution=[512, 5
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def extract_original_coords_from_fliplr(flip_coords, training_resolution=[512, 512]):
+def extract_original_coords_from_fliplr(flip_coords : Union[torch.Tensor, np.ndarray], training_resolution : list = [512, 512]) -> torch.Tensor:
     """
     Extracts the original coordinates of a flipped image based on the flipped coordinates and the training resolution.
 
-    :param flip_coords: A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
-    :type flip_coords: torch.Tensor or numpy.ndarray
-    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
-    :type training_resolution: list
-    :return: A tensor representing the original coordinates of the flipped image, with shape (2,).
-    :rtype: torch.Tensor
+    Parameters
+    ----------
+    `flip_coords` :  Union[torch.Tensor, np.ndarray]
+        A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
+    `training_resolution` : List
+        The resolution of the training images, represented as a list of width and height. Default is [512, 512].
+
+    Return
+    ------
+    `conv_coords` : torch.Tensor
+        A tensor representing the original coordinates of the flipped image, with shape (2,).
     """
     if type(flip_coords) == torch.Tensor:
         flip_coords = flip_coords.cpu().numpy()
@@ -178,18 +225,20 @@ def extract_original_coords_from_fliplr(flip_coords, training_resolution=[512, 5
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def extract_coords_from_movevertical(magnitude, coords):
+def extract_coords_from_movevertical(magnitude : float, coords : Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
     """
     Extracts the coordinates of an image moved vertically based on the input magnitude and original coordinates.
 
-    :param magnitude: The magnitude of the vertical movement.
-    :type magnitude: float
-    :param coords: A tensor or numpy array representing the original coordinates of an image, with shape (2,).
-    :type coords: torch.Tensor or numpy.ndarray
-    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
-    :type training_resolution: list
-    :return: A tensor representing the coordinates of the moved image, with shape (2,).
-    :rtype: torch.Tensor
+    Parameters
+    ----------
+    `magnitude` : Float
+        The magnitude of the vertical movement.
+    `coords` : Union[torch.Tensor, np.ndarray])
+
+    Return
+    ------
+    `conv_coords` : torch.Tensor
+        A tensor representing the original coordinates of the flipped image, with shape (2,).
     """
     if type(coords) == torch.Tensor:
         coords = coords.cpu().numpy()
@@ -198,29 +247,20 @@ def extract_coords_from_movevertical(magnitude, coords):
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def extract_coords_from_movehorizontal(magnitude, coords):
+def extract_coords_from_movehorizontal(magnitude : float, coords : Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
     """
     Extracts new coordinates by moving the input coordinates horizontally by a certain magnitude.
 
-    Parameters:
-        magnitude (int or float): The amount to move the coordinates horizontally.
-        coords (torch.Tensor or numpy.ndarray): The original coordinates to move.
+    Parameters
+    ----------
+    `magnitude` : Float
+        The magnitude of the vertical movement.
+    `coords` : Union[torch.Tensor, np.ndarray])
 
-    Returns:
-        torch.Tensor: The new coordinates after moving horizontally.
-
-    Examples:
-        >>> coords = torch.tensor([100, 200])
-        >>> magnitude = 50
-        >>> output = extract_coords_from_movehorizontal(magnitude, coords)
-        >>> print(output)
-        tensor([150, 200])
-
-        >>> coords = torch.tensor([300, 400])
-        >>> magnitude = -100
-        >>> output = extract_coords_from_movehorizontal(magnitude, coords)
-        >>> print(output)
-        tensor([200, 400])
+    Return
+    ------
+    `conv_coords` : torch.Tensor
+        A tensor representing the original coordinates of the flipped image, with shape (2,).
     """
     if type(coords) == torch.Tensor:
         coords = coords.cpu().numpy()
@@ -229,18 +269,22 @@ def extract_coords_from_movehorizontal(magnitude, coords):
     conv_coords = torch.tensor([original_x, original_y])
     return conv_coords
 
-def apply_tta_augmentation(data, seed):
+def apply_tta_augmentation(data : list, seed : int) -> tuple(dict, dict):
     """
     A function that applies a random TTA transformation on an inputted image. Takes a random seed to determine the specific transformation and
     the magnitude of such transformation using a basic mapping function with the boundaries provided by the imgaug documentation for each
     specific transformation (hence the difference in allowed values). Also determines randomly whether the allowed transformations should be
     multiplied by -1 to allow for wider range of possible transforms.
+
+    Note: Rotation is depricated.
+
     Parameters
     ----------
     `data` : List
         The dict containing the features and information of the image in question.
     `seed` : Int
         A stochastic seed variable used as described as above.
+
     Returns
     -------
     `augemented_dict` : Dict
