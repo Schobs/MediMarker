@@ -5,6 +5,8 @@ from losses.losses import (
     IntermediateOutputLoss,
     AdaptiveWingLoss,
     SigmaLoss,
+    SoftDiceLoss,
+    CombinedLoss2D,
 )
 from models.unetr import UNETR
 import torch
@@ -89,6 +91,8 @@ class UnetrTrainer(NetworkTrainer):
         loss_str = self.trainer_config.SOLVER.LOSS_FUNCTION
         if loss_str == "mse":
             self.individual_hm_loss = HeatmapLoss()
+        elif loss_str == "dice":
+            self.individual_hm_loss = SoftDiceLoss()
         elif loss_str == "awl":
             self.individual_hm_loss = AdaptiveWingLoss(
                 hm_lambda_scale=self.trainer_config.MODEL.HM_LAMBDA_SCALE
