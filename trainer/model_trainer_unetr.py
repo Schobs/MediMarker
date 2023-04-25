@@ -6,7 +6,7 @@ from losses.losses import (
     AdaptiveWingLoss,
     SigmaLoss,
     SoftDiceLoss,
-    CombinedLoss2D,
+    SoftDiceCrossEntropyLoss,
     SmoothL1Loss,
 )
 from models.unetr import UNETR

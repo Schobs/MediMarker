@@ -168,23 +168,31 @@ class SoftDiceLoss(nn.Module):
         return dice_loss
 
 
-class CombinedLoss2D(nn.Module):
-    def __init__(self, loss_func=nn.MSELoss()):
-        super(CombinedLoss2D, self).__init__()
-
-        self.loss = loss_func
-        self.dice_loss = SoftDiceLoss()
+class SoftDiceCrossEntropyLoss(nn.Module):
+    def __init__(self):
+        super(SoftDiceCrossEntropyLoss, self).__init__()
 
     def forward(self, net_output, target):
+        target_one_hot = torch.eye(net_output.shape[1], device=net_output.device)[
+            target.squeeze().long()]
+        target_one_hot = target_one_hot.permute(0, 3, 1, 2).contiguous()
+
+        num_pixels = target_one_hot.shape[2] * target_one_hot.shape[3]
+
         # Soft Dice Loss
-        dice_loss_value = self.dice_loss(net_output, target.float())
+        intersection = torch.sum(net_output * target_one_hot, dim=(2, 3))
+        dice_denominator = torch.sum(net_output.pow(
+            2) + target_one_hot.pow(2), dim=(2, 3))
+        dice_loss = 1 - 2 * \
+            (intersection / dice_denominator).sum() / num_pixels
 
         # Cross Entropy Loss
-        ce_loss = self.loss(net_output, target.argmax(
-            dim=0).unsqueeze(0).float())
+        ce_loss = -torch.sum(target_one_hot *
+                             torch.log(net_output)) / num_pixels
 
         # Combined Loss
-        total_loss = dice_loss_value + ce_loss
+        total_loss = dice_loss + ce_loss
+
         return total_loss
 
 # i need to think of a loss that normalises between 0-1
