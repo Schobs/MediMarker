@@ -6,7 +6,7 @@ OUTPUT:
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "yncS2q9q4j8UPdveJP0yEmka2"
   COMET_WORKSPACE: "oscargavin"
-  COMET_PROJECT_NAME: "torchio-testing"
+  COMET_PROJECT_NAME: "dice-loss-tests"
 
 SOLVER:
   DEEP_SUPERVISION: False
