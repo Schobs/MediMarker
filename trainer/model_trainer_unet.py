@@ -47,7 +47,7 @@ class UnetTrainer(NetworkTrainer):
         self.min_feature_res = self.trainer_config.MODEL.UNET.MIN_FEATURE_RESOLUTION
         self.max_features = self.trainer_config.MODEL.UNET.MAX_FEATURES
         self.input_size = self.trainer_config.SAMPLER.INPUT_SIZE
-        self.dropout = self.trainer_config.TRAINER.MC_DROPOUT if self.trainer_config.TRAINER.MC_DROPOUT is not None else False
+        self.dropout = self.trainer_config.TRAINER.MCDROP_RATE
 
         # get arch config parameters
         self.num_resolution_layers = UnetTrainer.get_resolution_layers(self.input_size,  self.min_feature_res)
@@ -59,7 +59,6 @@ class UnetTrainer(NetworkTrainer):
         self.normalization_operation = nn.InstanceNorm2d
         self.upsample_operation = nn.ConvTranspose2d
         self.norm_op_kwargs = {'eps': 1e-5, 'affine': True}
-        self.dropout_op_kwargs = {'p': 0, 'inplace': True}  # don't do dropout
         self.activation_function = nn.LeakyReLU
         self.activation_kwargs = {'negative_slope': 1e-2, 'inplace': True}
         self.pool_op_kernel_size = [(2, 2)] * (self.num_resolution_layers - 1)
@@ -94,12 +93,12 @@ class UnetTrainer(NetworkTrainer):
 
         # Let's make the network
         # import pdb; pdb.set_trace()
-        self.network = UNet(dropout=self.dropout, input_channels=self.num_input_channels, base_num_features=self.base_num_features, num_out_heatmaps=self.num_out_heatmaps,
+        self.network = UNet(input_channels=self.num_input_channels, base_num_features=self.base_num_features, num_out_heatmaps=self.num_out_heatmaps,
                             num_resolution_levels=self.num_resolution_layers, conv_operation=self.conv_operation, normalization_operation=self.normalization_operation,
                             normalization_operation_config=self.norm_op_kwargs, activation_function=self.activation_function, activation_func_config=self.activation_kwargs,
                             weight_initialization=self.weight_inititialiser, strided_convolution_kernels=self.pool_op_kernel_size, convolution_kernels=self.conv_op_kernel_size,
-                            convolution_config=self.conv_kwargs, upsample_operation=self.upsample_operation, max_features=self.max_features, deep_supervision=self.deep_supervision
-
+                            convolution_config=self.conv_kwargs, upsample_operation=self.upsample_operation, max_features=self.max_features, deep_supervision=self.deep_supervision,
+                            dropout=self.dropout
                             )
         self.network.to(self.device)
 

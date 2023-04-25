@@ -68,7 +68,7 @@ _C.TRAINER.SAVE_LATEST_ONLY = True
 _C.TRAINER.CACHE_DATA = True
 _C.TRAINER.FOLD = 0
 _C.TRAINER.INFERENCE_ONLY = False
-_C.TRAINER.MCDROP_RATE = None
+_C.TRAINER.MCDROP_RATE = 0.0
 
 # ----------------------------------------------------------------------------
 # Model settings settings

@@ -46,11 +46,14 @@ class DictLogger():
             "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['hm_max', 'coords_og_size']}
 
     def ensemble_inference_log_template(self):
-
-        # print("standard_info_keys", standard_info_keys)
         return {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
         "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
         "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['final_heatmaps', 'hm_max', 'coords_og_size']}
+
+    def mcdrop_inference_log_template(self):
+        return {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
+        "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
+        "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['mc_drop', 'final_heatmaps', 'hm_max', 'coords_og_size']}
 
     def tta_inference_log_template(self):
         return {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
@@ -95,7 +98,7 @@ class DictLogger():
             elif split == "training":
                 if "train_coord_error_mean" in vars_to_log:
                     log_dict["train_coord_error_mean"].append(np.mean(coord_error.detach().cpu().numpy()))
-            # Save data for ecah sample individually
+            # Save data for each sample individually
             if "individual_results" in vars_to_log:
                 log_dict["individual_results"] = []
                 for idx in range(len(pred_coords)):
@@ -127,7 +130,6 @@ class DictLogger():
                                 log_dict["landmark_errors"][coord_idx].append(er.detach().cpu().numpy())
                     # any extra info returned by the child class when calculating coords from outputs e.g. heatmap_max
                     for key_ in list(extra_info.keys()):
-
                         if "debug" not in key_:
                             ind_dict[key_] = ((extra_info[key_][idx].detach().cpu().numpy()))
                     log_dict["individual_results"].append(ind_dict)
@@ -148,7 +150,6 @@ class DictLogger():
         if "sigmas_mean" in list(per_epoch_logs.keys()):
             np_sigmas = [x.cpu().detach().numpy() for x in sigmas]
             per_epoch_logs["sigmas_mean"] = (np.mean(np_sigmas))
-
             for idx, sig in enumerate(np_sigmas):
                 if "sigma_"+str(idx) in list(per_epoch_logs.keys()):
                     per_epoch_logs["sigma_"+str(idx)] = sig

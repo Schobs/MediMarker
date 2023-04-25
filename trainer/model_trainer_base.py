@@ -228,7 +228,6 @@ class NetworkTrainer(ABC):
         else:
             data_dict = direct_data_dict
         data = (data_dict['image']).to(self.device)
-        #import pdb; pdb.set_trace()
         # This happens when we regress sigma with >0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
         if self.gen_hms_in_mainthread:
@@ -303,7 +302,6 @@ class NetworkTrainer(ABC):
         inversed_ouput = output.copy()
         if log_coords:
             if "tta_augmentations" in logged_vars["individual_results_extra_keys"]:
-                #print("Hit 304: inversing heatmaps")
                 inversed_ouput[6] = inverse_heatmaps(logged_vars['individual_results'], output[6], data_dict)
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(output, data_dict["original_image_size"])
             if "individual_results_extra_keys" in logged_vars.keys() and "tta_augmentations" in logged_vars["individual_results_extra_keys"]:
@@ -554,11 +552,12 @@ class NetworkTrainer(ABC):
         else:
             # This case is the full sampler
             inference_full_image = True
+        num_vers = 4
         inference_resolution = self.training_resolution
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         self.test_dataloader = DataLoader(
             test_dataset,
-            batch_size=self.data_loader_batch_size,
+            batch_size=int(np.floor(self.data_loader_batch_size/(num_vers))),
             shuffle=False,
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
@@ -584,8 +583,7 @@ class NetworkTrainer(ABC):
         if inference_full_image:
             while generator != None:
                 try:
-                    num_vers = 5
-                    evaluation_logs = self.dict_logger.ensemble_inference_log_template()
+                    evaluation_logs = self.dict_logger.mcdrop_inference_log_template()
                     direct_data_dict = next(generator)
                     augmented_dict = direct_data_dict.copy()
                     augmented_dict['image'] = [x for x in augmented_dict['image'] for i in range(num_vers)]
@@ -603,17 +601,17 @@ class NetworkTrainer(ABC):
                             direct_data_dict=batch
                         )
                         (
-                            ensembles_analyzed,
-                            ind_landmark_errors,
-                        ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
-                            evaluation_logs
-                        )
-                        # Update the dictionaries with the results
-                        for k_ in list(ensemble_result_dicts.keys()):
-                            ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
-                        for ens_key, coord_extact_methods in ind_landmark_errors.items():
-                            for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
-                                all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
+                        ensembles_analyzed,
+                        ind_landmark_errors,
+                    ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
+                        evaluation_logs
+                    )
+                    # Update the dictionaries with the results
+                    for k_ in list(ensemble_result_dicts.keys()):
+                        ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
+                    for ens_key, coord_extact_methods in ind_landmark_errors.items():
+                        for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
+                            all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
                 except StopIteration:
                     generator = None
                     print("-", end="")
