@@ -13,7 +13,7 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 1
   LOSS_FUNCTION: "dice"
   # MINI_BATCH_SIZE: 50 #As high as will fit in gpu memory
-  DATA_LOADER_BATCH_SIZE_TRAIN: 4 #As high as will fit in gpu memory
+  DATA_LOADER_BATCH_SIZE_TRAIN: 2 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_EVAL: 2 #As high as will fit in gpu memory
   MAX_EPOCHS: 500 #How long you want to train? ideal is at least 150-250.
 
@@ -41,7 +41,7 @@ INFERENCE:
   DEBUG: False #Set to true to get some visualization of predicted heatmaps!
 
 SAMPLER:
-  NUM_WORKERS: 8 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down.
+  NUM_WORKERS: 4 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down.
   # DATA_AUG_PACKAGE: "torchio"
   # DATA_AUG: "AffineSimple" # set to None for no augmentation. for other schemes see the documentation.
   INPUT_SIZE: [512, 512]
