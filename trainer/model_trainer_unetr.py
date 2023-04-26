@@ -5,7 +5,6 @@ from losses.losses import (
     IntermediateOutputLoss,
     AdaptiveWingLoss,
     SoftDiceLoss,
-    WeightedCrossEntropyLoss,
 )
 from models.unetr import UNETR
 import torch
