@@ -6,12 +6,12 @@ OUTPUT:
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "yncS2q9q4j8UPdveJP0yEmka2"
   COMET_WORKSPACE: "oscargavin"
-  COMET_PROJECT_NAME: "Soft Dice Cross Entropy"
+  COMET_PROJECT_NAME: "unetr-dice-loss-250-epochs"
 
 SOLVER:
   DEEP_SUPERVISION: False
   NUM_RES_SUPERVISIONS: 1
-  LOSS_FUNCTION: "wce"
+  LOSS_FUNCTION: dice
   # MINI_BATCH_SIZE: 50 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_TRAIN: 2 #As high as will fit in gpu memory
   DATA_LOADER_BATCH_SIZE_EVAL: 2 #As high as will fit in gpu memory
@@ -33,7 +33,7 @@ DATASET:
 
 TRAINER:
   INFERENCE_ONLY: False # set to true if already trained and want to perform inference (testing) only.
-  CACHE_DATA: True #Ideally true, saves time from loading from disk.
+  CACHE_DATA: False #Ideally true, saves time from loading from disk.
   FOLD: 3 # Pick the fold. this dataset has folds 0,1,2,3. You can set to -1 and directly put the path to JSON in SRC_TARGETS if you want.
 
 INFERENCE:

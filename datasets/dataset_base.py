@@ -392,23 +392,23 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 shape=untransformed_im[0].shape,
             )
 
-            # command here for oscar
-
-            # list where [0] is image and [1] are coords.
+            # After this line:
             transformed_sample = self.transform(
                 image=untransformed_im[0], keypoints=kps)
-            # print(transformed_sample[1].shape)
 
-            # TODO: try and not renormalize if we're patch sampling, maybe?
-            if self.sample_mode != "patch_bias":
-                input_image = normalize_cmr(
-                    transformed_sample[0], to_tensor=True)
-            else:
-                input_image = torch.from_numpy(np.expand_dims(
-                    transformed_sample[0], axis=0)).float()
-
+            # Get transformed image and coords.
+            input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
             input_coords = np.array([[coo.x, coo.y]
                                     for coo in transformed_sample[1]])
+
+            # Generate heatmap using transformed coordinates
+            heatmap = self.LabelGenerator.generate_labels(input_coords)
+
+            # Apply the same transformation to the heatmap
+            transformed_heatmap = self.transform(image=heatmap, keypoints=kps)
+
+            # Get the transformed heatmap
+            label = transformed_heatmap[0]
 
             # Recalculate indicators incase transform pushed out/in coords.
             landmarks_in_indicator = [

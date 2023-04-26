@@ -4,7 +4,6 @@ from losses.losses import (
     HeatmapLoss,
     IntermediateOutputLoss,
     AdaptiveWingLoss,
-    SigmaLoss,
     SoftDiceLoss,
     WeightedCrossEntropyLoss,
 )
