@@ -1015,6 +1015,7 @@ class NetworkTrainer(ABC):
         #### Training dataset ####
         train_dataset = self.dataset_class(
             LabelGenerator=self.train_label_generator,
+            TransformHeatmaps=self.transform_heatmaps,
             split="training",
             sample_mode=self.sampler_mode,
             patch_sampler_args=self.dataset_patch_sampling_args,
