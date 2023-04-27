@@ -4,8 +4,7 @@ from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_ce
 
 import numpy as np
 import torch
-import torchio as tio
-from imgaug.augmentables import Keypoint, KeypointsOnImage
+from imgaug.augmentables import Keypoint, KeypointsOnImage, HeatmapsOnImage
 from torch.utils import data
 from torchvision import transforms
 from transforms.transformations import (
@@ -396,8 +395,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 shape=untransformed_im[0].shape,
             )
 
-            # command here for oscar
-
             # list where [0] is image and [1] are coords.
             transformed_sample = self.transform(
                 image=untransformed_im[0], keypoints=kps)
@@ -445,7 +442,22 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             )
 
             if self.transform_heatmaps:
-                label = self.transform(label)
+                # Convert heatmaps to the same format as the image (H, W, C)
+                heatmaps = np.transpose(label, (1, 2, 0))
+
+                # Create a HeatmapsOnImage instance
+                heatmaps_on_image = HeatmapsOnImage(
+                    heatmaps, shape=untransformed_im[0].shape)
+
+                # Apply the same transformation pipeline to the heatmaps
+                transformed_heatmaps_on_image = self.transform(
+                    image=untransformed_im[0], heatmaps=heatmaps_on_image)
+
+                # Convert heatmaps back to the original format (C, H, W)
+                transformed_heatmaps = np.transpose(
+                    transformed_heatmaps_on_image.arr, (2, 0, 1))
+
+                label = transformed_heatmaps
 
         else:
             label = []
