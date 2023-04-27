@@ -834,7 +834,7 @@ class NetworkTrainer(ABC):
                     (
                         ensembles_analyzed,
                         ind_landmark_errors,
-                    ) = ensemble_handler.ensemble_inference_with_uncertainties(
+                    ) = ensemble_handler.ensemble_inference_with_uncertainties( #@LAWRENCE - this is where E-CPV is calculated... surely the eval logs will contain the last model's predictions? Similar story for TTA & MC-DROP
                         evaluation_logs
                     )
 
