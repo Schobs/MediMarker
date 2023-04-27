@@ -145,7 +145,11 @@ class EnsembleUncertainties():
             ind_errors (Dict): Updated dictionary of the individual landmark errors for each uncertainty metric.
         """
 
-
+        # @LAWRENCE - at this point there is only one set of predicted coords. What I think is happening:
+        # Say are two ensemble models, the latter's coordinates overwrite the previous' in the dict logger by way
+        # of run_iteration in model_trainer_base.
+        # This means that the e-cpv calculation always ends in 0
+        
         #Calculate the E-CPV
         average_coords = np.mean([dic['predicted_coords'] for dic in individual_results] , axis=0)
         # average_coords_og_resolution = np.mean([dic['predicted_coords_original_resolution'] for dic in individual_results] , axis=0)

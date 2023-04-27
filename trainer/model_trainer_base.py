@@ -62,6 +62,12 @@ class NetworkTrainer(ABC):
         # if false it will not store/overwrite _latest but separate files each
         self.save_latest_only = self.trainer_config.TRAINER.SAVE_LATEST_ONLY
         self.save_intermediate_checkpoints = True  # whether or not to save checkpoint_latest
+        self.generic_dataset_args = {"landmarks": self.trainer_config.DATASET.LANDMARKS,
+                                     "annotation_path": self.trainer_config.DATASET.SRC_TARGETS,
+                                     "image_modality": self.trainer_config.DATASET.IMAGE_MODALITY,
+                                     "root_path": self.trainer_config.DATASET.ROOT,
+                                     "fold": self.trainer_config.TRAINER.FOLD,
+                                     "dataset_split_size": self.trainer_config.DATASET.TRAINSET_SIZE}
         self.was_initialized = False
         self.amp_grad_scaler = None
         self.train_dataloader = self.valid_dataloader = None
@@ -315,7 +321,7 @@ class NetworkTrainer(ABC):
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
 
-        return pred_coords, pred_coords_input_size, extra_info, target_coords, logged_vars
+        return pred_coords, pred_coords_input_size, extra_info, target_coords, logged_vars #LAWRENCE - overwrites the predicition from the previous model, where is model 1's coordinates being saved?
 
     def on_epoch_end(self, per_epoch_logs):
         """
@@ -767,7 +773,7 @@ class NetworkTrainer(ABC):
         inference_resolution = self.training_resolution
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
-        test_batch_size = self.maybe_alter_batch_size(test_dataset, self.data_loader_batch_size_eval)
+        test_batch_size = self.data_loader_batch_size
 
         test_dataloader = DataLoader(
             test_dataset,
@@ -811,6 +817,8 @@ class NetworkTrainer(ABC):
                     for ckpt in checkpoint_list:
                         self.load_checkpoint(ckpt, training_bool=False)
                         # Directly pass the next data_dict to run_iteration rather than iterate it within.
+
+                        #@LAWRENCE
                         l, _ = self.run_iteration(
                             generator,
                             test_dataloader,
@@ -819,8 +827,7 @@ class NetworkTrainer(ABC):
                             log_coords=True,
                             logged_vars=evaluation_logs,
                             debug=debug,
-                            direct_data_dict=direct_data_dict,
-                            restart_dataloader=False
+                            direct_data_dict=direct_data_dict
                         )
 
                     # Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)

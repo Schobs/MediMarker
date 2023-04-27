@@ -86,7 +86,7 @@ class DictLogger():
                 log_dict[key_].append(value)
         extra_info = {k: extra_info[k] for k in log_dict['individual_results_extra_keys'] if k in extra_info}
         if log_coords:
-            if "individual_results_extra_keys" in vars_to_log and "tta_augmentations" in log_dict["individual_results_extra_keys"]:
+            if "individual_results_extra_keys" in vars_to_log and "tta_augmentations" in log_dict["individual_results_extra_keys"]: #@LAWRENCE - do we need to do something similar here to manage the different predictions?
                 img_size = data_dict['original_image_size'].cpu().numpy()
                 pred_coords = invert_coordinates(pred_coords, log_dict, img_size)
             # Get coord error of the input resolution to network
