@@ -407,6 +407,11 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 input_image = torch.from_numpy(np.expand_dims(
                     transformed_sample[0], axis=0)).float()
 
+            input_image = normalize_cmr(
+                transformed_sample[0], to_tensor=self.to_pytorch)
+            input_coords = np.array([[coo.x, coo.y]
+                                    for coo in transformed_sample[1]])
+
             # Recalculate indicators incase transform pushed out/in coords.
             landmarks_in_indicator = [
                 1
