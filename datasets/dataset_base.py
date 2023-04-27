@@ -54,7 +54,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         data_aug_args,
         label_generator_args,
         LabelGenerator,
-        TransformHeatmaps,
+        transform_heatmaps,
         sample_mode: str,
         split: str = "training",
         cache_data: bool = False,
@@ -72,7 +72,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             data_aug_args (Dict): A dict of arguments for the data augmentation.
             label_generator_args (Dict): A dict of arguments for the Label Generator.
             LabelGenerator (_type_): _description_
-            TransformHeatmaps (bool): Defaults to False. 
+            transform_heatmaps (bool): Defaults to False. 
             sample_mode (str): _description_
             split (str, optional): _description_. Defaults to "training".
             cache_data (bool, optional): _description_. Defaults to False.
@@ -93,6 +93,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         # We are passing in the label generator here, this is unique to each model_trainer class.
         self.LabelGenerator = LabelGenerator
+        self.transform_heatmaps = transform_heatmaps
         self.hm_lambda_scale = label_generator_args["hm_lambda_scale"]
         self.generate_hms_here = label_generator_args["generate_heatmaps_here"]
 
