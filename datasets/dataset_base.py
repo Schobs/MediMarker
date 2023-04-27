@@ -445,7 +445,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             )
 
             if self.transform_heatmaps:
-                label = self.transform_heatmaps(label)
+                label = self.transform(label)
 
         else:
             label = []
