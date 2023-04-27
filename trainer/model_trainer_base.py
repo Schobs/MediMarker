@@ -848,7 +848,7 @@ class NetworkTrainer(ABC):
             # Need to load and get results from each checkpoint. Load checkpoint for each batch because of memory issues running through entire dataloader
             # and saving multiple outputs for every checkpoint. In future can improve this by going through X (e.g.200 samples/10 batches) before changing checkpoint.
             while generator != None:
-                self.logger.info("Next batch...")
+                self.logger.info("Next")
                 try:
                     evaluation_logs = self.dict_logger.ensemble_inference_log_template()
                     direct_data_dict = next(generator)

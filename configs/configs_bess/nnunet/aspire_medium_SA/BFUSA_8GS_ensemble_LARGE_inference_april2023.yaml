@@ -21,7 +21,7 @@ DATASET:
   # DEBUG: True
   ROOT: '/shared/tale2/Shared/data/CMRI/'
   # SRC_TARGETS: '/shared/tale2/Shared/data/CMRI/PAH-Followup/landmark_localisation_annotations_combined_npz/4ch'
-  SRC_TARGETS: '/mnt/tale_shared/data/CMRI/new scans/SArecipe/fold0.json'
+  SRC_TARGETS: '/shared/tale2/Shared/data/CMRI/new scans/SArecipe/fold0.json'
 
   NAME:  "APSIRE_SA_APRIL"
   IMAGE_MODALITY: 'CMRI'
@@ -63,3 +63,5 @@ SAMPLER:
   DATA_AUG: 'AffineComplex'
   INPUT_SIZE : [512,512]
 
+# SSH:
+#   AUTO_AMEND_PATHS: False
