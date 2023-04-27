@@ -15,7 +15,8 @@ _C = CN()
 # Dataset
 # -----------------------------------------------------------------------------
 _C.DATASET = CN()
-_C.DATASET.DATASET_CLASS = "generic"  # see datasets.dataset_index for available datasets or add new ones yourself.
+# see datasets.dataset_index for available datasets or add new ones yourself.
+_C.DATASET.DATASET_CLASS = "generic"
 
 _C.DATASET.ROOT = ""
 _C.DATASET.NAME = "ASPIRE"
@@ -25,7 +26,8 @@ _C.DATASET.SRC_TARGETS = (
 _C.DATASET.IMAGE_MODALITY = "CMRI"
 _C.DATASET.LANDMARKS = []
 # _C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512] #legacy, can ignore.
-_C.DATASET.TRAINSET_SIZE = -1  # -1 for full trainset size or int <= len(training_set)
+# -1 for full trainset size or int <= len(training_set)
+_C.DATASET.TRAINSET_SIZE = -1
 
 # _C.DATASET.DEBUG = False
 # _C.DATASET.DATA_AUG = None
@@ -44,6 +46,7 @@ _C.SAMPLER.EVALUATION_SAMPLE_MODE = "full"
 _C.SAMPLER.DATA_AUG = "AffineComplex"  # None
 _C.SAMPLER.DATA_AUG_PACKAGE = "imgaug"  # ['imgaug', 'albumentations']
 _C.SAMPLER.NUM_WORKERS = 0
+_C.SAMPLER.TRANSFORM_HEATMAPS = False
 
 
 _C.SAMPLER.PATCH = CN()
@@ -128,14 +131,18 @@ _C.MODEL.PHDNET.CLAMP_DIST = None
 
 
 _C.INFERENCE = CN()
-_C.INFERENCE.SPLIT = "testing"  # Split/s of the data to perform inference. Can specify multiple splits.
+# Split/s of the data to perform inference. Can specify multiple splits.
+_C.INFERENCE.SPLIT = "testing"
 
-_C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first"  # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+# ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+_C.INFERENCE.EVALUATION_MODE = "scale_heatmap_first"
 _C.INFERENCE.FIT_GAUSS = (
-    False  # If false, uses max, if true, first fits gaussian to output heatmap.
+    # If false, uses max, if true, first fits gaussian to output heatmap.
+    False
 )
 
-_C.INFERENCE.ENSEMBLE_INFERENCE = False  # average predictions from multiple models
+# average predictions from multiple models
+_C.INFERENCE.ENSEMBLE_INFERENCE = False
 _C.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS = [
     "smha",
     "emha",

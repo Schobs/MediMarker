@@ -54,6 +54,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         data_aug_args,
         label_generator_args,
         LabelGenerator,
+        TransformHeatmaps,
         sample_mode: str,
         split: str = "training",
         cache_data: bool = False,
@@ -71,6 +72,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             data_aug_args (Dict): A dict of arguments for the data augmentation.
             label_generator_args (Dict): A dict of arguments for the Label Generator.
             LabelGenerator (_type_): _description_
+            TransformHeatmaps (bool): Defaults to False. 
             sample_mode (str): _description_
             split (str, optional): _description_. Defaults to "training".
             cache_data (bool, optional): _description_. Defaults to False.
@@ -387,29 +389,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     x_y_corner,
                 ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords)
 
-            # kps = KeypointsOnImage(
-            #     [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
-            #     shape=untransformed_im[0].shape,
-            # )
-
-            # # After this line:
-            # transformed_sample = self.transform(
-            #     image=untransformed_im[0], keypoints=kps)
-
-            # # Get transformed image and coords.
-            # input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
-            # input_coords = np.array([[coo.x, coo.y]
-            #                         for coo in transformed_sample[1]])
-
-            # # Generate heatmap using transformed coordinates
-            # heatmap = self.LabelGenerator.generate_labels(input_coords)
-
-            # # Apply the same transformation to the heatmap
-            # transformed_heatmap = self.transform(image=heatmap, keypoints=kps)
-
-            # # Get the transformed heatmap
-            # label = transformed_heatmap[0]
-
             kps = KeypointsOnImage(
                 [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
                 shape=untransformed_im[0].shape,
@@ -426,9 +405,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             else:
                 input_image = torch.from_numpy(np.expand_dims(
                     transformed_sample[0], axis=0)).float()
-
-            input_coords = np.array([[coo.x, coo.y]
-                                    for coo in transformed_sample[1]])
 
             # Recalculate indicators incase transform pushed out/in coords.
             landmarks_in_indicator = [
@@ -459,6 +435,10 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 self.num_res_supervisions,
                 self.hm_lambda_scale,
             )
+
+            if self.transform_heatmaps:
+                label = self.transform_heatmaps(label)
+
         else:
             label = []
 

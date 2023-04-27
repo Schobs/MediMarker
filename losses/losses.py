@@ -169,7 +169,6 @@ class SoftDiceLoss(nn.Module):
         return dice_loss
 
 
-
 # i need to think of a loss that normalises between 0-1
 
 

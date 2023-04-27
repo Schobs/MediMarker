@@ -91,8 +91,6 @@ class UnetrTrainer(NetworkTrainer):
             self.individual_hm_loss = HeatmapLoss()
         elif loss_str == "dice":
             self.individual_hm_loss = SoftDiceLoss()
-        elif loss_str == "wce":
-            self.individual_hm_loss = WeightedCrossEntropyLoss()
         elif loss_str == "awl":
             self.individual_hm_loss = AdaptiveWingLoss()
         else:

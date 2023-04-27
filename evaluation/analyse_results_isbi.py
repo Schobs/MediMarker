@@ -2,7 +2,7 @@ import numpy as np
 import os
 import pandas as pd
 from pandas import ExcelWriter
-from localization_evaluation import success_detection_rate, generate_summary_df
+from localization_evaluation import generate_summary_df_withnlpd, nlpd_evaluation, success_detection_rate, generate_summary_df
 import copy
 
 
@@ -40,13 +40,12 @@ def analyse_all_folds(
     root_path,
     name_of_exp,
     models_to_test,
-    early_stop_strategy,
     folds,
+    landmark,
     collation_location,
+    cov_key="fitted_gauss"
 ):
     """Function that takes experiment name and selection of folds and summaries results.
-
-
     Args:
         root_path (string): Path to saved experiments
         name_of_exp (string): Name of experiment to analyse
@@ -56,38 +55,35 @@ def analyse_all_folds(
         folds [int]: List of folds to analyse
     """
     """
-    It will return: 
+    It will return:
     1) failed experiments (i.e. experiments which did not generate results files)
     2) For every saved model in models_to_test it will generate:
         A) Individual pandas DF of completed experiments, results for each sample with a note of their fold
-        B) Summary pandas DF of mean error, SDR results of completed experiments 
+        B) Summary pandas DF of mean error, SDR results of completed experiments
     3) Experiment summary of parameters extracted from the experiment name
-    4) It will also do seperate analysis of all models of the experiments and ascertain the best model, 
+    4) It will also do seperate analysis of all models of the experiments and ascertain the best model,
         collating results for all folds. It will note the epoch. This will be saved in DF "overfitted_analysis".
         This is to check how well the early stopping strategy is over/underfitting the data.
         It will note if a model in models_to_test was the best model afterall.
     4)
-        
-
     """
+    all_exps = [os.path.join(root_path, x)
+                for x in os.listdir(root_path) if name_of_exp in x]
+
+    matches_ind, summaries_ind = [
+        sorted(x) for x in find_spreadsheets(all_exps, folds, landmark)]
 
     exp_path = os.path.join(root_path, name_of_exp)
+    os.makedirs(exp_path, exist_ok=True)
     individual_dicts = {}
     skipped_folds = []
     summary_dicts = {}
 
-    # Use the experiment name to extract exp parameters
-    info_dict = get_parameters(name_of_exp)
-
     # For each fold load the results files
     for fold in folds:
-        summ_file_name = os.path.join(
-            exp_path, "summary_results_fold" + str(fold) + ".xlsx"
-        )
-        ind_file_name = os.path.join(
-            exp_path, "individual_results_fold" + str(fold) + ".xlsx"
-        )
 
+        summ_file_name = [x for x in summaries_ind if f"fold{fold}" in x][0]
+        ind_file_name = [x for x in matches_ind if f"fold{fold}" in x][0]
         try:
             summary_file = pd.ExcelFile(summ_file_name)
             ind_file = pd.ExcelFile(
@@ -107,7 +103,7 @@ def analyse_all_folds(
             ckpt_general = ckpt.split("_fold")[
                 0
             ]  # split here to get rid of "_foldX" suffix
-            if ckpt_general in models_to_test:
+            if any([ckpt_general in x for x in models_to_test]):
 
                 # Read individual results and add fold column
                 ind_results = ind_file.parse(ckpt, index_col=[0])
@@ -150,6 +146,21 @@ def analyse_all_folds(
                 for idx, x in filter_df.iterrows()
             ]
 
+            if isinstance(cov_key, str):
+                list_for_nlpd = [
+                    {"uid": int(x["uid"]), "cov": x["fitted_gauss"], "mean": x["pred_coords_input_size"],
+                     "target":x["target_coords_input_size"]}
+                    for idx, x in results.iterrows()
+                ]
+            else:
+                assert len(
+                    cov_key) == 2, "Cov key must be a string or a list of two strings. bad hardcoded, I know."
+                list_for_nlpd = [
+                    {"uid": int(x["uid"]), "cov": [x[cov_key[0]], x[cov_key[1]]], "mean": x["pred_coords_input_size"],
+                     "target":x["target_coords_input_size"]}
+                    for idx, x in results.iterrows()
+                ]
+
             # Get SDR results
             radius_list = [
                 1,
@@ -180,17 +191,24 @@ def analyse_all_folds(
 
                 # print("Outlier results ",rad, out_res_rad["all"])
 
+            nlpd_results, mean_error_results = nlpd_evaluation(list_for_nlpd)
+
+            results['NLPD'] = results['uid'].map(nlpd_results)
+            results['error_input_size'] = results['uid'].map(
+                mean_error_results)
+
             # Get all landmark errors into a 2D list, 1 list for each landmark.
             all_errors = results[all_lm_keys].values.T.tolist()
 
-            summary_results = generate_summary_df(all_errors, outlier_results)
+            summary_results = generate_summary_df_withnlpd(
+                all_errors, outlier_results, nlpd_results, mean_error_results)
             if skipped_folds == []:
                 skipped_folds = "None"
             summary_results["Skipped Folds"] = str(skipped_folds)
 
-            # Get Info there
-            for info_key, info in info_dict.items():
-                summary_results[info_key] = info
+            # # Get Info there
+            # for info_key, info in info_dict.items():
+            #     summary_results[info_key] = info
             summary_dicts[chkpt_key] = summary_results
 
     with ExcelWriter(
@@ -201,22 +219,25 @@ def analyse_all_folds(
 
     with ExcelWriter(os.path.join(exp_path, "summary_results_allfolds.xlsx")) as writer:
         for n, df in (summary_dicts).items():
-            df.to_excel(writer, n, index=False)
+            df.to_excel(writer, n, index=True)
 
     # Also save elsewhere
     # collation_location = os.path.join(root_path, "junior_all_summaries2")
+    os.makedirs(collation_location, exist_ok=True)
     with ExcelWriter(
-        os.path.join(collation_location, name_of_exp + "_individual.xlsx")
+        os.path.join(collation_location, name_of_exp +
+                     "_individual_L" + str(landmark)+".xlsx")
     ) as writer:
         for n, df in (individual_dicts).items():
             df.to_excel(writer, n, index=False)
 
     with ExcelWriter(
         os.path.join(collation_location, name_of_exp +
-                     "_summary_results_allfolds.xlsx")
+                     "_summary_results_allfolds_L" + str(landmark)+".xlsx")
     ) as writer:
         for n, df in (summary_dicts).items():
-            df.to_excel(writer, n, index=False)
+
+            df.to_excel(writer, n, index=True)
 
     return summary_dicts, False
 
