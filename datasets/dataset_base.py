@@ -399,18 +399,50 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             transformed_sample = self.transform(
                 image=untransformed_im[0], keypoints=kps)
 
-            # TODO: try and not renormalize if we're patch sampling, maybe?
-            if self.sample_mode != "patch_bias":
-                input_image = normalize_cmr(
-                    transformed_sample[0], to_tensor=True)
-            else:
-                input_image = torch.from_numpy(np.expand_dims(
-                    transformed_sample[0], axis=0)).float()
+            # image = (1,512,512)
+            # heatmap for 1st landmark = (19, 1, 512 , 512)
+
+            # input_size  = [512,512]
+            # num_landmarks = 19
+            # np.zeros((19,1, 512,512))
+
+            # 1) indicator_map = np.zeros((num_landmarks, 1, self.input_size[0], self.input_size[1])) # (19, 1, 512, 512)
+            # for  idx, landmark in enumerate(untransformed_coords):
+            #     indicator_map[idx, 0, landmark[0], landmark[1]] = 1
+            # transformed_indicator = self.transform(image=indicator_map)
+            # new_coords = np.argmax(transformed_indicator, axis=(1, 2))
+            # label = self.LabelGenerator.generate_labels(new_coords)
+            # in this case, the label will be your normal circular/isotropic gaussian heatmap.
+
+            # 2) First turn the landmarks into a heatmap using
+            # heatmap = self.LabelGenerator.generate_labels(untransformed_coords)
+            # label = self.transform(image=heatmap)
 
             input_image = normalize_cmr(
                 transformed_sample[0], to_tensor=self.to_pytorch)
             input_coords = np.array([[coo.x, coo.y]
                                     for coo in transformed_sample[1]])
+
+            # Recalculate indicators incase transform pushed out/in coords.
+            landmarks_in_indicator = [
+                1
+                if (
+                    (0 <= xy[0] <= self.input_size[0])
+                    and (0 <= xy[1] <= self.input_size[1])
+                )
+                else 0
+                for xy in input_coords
+            ]
+
+        else:
+
+            input_coords = coords
+            if self.to_pytorch:
+                input_image = torch.from_numpy(image).float()
+            else:
+                input_image = image
+
+            landmarks_in_indicator = [1 for xy in input_coords]
 
             # Recalculate indicators incase transform pushed out/in coords.
             landmarks_in_indicator = [
