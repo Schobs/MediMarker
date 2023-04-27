@@ -1093,6 +1093,7 @@ class NetworkTrainer(ABC):
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
         dataset = self.dataset_class(
             LabelGenerator=self.eval_label_generator,
+            transform_heatmaps=self.trainer_config.SAMPLER.TRANSFORM_HEATMAPS,
             split=split,
             sample_mode=self.trainer_config.SAMPLER.EVALUATION_SAMPLE_MODE,
             patch_sampler_args=self.dataset_patch_sampling_args,
