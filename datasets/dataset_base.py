@@ -388,7 +388,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     untransformed_coords,
                     landmarks_in_indicator,
                     x_y_corner,
-                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords)
+                ) = sample_patch_centred(untransformed_im, coords_to_centre_around, self.load_im_size, self.sample_patch_size, self.center_patch_jitter, self.debug, groundtruth_lms=untransformed_coords,
+                                         deterministic=self.center_patch_deterministic, garuntee_gt_in=self.guarantee_landmarks_in_image, safe_padding=self.center_safe_padding)
 
             kps = KeypointsOnImage(
                 [Keypoint(x=coo[0], y=coo[1]) for coo in untransformed_coords],
@@ -442,24 +443,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             else:
                 input_image = image
 
-            landmarks_in_indicator = [1 for xy in input_coords]
-
-            # Recalculate indicators incase transform pushed out/in coords.
-            landmarks_in_indicator = [
-                1
-                if (
-                    (0 <= xy[0] <= self.input_size[0])
-                    and (0 <= xy[1] <= self.input_size[1])
-                )
-                else 0
-                for xy in input_coords
-            ]
-
-        # Don't do data augmentation.
-        else:
-
-            input_coords = coords
-            input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
 
         if self.generate_hms_here:
