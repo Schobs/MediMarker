@@ -313,10 +313,10 @@ class NetworkTrainer(ABC):
             if "individual_results_extra_keys" in logged_vars.keys() and "tta_augmentations" in logged_vars["individual_results_extra_keys"]:
                 img_size = data_dict['original_image_size'].cpu().numpy()
                 pred_coords_input_size = invert_coordinates(pred_coords_input_size, logged_vars, img_size)
-            try:
-                logged_vars["individual_results"] = logged_vars["individual_results"][-(len(pred_coords_input_size)):]
-            except:
-                pass
+            #try:
+            #    logged_vars["individual_results"] = logged_vars["individual_results"][-(len(pred_coords_input_size)):]
+            #except:
+            #    pass
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
@@ -595,7 +595,7 @@ class NetworkTrainer(ABC):
                     augmented_dict['image'] = [x for x in augmented_dict['image'] for i in range(num_vers)]
                     for i in range(num_vers):
                         batch = augmented_dict.copy()
-                        batch['image'] = torch.stack(batch['image'][i::num_vers]).to(self.device)
+                        batch['image'] = torch.stack(batch['image'][i*num_vers:i+1*num_vers]).to(self.device)
                         l, _ = self.run_iteration(
                             generator,
                             self.test_dataloader,
@@ -717,7 +717,7 @@ class NetworkTrainer(ABC):
                         ensembles_analyzed,
                         ind_landmark_errors,
                     ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
-                        evaluation_logs
+                        evaluation_logs, tta=True
                     )
                     # Update the dictionaries with the results
                     for k_ in list(ensemble_result_dicts.keys()):
@@ -790,7 +790,7 @@ class NetworkTrainer(ABC):
         smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX
 
         ensemble_handler = EnsembleUncertainties(
-            uncertainty_estimation_keys, smha_model_idx, self.generic_dataset_args["landmarks"]
+            uncertainty_estimation_keys, smha_model_idx, self.landmarks
         )
 
         # network evaluation mode
@@ -801,7 +801,7 @@ class NetworkTrainer(ABC):
             uncert_key: [] for uncert_key in ensemble_handler.uncertainty_keys
         }
         all_ind_errors = {
-            uncert_key: [[] for x in range(len(self.generic_dataset_args["landmarks"]))]
+            uncert_key: [[] for x in range(len(self.landmarks))]
             for uncert_key in ensemble_handler.uncertainty_keys
         }
 
@@ -817,7 +817,6 @@ class NetworkTrainer(ABC):
                     for ckpt in checkpoint_list:
                         self.load_checkpoint(ckpt, training_bool=False)
                         # Directly pass the next data_dict to run_iteration rather than iterate it within.
-
                         #@LAWRENCE
                         l, _ = self.run_iteration(
                             generator,
@@ -829,7 +828,7 @@ class NetworkTrainer(ABC):
                             debug=debug,
                             direct_data_dict=direct_data_dict
                         )
-
+                        #print(ckpt, [x['uid'] for x in evaluation_logs['individual_results']])
                     # Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)
                     (
                         ensembles_analyzed,

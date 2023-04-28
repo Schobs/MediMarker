@@ -100,7 +100,6 @@ class DictLogger():
                     log_dict["train_coord_error_mean"].append(np.mean(coord_error.detach().cpu().numpy()))
             # Save data for each sample individually
             if "individual_results" in vars_to_log:
-                log_dict["individual_results"] = []
                 for idx in range(len(pred_coords)):
                     ind_dict = {}
                     for standard_info_key in self.standard_info_keys:

@@ -14,7 +14,7 @@ class EnsembleUncertainties():
         self.landmarks = landmarks
 
 
-    def ensemble_inference_with_uncertainties(self, evaluation_logs):
+    def ensemble_inference_with_uncertainties(self, evaluation_logs, tta=False):
         """ Function to calculate the predicted coordinates and uncertainty metrics for an ensemble of models over a dictionary of evaluation logs.
         Args:
             evaluation_logs (dict): Dictionary of samples of the template from DictLogger.ensemble_inference_log_template():
@@ -26,15 +26,23 @@ class EnsembleUncertainties():
             ind_errors (dict): Dictionary of the individual landmark errors for each uncertainty metric.    
 
         """
-        
         #Group ensemble predictions by uid
         sorted_dict_by_uid = {}
-        for ind_res in evaluation_logs["individual_results"]:
-            uid = ind_res["uid"]
-            if uid not in sorted_dict_by_uid:
-                sorted_dict_by_uid[uid] = {}
-                sorted_dict_by_uid[uid]["ind_preds"] = []
-            sorted_dict_by_uid[uid]["ind_preds"].append(ind_res)
+        if tta:
+            for ind_res in [evaluation_logs["individual_results"][-1]]: #TTA results need to be handled differently as the transformations are included in the eval_logs
+                uid = ind_res["uid"]
+                if uid not in sorted_dict_by_uid:
+                    sorted_dict_by_uid[uid] = {}
+                    sorted_dict_by_uid[uid]["ind_preds"] = []
+                sorted_dict_by_uid[uid]["ind_preds"].append(ind_res)
+        else:
+            for ind_res in evaluation_logs["individual_results"]:
+                uid = ind_res["uid"]
+                if uid not in sorted_dict_by_uid:
+                    sorted_dict_by_uid[uid] = {}
+                    sorted_dict_by_uid[uid]["ind_preds"] = []
+                sorted_dict_by_uid[uid]["ind_preds"].append(ind_res)
+        #import pdb; pdb.set_trace()
 
         #Initialise results dictionaries
         all_ensemble_results_dicts = {uncert_key: [] for uncert_key in self.uncertainty_keys}
@@ -182,8 +190,6 @@ class EnsembleUncertainties():
                 ensemble_results_dict["ecpv"]["L"+str(cidx)] = p_coord
                 ensemble_results_dict["ecpv"]["uncertainty L"+str(cidx)] = all_coord_vars[cidx]
                 ind_errors["ecpv"][cidx].append(p_coord)
-
-                
         return ensemble_results_dict, ind_errors
 
 
@@ -204,7 +210,7 @@ class EnsembleUncertainties():
             ind_errors (Dict): Updated dictionary of the individual landmark errors for each uncertainty metric.
         """
 
-
+        #import pdb; pdb.set_trace()
         # 3.1) Average all the heatmaps
         all_ind_heatmaps = [dic['final_heatmaps'] for dic in individual_results]
         #Create an empty map and add all maps to it, then average
