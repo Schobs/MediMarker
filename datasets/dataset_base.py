@@ -448,8 +448,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 # Convert the heatmap tensor to a NumPy array
                 heatmap_np = label["heatmaps"][0].numpy()
 
-                # Apply the transformation
-                transformed_heatmap = self.transform(image=heatmap_np)
+                # Apply the transformation using augment_images()
+                transformed_heatmap = self.transform.augment_images([heatmap_np])[
+                    0]
 
                 # Convert the transformed heatmap back to a tensor
                 label["heatmaps"][0] = torch.from_numpy(transformed_heatmap)
