@@ -443,7 +443,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.num_res_supervisions,
                     self.hm_lambda_scale,
                 )
-                label = self.transform(image=label["heatmaps"][1])
+                label = self.transform(image=label["heatmaps"][0])
                 # make sure length
 
             else:
