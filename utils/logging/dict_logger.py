@@ -36,7 +36,7 @@ class DictLogger():
 
         return logged_per_epoch
 
-    def evaluation_log_template(self, model_type):
+    def evaluation_log_template(self):
         # if self.model_type == "default":       
 
         eval_logs = {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
