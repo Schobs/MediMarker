@@ -222,15 +222,34 @@ class UnetrTrainer(NetworkTrainer):
             pred_coords = input_size_coords
             max_values = input_max_values
 
-        # Maybe fit a gaussian to the output heatmap and get the coords from that
-        if self.fit_gauss_inference:
-            pred_coords, max_values, fitted_dicts = get_coords_fit_gauss(
-                final_heatmap, pred_coords, visualize=False
-            )
-
         extra_info["hm_max"] = input_max_values
         extra_info["final_heatmaps"] = final_heatmap
 
+        # Maybe fit a gaussian to the output heatmap and get the coords from that
+        if self.fit_gauss_inference and not self.is_train:
+
+            # If not resizing first, get the coordinate predictions from the fitted gauss.
+            # IF we do resize first, we already have the coords from the resized heatmap,
+            # it is too expensive to fit a gauss to the resized heatmap to get the coords from the full heatmap,
+            # so just use the resized heatmap coords and remember that the fitted cov is for lower res.
+            if not self.resize_first:
+                pred_coords, _, fitted_dicts = get_coords_fit_gauss(
+                    model_output, input_size_coords, visualize=self.trainer_config.INFERENCE.DEBUG
+                )
+                pred_coords = torch.tensor(pred_coords).to(self.device)
+                extra_info["pred_coords_input_size"] = pred_coords.cpu(
+                ).detach().numpy()
+
+            else:
+                _, _, fitted_dicts = get_coords_fit_gauss(
+                    model_output, input_size_coords, visualize=self.trainer_config.INFERENCE.DEBUG
+                )
+
+            extra_info["fitted_gauss"] = np.empty(
+                (input_max_values.shape[0], input_max_values.shape[1], 2, 2))
+            for si, sample in enumerate(fitted_dicts):
+                for li, lm in enumerate(sample):
+                    extra_info["fitted_gauss"][si, li, :, :] = lm["covariance"]
         return pred_coords, extra_info
 
     def stitch_heatmap(self, patch_predictions, stitching_info, gauss_strength=0.5):

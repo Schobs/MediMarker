@@ -36,6 +36,38 @@ def get_parameters(name):
     return param_dict
 
 
+def find_spreadsheets(root_dirs, F, L):
+    matches_ind = []
+    summaries_ind = []
+    if "optim" in root_dirs[0]:
+        for root in root_dirs:
+            for t in F:
+                folder_name = f"final_f{t}_l{L}"
+                folder_path = root
+                if folder_path.endswith(folder_name):
+                    for filename in os.listdir(folder_path):
+                        if "individual_results" in filename:
+                            matches_ind.append(
+                                os.path.join(folder_path, filename))
+                        if "summary" in filename:
+                            summaries_ind.append(
+                                os.path.join(folder_path, filename))
+    else:
+        for root in root_dirs:
+            for t in F:
+                folder_name = f"F{t}L{L}_V2"
+                folder_path = os.path.join(root, folder_name)
+                if os.path.isdir(folder_path):
+                    for filename in os.listdir(folder_path):
+                        if "individual_results" in filename:
+                            matches_ind.append(
+                                os.path.join(folder_path, filename))
+                        if "summary" in filename:
+                            summaries_ind.append(
+                                os.path.join(folder_path, filename))
+    return list(set(matches_ind)), list(set(summaries_ind))
+
+
 def analyse_all_folds(
     root_path,
     name_of_exp,
