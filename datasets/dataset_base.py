@@ -425,7 +425,6 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
         # Don't do data augmentation.
         else:
-
             input_coords = coords
             input_image = torch.from_numpy(image).float()
             landmarks_in_indicator = [1 for xy in input_coords]
@@ -433,18 +432,29 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         if self.generate_hms_here:
 
             if self.transform_heatmaps:
-                input_coords = self.transform(input_coords)
+                assert self.num_res_supervisions == 1, "Must use num_res_supervisions equal to 1 to use transformed heat maps"
 
-            label = self.LabelGenerator.generate_labels(
-                input_coords,
-                x_y_corner,
-                landmarks_in_indicator,
-                self.heatmap_label_size,
-                hm_sigmas,
-                self.num_res_supervisions,
-                self.hm_lambda_scale,
-            )
+                label = self.LabelGenerator.generate_labels(
+                    untransformed_coords,
+                    x_y_corner,
+                    landmarks_in_indicator,
+                    self.heatmap_label_size,
+                    hm_sigmas,
+                    self.num_res_supervisions,
+                    self.hm_lambda_scale,
+                )
+                label = self.transform(image=label["heatmaps"][0])
 
+            else:
+                label = self.LabelGenerator.generate_labels(
+                    input_coords,
+                    x_y_corner,
+                    landmarks_in_indicator,
+                    self.heatmap_label_size,
+                    hm_sigmas,
+                    self.num_res_supervisions,
+                    self.hm_lambda_scale,
+                )
         else:
             label = []
 
