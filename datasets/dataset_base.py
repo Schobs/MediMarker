@@ -445,6 +445,15 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 )
                 label = self.transform(image=label["heatmaps"][0])
 
+                # Convert the heatmap tensor to a NumPy array
+                heatmap_np = label["heatmaps"][0].numpy()
+
+                # Apply the transformation
+                transformed_heatmap = self.transform(image=heatmap_np)
+
+                # Convert the transformed heatmap back to a tensor
+                label["heatmaps"][0] = torch.from_numpy(transformed_heatmap)
+
             else:
                 label = self.LabelGenerator.generate_labels(
                     input_coords,
