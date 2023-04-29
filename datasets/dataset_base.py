@@ -444,7 +444,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.hm_lambda_scale,
                 )
 
-                heatmaps = label["heatmaps"][0][0]
+                heatmaps = label["heatmaps"][0]
 
                 # Convert heatmaps to numpy arrays if they are torch tensors
                 heatmaps_np = np.array(heatmaps)
@@ -473,7 +473,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 # print("augmented heatmaps type: ",
                 #       augmented_heatmaps_tensor.dtype)
 
-                print(label["heatmaps"][0])
+                # print(label["heatmaps"][0])
 
             else:
                 label = self.LabelGenerator.generate_labels(
@@ -486,7 +486,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.hm_lambda_scale,
                 )
 
-                print(label["heatmaps"][0])
+                # print(label["heatmaps"][0])
 
                 # print("heatmaps shape: ", label["heatmaps"][0].shape)
                 # print("heatmaps type: ", label["heatmaps"][0].dtype)
