@@ -447,7 +447,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 heatmaps = label["heatmaps"][0]
 
                 # Convert heatmaps to numpy arrays if they are torch tensors
-                heatmaps_np = [hm.numpy() for hm in heatmaps]
+                heatmaps_np = [hm.numpy() if isinstance(
+                    hm, torch.Tensor) else hm for hm in heatmaps]
 
                 # Add an extra dimension to the numpy arrays to represent num_channels (required by imgaug)
                 heatmaps_expanded = [np.expand_dims(
