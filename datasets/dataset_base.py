@@ -456,8 +456,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     heatmaps_transposed = np.transpose(heatmaps_np, (1, 2, 0))
 
                     # Apply the imgaug transformation
-                    heatmaps_augmented = self.transform.augment_image(
-                        heatmaps_transposed)
+                    heatmaps_augmented = self.transform(
+                        image=heatmaps_transposed)
 
                     # Transpose back to (num_landmarks, height, width)
                     heatmaps_augmented = np.transpose(
