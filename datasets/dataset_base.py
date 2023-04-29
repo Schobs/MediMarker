@@ -444,26 +444,33 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.hm_lambda_scale,
                 )
 
-                heatmaps_np = label["heatmaps"]
-                if isinstance(heatmaps_np, torch.Tensor):
-                    heatmaps_np = heatmaps_np.numpy()
+                heatmaps_list = label["heatmaps"]
 
-                # Transpose heatmaps from (num_landmarks, height, width) to (height, width, num_landmarks)
-                heatmaps_transposed = np.transpose(heatmaps_np, (1, 2, 0))
+                # Iterate through the list of heatmaps and apply the transformation
+                augmented_heatmaps = []
+                for heatmaps_np in heatmaps_list:
+                    if isinstance(heatmaps_np, torch.Tensor):
+                        heatmaps_np = heatmaps_np.numpy()
 
-                # Apply the imgaug transformation
-                heatmaps_augmented = self.transform.augment_image(
-                    heatmaps_transposed)
+                    # Transpose heatmaps from (num_landmarks, height, width) to (height, width, num_landmarks)
+                    heatmaps_transposed = np.transpose(heatmaps_np, (1, 2, 0))
 
-                # Transpose back to (num_landmarks, height, width)
-                heatmaps_augmented = np.transpose(
-                    heatmaps_augmented, (2, 0, 1))
+                    # Apply the imgaug transformation
+                    heatmaps_augmented = self.transform.augment_image(
+                        heatmaps_transposed)
 
-                # Convert the heatmaps back to tensors
-                heatmaps_tensors = torch.from_numpy(heatmaps_augmented).float()
+                    # Transpose back to (num_landmarks, height, width)
+                    heatmaps_augmented = np.transpose(
+                        heatmaps_augmented, (2, 0, 1))
+
+                    # Convert the heatmaps back to tensors
+                    heatmaps_tensors = torch.from_numpy(
+                        heatmaps_augmented).float()
+
+                    augmented_heatmaps.append(heatmaps_tensors)
 
                 # Update the 'heatmaps' key in the label dictionary
-                label["heatmaps"] = heatmaps_tensors
+                label["heatmaps"] = augmented_heatmaps
 
             else:
                 label = self.LabelGenerator.generate_labels(
