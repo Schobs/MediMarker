@@ -473,7 +473,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 # print("augmented heatmaps type: ",
                 #       augmented_heatmaps_tensor.dtype)
 
-                print("label shape: ", label.shape)
+                print(label["heatmaps"][0])
 
             else:
                 label = self.LabelGenerator.generate_labels(
