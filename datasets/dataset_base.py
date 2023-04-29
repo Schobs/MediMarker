@@ -446,28 +446,17 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
                 heatmaps_list = label["heatmaps"]
 
-                # Iterate through the list of heatmaps and apply the transformation
-                augmented_heatmaps = []
-                for heatmaps_np in heatmaps_list:
-                    if isinstance(heatmaps_np, torch.Tensor):
-                        heatmaps_np = heatmaps_np.numpy()
+                # Stack the heatmaps into a single numpy array
+                heatmaps_batch = np.stack([np.transpose(hm.numpy() if isinstance(
+                    hm, torch.Tensor) else hm, (1, 2, 0)) for hm in heatmaps_list])
 
-                    # Transpose heatmaps from (num_landmarks, height, width) to (height, width, num_landmarks)
-                    heatmaps_transposed = np.transpose(heatmaps_np, (1, 2, 0))
+                # Apply the imgaug transformation to the entire batch of heatmaps
+                heatmaps_augmented_batch = self.transform(
+                    images=heatmaps_batch)
 
-                    # Apply the imgaug transformation
-                    heatmaps_augmented = self.transform(
-                        image=heatmaps_transposed)
-
-                    # Transpose back to (num_landmarks, height, width)
-                    heatmaps_augmented = np.transpose(
-                        heatmaps_augmented, (2, 0, 1))
-
-                    # Convert the heatmaps back to tensors
-                    heatmaps_tensors = torch.from_numpy(
-                        heatmaps_augmented).float()
-
-                    augmented_heatmaps.append(heatmaps_tensors)
+                # Unstack the transformed heatmaps back into a list of individual heatmaps
+                augmented_heatmaps = [torch.from_numpy(np.transpose(
+                    hm, (2, 0, 1))).float() for hm in heatmaps_augmented_batch]
 
                 # Update the 'heatmaps' key in the label dictionary
                 label["heatmaps"] = augmented_heatmaps
