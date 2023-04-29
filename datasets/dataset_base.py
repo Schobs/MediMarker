@@ -443,9 +443,27 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.num_res_supervisions,
                     self.hm_lambda_scale,
                 )
-                print("pre-transform label shape: ", label.shape)
-                label = self.transform(image=label["heatmaps"])
-                print("post-transform label shape: ", label.shape)
+
+                heatmaps_np = label["heatmaps"]
+                if isinstance(heatmaps_np, torch.Tensor):
+                    heatmaps_np = heatmaps_np.numpy()
+
+                # Transpose heatmaps from (num_landmarks, height, width) to (height, width, num_landmarks)
+                heatmaps_transposed = np.transpose(heatmaps_np, (1, 2, 0))
+
+                # Apply the imgaug transformation
+                heatmaps_augmented = self.transform.augment_image(
+                    heatmaps_transposed)
+
+                # Transpose back to (num_landmarks, height, width)
+                heatmaps_augmented = np.transpose(
+                    heatmaps_augmented, (2, 0, 1))
+
+                # Convert the heatmaps back to tensors
+                heatmaps_tensors = torch.from_numpy(heatmaps_augmented).float()
+
+                # Update the 'heatmaps' key in the label dictionary
+                label["heatmaps"] = heatmaps_tensors
 
             else:
                 label = self.LabelGenerator.generate_labels(
