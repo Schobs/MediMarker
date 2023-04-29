@@ -442,37 +442,25 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     hm_sigmas,
                     self.num_res_supervisions,
                     self.hm_lambda_scale,
+                    to_tensor=False,
                 )
 
                 heatmaps = label["heatmaps"][0]
 
-                # Convert heatmaps to numpy arrays if they are torch tensors
-                heatmaps_np = [hm.numpy() if isinstance(
-                    hm, torch.Tensor) else hm for hm in heatmaps]
-
                 # Add an extra dimension to the numpy arrays to represent num_channels (required by imgaug)
                 heatmaps_expanded = [np.expand_dims(
-                    hm, axis=-1) for hm in heatmaps_np]
+                    hm, axis=-1) for hm in heatmaps]
 
                 # Apply the imgaug transformation to the batch of heatmaps
                 heatmaps_augmented_batch = self.transform(
                     images=heatmaps_expanded)
 
-                # Remove the extra dimension and convert the heatmaps back to tensors
-                augmented_heatmaps = [torch.from_numpy(np.squeeze(
-                    hm, axis=-1)).float() for hm in heatmaps_augmented_batch]
+                # Remove the extra dimension from the heatmaps
+                augmented_heatmaps = [np.squeeze(
+                    hm, axis=-1) for hm in heatmaps_augmented_batch]
 
-                # Stack the augmented heatmaps back into a single tensor
-                augmented_heatmaps_tensor = torch.stack(
-                    augmented_heatmaps, dim=0)
-
-                # Update the 'heatmaps' key in the label dictionary
-                label["heatmaps"][0] = augmented_heatmaps_tensor
-
-                print("augmented heatmaps shape: ",
-                      augmented_heatmaps_tensor.shape)
-                print("augmented heatmaps type: ",
-                      augmented_heatmaps_tensor.dtype)
+                # Update the 'heatmaps' key in the label dictionary with the numpy arrays
+                label["heatmaps"][0] = np.stack(augmented_heatmaps, axis=0)
 
             else:
                 label = self.LabelGenerator.generate_labels(
@@ -485,8 +473,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.hm_lambda_scale,
                 )
 
-                print("heatmaps shape: ", label["heatmaps"][0].shape)
-                print("heatmaps type: ", label["heatmaps"][0].dtype)
+                # print("heatmaps shape: ", label["heatmaps"][0].shape)
+                # print("heatmaps type: ", label["heatmaps"][0].dtype)
         else:
             label = []
 
