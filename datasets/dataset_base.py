@@ -446,13 +446,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
 
                 heatmaps_list = label["heatmaps"]
 
-                # Stack the heatmaps into a single numpy array
-                heatmaps_batch = np.stack([np.transpose(hm.numpy() if isinstance(
-                    hm, torch.Tensor) else hm, (1, 2, 0)) for hm in heatmaps_list])
-
                 # Apply the imgaug transformation to the entire batch of heatmaps
                 heatmaps_augmented_batch = self.transform(
-                    images=heatmaps_batch)
+                    images=np.stack([np.transpose(hm.numpy() if isinstance(hm, torch.Tensor) else hm, (1, 2, 0)) for hm in heatmaps_list]))
 
                 # Unstack the transformed heatmaps back into a list of individual heatmaps
                 augmented_heatmaps = [torch.from_numpy(np.transpose(

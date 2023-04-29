@@ -5,7 +5,7 @@
 #SBATCH --mail-type=FAIL
 # Rename the job
 #SBATCH --comment=unetr_model_test
-#SBATCH --cpus-per-task=9
+#SBATCH --cpus-per-task=2
 
 module load Anaconda3/5.3.0
 
