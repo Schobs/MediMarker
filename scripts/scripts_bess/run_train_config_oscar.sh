@@ -5,7 +5,7 @@
 #SBATCH --mail-type=FAIL
 # Rename the job
 #SBATCH --comment=unetr_model_test
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=4
 
 module load Anaconda3/5.3.0
 
@@ -14,5 +14,5 @@ module load cuDNN/7.6.4.38-gcccuda-2019b
 
 source activate my_env
 
-python ../../main.py --cfg ../../configs/configs_BSC_projects/ceph_oscar.yaml
-# python main.py --cfg configs/configs_BSC_projects/ceph_oscar.yaml
+# python ../../main.py --cfg ../../configs/configs_BSC_projects/ceph_oscar.yaml
+python main.py --cfg configs/configs_BSC_projects/ceph_oscar.yaml
