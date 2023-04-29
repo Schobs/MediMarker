@@ -466,7 +466,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     augmented_heatmaps, dim=0)
 
                 # Update the 'heatmaps' key in the label dictionary
-                label["heatmaps"][0][0] = augmented_heatmaps_tensor
+                label["heatmaps"][0] = augmented_heatmaps_tensor
 
                 # print("augmented heatmaps shape: ",
                 #       augmented_heatmaps_tensor.shape)
