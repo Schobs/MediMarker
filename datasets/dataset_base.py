@@ -469,6 +469,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                 # Update the 'heatmaps' key in the label dictionary
                 label["heatmaps"] = [augmented_heatmaps_tensor]
 
+                print(label["heatmaps"][0].shape)
+
             else:
                 label = self.LabelGenerator.generate_labels(
                     input_coords,
