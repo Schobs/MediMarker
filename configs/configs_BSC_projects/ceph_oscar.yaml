@@ -42,7 +42,7 @@ INFERENCE:
   FIT_GAUSS: True
 
 SAMPLER:
-  NUM_WORKERS: 1 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down.
+  NUM_WORKERS: 0 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down.
   # DATA_AUG_PACKAGE: "torchio"
   # DATA_AUG: "AffineSimple" # set to None for no augmentation. for other schemes see the documentation.
   TRANSFORM_HEATMAPS: True #Set to true to transform the heatmaps as well. If false, only the images will be transformed.
