@@ -444,18 +444,30 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.hm_lambda_scale,
                 )
 
-                heatmaps_list = label["heatmaps"]
+                heatmaps = label["heatmaps"][0]
 
-                # Apply the imgaug transformation to the entire batch of heatmaps
+                # Convert heatmaps to numpy arrays if they are torch tensors
+                heatmaps_np = [hm.numpy() if isinstance(
+                    hm, torch.Tensor) else hm for hm in heatmaps]
+
+                # Add an extra dimension to the numpy arrays to represent num_channels (required by imgaug)
+                heatmaps_expanded = [np.expand_dims(
+                    hm, axis=-1) for hm in heatmaps_np]
+
+                # Apply the imgaug transformation to the batch of heatmaps
                 heatmaps_augmented_batch = self.transform(
-                    images=np.stack([np.transpose(hm.numpy() if isinstance(hm, torch.Tensor) else hm, (1, 2, 0)) for hm in heatmaps_list]))
+                    images=heatmaps_expanded)
 
-                # Unstack the transformed heatmaps back into a list of individual heatmaps
-                augmented_heatmaps = [torch.from_numpy(np.transpose(
-                    hm, (2, 0, 1))).float() for hm in heatmaps_augmented_batch]
+                # Remove the extra dimension and convert the heatmaps back to tensors
+                augmented_heatmaps = [torch.from_numpy(np.squeeze(
+                    hm, axis=-1)).float() for hm in heatmaps_augmented_batch]
+
+                # Stack the augmented heatmaps back into a single tensor
+                augmented_heatmaps_tensor = torch.stack(
+                    augmented_heatmaps, dim=0)
 
                 # Update the 'heatmaps' key in the label dictionary
-                label["heatmaps"] = augmented_heatmaps
+                label["heatmaps"] = [augmented_heatmaps_tensor]
 
             else:
                 label = self.LabelGenerator.generate_labels(
@@ -467,8 +479,8 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.num_res_supervisions,
                     self.hm_lambda_scale,
                 )
-                print("label: ", label)
-                print("label shape: ", label["heatmaps"][0].shape)
+                # print("label: ", label)
+                # print("label shape: ", label["heatmaps"][0].shape)
         else:
             label = []
 
