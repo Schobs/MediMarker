@@ -443,7 +443,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.num_res_supervisions,
                     self.hm_lambda_scale,
                 )
+                print("pre-transform label shape: ", label["heatmaps"].shape)
                 label = self.transform(image=label["heatmaps"])
+                print("post-transform label shape: ", label["heatmaps"].shape)
 
             else:
                 label = self.LabelGenerator.generate_labels(
