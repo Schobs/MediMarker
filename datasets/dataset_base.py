@@ -484,6 +484,9 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.num_res_supervisions,
                     self.hm_lambda_scale,
                 )
+
+                print("heatmaps shape: ", label["heatmaps"][0].shape)
+                print("heatmaps type: ", label["heatmaps"][0].dtype)
         else:
             label = []
 
