@@ -444,14 +444,29 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
                     self.hm_lambda_scale,
                 )
 
-                heatmaps = np.array(label["heatmaps"][0])
+                heatmaps = label["heatmaps"][0]
+
+                # Convert heatmaps to numpy arrays if they are torch tensors
+                heatmaps_np = np.array(heatmaps)
+
+                # Add an extra dimension to the numpy arrays to represent num_channels (required by imgaug)
+                heatmaps_expanded = [np.expand_dims(
+                    hm, axis=-1) for hm in heatmaps_np]
 
                 # Apply the imgaug transformation to the batch of heatmaps
-                heatmaps_augmented = self.transform(
-                    images=heatmaps)
+                heatmaps_augmented_batch = self.transform(
+                    images=heatmaps_expanded)
+
+                # Remove the extra dimension and convert the heatmaps back to tensors
+                augmented_heatmaps = [torch.from_numpy(np.squeeze(
+                    hm, axis=-1)).float() for hm in heatmaps_augmented_batch]
+
+                # Stack the augmented heatmaps back into a single tensor
+                augmented_heatmaps_tensor = torch.stack(
+                    augmented_heatmaps, dim=0)
 
                 # Update the 'heatmaps' key in the label dictionary
-                label["heatmaps"][0] = heatmaps_augmented
+                label["heatmaps"][0] = augmented_heatmaps_tensor
 
             else:
                 label = self.LabelGenerator.generate_labels(
