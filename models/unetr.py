@@ -300,9 +300,6 @@ class UNETR(nn.Module):
                 Conv2DBlock(128, 64),
                 Conv2DBlock(64, 64),
                 SingleConv2DBlock(64, output_dim, 1)
-                # potential change for landmark localisation rather than image segmentation
-                # SingleConv2DBlock(64, 2, 1),  # change output dimension to 2 for heatmap
-                # nn.Softmax2d()  # apply softmax to produce heatmap
             )
 
     def forward(self, x):
@@ -312,14 +309,6 @@ class UNETR(nn.Module):
         z6 = z6.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_dim)
         z9 = z9.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_dim)
         z12 = z12.transpose(-1, -2).view(-1, self.embed_dim, *self.patch_dim)
-
-        # ===================================
-        # Produce Co-ordinates
-        # ===================================
-        # Append the coordinates to the features map
-        # coords = coords.unsqueeze(-1).unsqueeze(-1)
-        # coords = coords.repeat(1, 1, x.shape[2], x.shape[3])
-        # z0 = torch.cat([z0, coords], dim=1)
 
         z12 = self.decoder12_upsampler(z12)
         # print("z12 shape: "+str(z12.shape))
