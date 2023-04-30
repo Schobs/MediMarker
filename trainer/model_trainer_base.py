@@ -195,12 +195,12 @@ class NetworkTrainer(ABC):
 
         # This is the logger that will save epoch results to log & log variables at inference, extend this for any extra
         # stuff you want to log/save at evaluation!
-        self.dict_logger = DictLogger(
-            len(self.generic_dataset_args["landmarks"]),
-            self.regress_sigma,
-            self.loss.loss_seperated_keys,
-            self.dataset_class.additional_sample_attribute_keys,
-        )
+        # self.dict_logger = DictLogger(
+        #     len(self.generic_dataset_args["landmarks"]),
+        #     self.regress_sigma,
+        #     self.loss.loss_seperated_keys,
+        #     self.dataset_class.additional_sample_attribute_keys,
+        # )
 
         self.was_initialized = True
 
