@@ -305,23 +305,21 @@ class NetworkTrainer(ABC):
         Returns:
             _type_: _description_
         """
-        inversed_ouput = output.copy()
         if log_coords:
             if "tta_augmentations" in logged_vars["individual_results_extra_keys"]:
-                inversed_ouput[6] = inverse_heatmaps(logged_vars['individual_results'], output[6], data_dict)
+                for idx in range(len(output)):
+                    output[idx] = inverse_heatmaps(logged_vars['individual_results'], output[idx], data_dict)
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(output, data_dict["original_image_size"])
             if "individual_results_extra_keys" in logged_vars.keys() and "tta_augmentations" in logged_vars["individual_results_extra_keys"]:
-                img_size = data_dict['original_image_size'].cpu().numpy()
-                pred_coords_input_size = invert_coordinates(pred_coords_input_size, logged_vars, img_size)
-            #try:
-            #    logged_vars["individual_results"] = logged_vars["individual_results"][-(len(pred_coords_input_size)):]
-            #except:
-            #    pass
+                img_size = data_dict["original_image_size"]
+                #pred_coords_input_size = invert_coordinates(pred_coords_input_size, logged_vars, img_size)
+                #print(f"316: {pred_coords_input_size} for {img_size}")
             pred_coords, target_coords = self.maybe_rescale_coords(pred_coords_input_size, data_dict)
+            #print(f"318: {pred_coords}, {target_coords}")
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
 
-        return pred_coords, pred_coords_input_size, extra_info, target_coords, logged_vars #LAWRENCE - overwrites the predicition from the previous model, where is model 1's coordinates being saved?
+        return pred_coords, pred_coords_input_size, extra_info, target_coords, logged_vars
 
     def on_epoch_end(self, per_epoch_logs):
         """
@@ -558,12 +556,12 @@ class NetworkTrainer(ABC):
         else:
             # This case is the full sampler
             inference_full_image = True
-        num_vers = 4
+        num_vers = 3
         inference_resolution = self.training_resolution
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         self.test_dataloader = DataLoader(
             test_dataset,
-            batch_size=int(np.floor(self.data_loader_batch_size/(num_vers))),
+            batch_size=1,
             shuffle=False,
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
@@ -573,17 +571,17 @@ class NetworkTrainer(ABC):
             self.trainer_config.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS
         )
         smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX
-        self.ensemble_handler = EnsembleUncertainties(
+        ensemble_handler = EnsembleUncertainties(
             uncertainty_estimation_keys, smha_model_idx, self.landmarks
         )
         # network evaluation mode
         self.network.eval()
         ensemble_result_dicts = {
-            uncert_key: [] for uncert_key in self.ensemble_handler.uncertainty_keys
+            uncert_key: [] for uncert_key in ensemble_handler.uncertainty_keys
         }
         all_ind_errors = {
             uncert_key: [[] for x in range(len(self.landmarks))]
-            for uncert_key in self.ensemble_handler.uncertainty_keys
+            for uncert_key in ensemble_handler.uncertainty_keys
         }
         generator = iter(self.test_dataloader)
         if inference_full_image:
@@ -592,10 +590,9 @@ class NetworkTrainer(ABC):
                     evaluation_logs = self.dict_logger.mcdrop_inference_log_template()
                     direct_data_dict = next(generator)
                     augmented_dict = direct_data_dict.copy()
-                    augmented_dict['image'] = [x for x in augmented_dict['image'] for i in range(num_vers)]
+                    diff_vers = {x : augmented_dict for x in range(num_vers)}
                     for i in range(num_vers):
-                        batch = augmented_dict.copy()
-                        batch['image'] = torch.stack(batch['image'][i*num_vers:i+1*num_vers]).to(self.device)
+                        batch = diff_vers.get(i)
                         l, _ = self.run_iteration(
                             generator,
                             self.test_dataloader,
@@ -606,10 +603,10 @@ class NetworkTrainer(ABC):
                             debug=debug,
                             direct_data_dict=batch
                         )
-                        (
+                    (
                         ensembles_analyzed,
                         ind_landmark_errors,
-                    ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
+                    ) = ensemble_handler.ensemble_inference_with_uncertainties(
                         evaluation_logs
                     )
                     # Update the dictionaries with the results
@@ -658,7 +655,7 @@ class NetworkTrainer(ABC):
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         self.test_dataloader = DataLoader(
             test_dataset,
-            batch_size=int(np.floor(self.data_loader_batch_size/(num_tta_iterations+1))),
+            batch_size=1,
             shuffle=False,
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
@@ -668,17 +665,17 @@ class NetworkTrainer(ABC):
             self.trainer_config.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS
         )
         smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX
-        self.ensemble_handler = EnsembleUncertainties(
+        ensemble_handler = EnsembleUncertainties(
             uncertainty_estimation_keys, smha_model_idx, self.landmarks
         )
         # network evaluation mode
         self.network.eval()
         ensemble_result_dicts = {
-            uncert_key: [] for uncert_key in self.ensemble_handler.uncertainty_keys
+            uncert_key: [] for uncert_key in ensemble_handler.uncertainty_keys
         }
         all_ind_errors = {
             uncert_key: [[] for x in range(len(self.landmarks))]
-            for uncert_key in self.ensemble_handler.uncertainty_keys
+            for uncert_key in ensemble_handler.uncertainty_keys
         }
         generator = iter(self.test_dataloader)
         if inference_full_image:
@@ -687,22 +684,19 @@ class NetworkTrainer(ABC):
                     evaluation_logs = self.dict_logger.tta_inference_log_template()
                     direct_data_dict = next(generator)
                     augmented_dict = direct_data_dict.copy()
-                    augmented_dict['image'] = [x for x in augmented_dict['image'] for i in range(num_tta_iterations+1)]
-                    all_inverse_transformations = []
-                    for idx in range(len(augmented_dict['image'])):
-                        if idx % 5 == 0:
-                            all_inverse_transformations.append({"normal": None})
-                            continue
-                        aug_seed = np.random.randint(100000)
-                        augmented_dict['image'][idx], inverse_transformation = apply_tta_augmentation(
-                            augmented_dict['image'][idx], aug_seed)
-                        all_inverse_transformations.append(inverse_transformation)
-                    for i in range(num_tta_iterations+1):
-                        batch = augmented_dict.copy()
-                        batch['image'] = torch.stack(batch['image'][i::num_tta_iterations+1]).to(self.device)
-                        inverse_transforms = all_inverse_transformations[i::num_tta_iterations+1]
-                        [evaluation_logs["individual_results"].append(
-                            {"transform": x}) for x in inverse_transforms]
+                    diff_vers = {x : augmented_dict for x in range(num_tta_iterations+1)}
+                    all_inverse_transformations = {x: [] for x in range(num_tta_iterations+1)}
+                    for idx in range(num_tta_iterations+1):
+                        batch = diff_vers.get(idx)
+                        if idx != 0:
+                            aug_seed = np.random.randint(100000)
+                            diff_vers[idx]['image'], inverse_transformation = apply_tta_augmentation(batch['image'], aug_seed)
+                            all_inverse_transformations[idx].append(inverse_transformation)
+                        else:
+                            all_inverse_transformations[idx].append({"normal": None})
+                        inverse_transforms = all_inverse_transformations.get(idx)
+                        #print(idx, len(batch['image']), inverse_transforms)
+                        [evaluation_logs["individual_results"].append({"transform": x}) for x in inverse_transforms]
                         l, _ = self.run_iteration(
                             generator,
                             self.test_dataloader,
@@ -716,7 +710,7 @@ class NetworkTrainer(ABC):
                     (
                         ensembles_analyzed,
                         ind_landmark_errors,
-                    ) = self.ensemble_handler.ensemble_inference_with_uncertainties(
+                    ) = ensemble_handler.ensemble_inference_with_uncertainties(
                         evaluation_logs, tta=True
                     )
                     # Update the dictionaries with the results
@@ -817,7 +811,6 @@ class NetworkTrainer(ABC):
                     for ckpt in checkpoint_list:
                         self.load_checkpoint(ckpt, training_bool=False)
                         # Directly pass the next data_dict to run_iteration rather than iterate it within.
-                        #@LAWRENCE
                         l, _ = self.run_iteration(
                             generator,
                             test_dataloader,
@@ -833,7 +826,7 @@ class NetworkTrainer(ABC):
                     (
                         ensembles_analyzed,
                         ind_landmark_errors,
-                    ) = ensemble_handler.ensemble_inference_with_uncertainties( #@LAWRENCE - this is where E-CPV is calculated... surely the eval logs will contain the last model's predictions? Similar story for TTA & MC-DROP
+                    ) = ensemble_handler.ensemble_inference_with_uncertainties(
                         evaluation_logs
                     )
 

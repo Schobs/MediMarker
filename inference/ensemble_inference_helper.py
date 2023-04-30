@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from utils.im_utils.heatmap_manipulation import get_coords
+from utils.uncertainty_utils.tta import extract_original_coords_from_flipud, extract_original_coords_from_fliplr, extract_coords_from_movevertical, extract_coords_from_movehorizontal
 
 
 class EnsembleUncertainties():
@@ -29,7 +30,7 @@ class EnsembleUncertainties():
         #Group ensemble predictions by uid
         sorted_dict_by_uid = {}
         if tta:
-            for ind_res in [evaluation_logs["individual_results"][-1]]: #TTA results need to be handled differently as the transformations are included in the eval_logs
+            for ind_res in evaluation_logs["individual_results"][1::2]: #NOT A STABLE SOLUTION; WILL HAVE TO DO FOR NOW - links to batch size in tta_inference set to 1
                 uid = ind_res["uid"]
                 if uid not in sorted_dict_by_uid:
                     sorted_dict_by_uid[uid] = {}
@@ -42,8 +43,6 @@ class EnsembleUncertainties():
                     sorted_dict_by_uid[uid] = {}
                     sorted_dict_by_uid[uid]["ind_preds"] = []
                 sorted_dict_by_uid[uid]["ind_preds"].append(ind_res)
-        #import pdb; pdb.set_trace()
-
         #Initialise results dictionaries
         all_ensemble_results_dicts = {uncert_key: [] for uncert_key in self.uncertainty_keys}
         ind_errors = {uncert_key: [[] for x in range(len(self.landmarks))] for uncert_key in self.uncertainty_keys}
@@ -83,7 +82,10 @@ class EnsembleUncertainties():
 
             ################## 2) E_CPV ###########################
             if "ecpv" in self.uncertainty_keys:
-                ensemble_results_dict, ind_errors = self.calculate_ecpv(individual_results, ensemble_results_dict, ind_errors, target_coords, calc_error)
+                if tta:
+                    ensemble_results_dict, ind_errors = self.calculate_ecpv(individual_results, ensemble_results_dict, ind_errors, target_coords, calc_error, evaluation_logs["individual_results"][0::2])
+                else:
+                    ensemble_results_dict, ind_errors = self.calculate_ecpv(individual_results, ensemble_results_dict, ind_errors, target_coords, calc_error)
           
             ################## 3) E_MHA ###########################
             if "emha" in self.uncertainty_keys:
@@ -136,7 +138,7 @@ class EnsembleUncertainties():
 
         return ensemble_results_dict, ind_errors
 
-    def calculate_ecpv(self, individual_results, ensemble_results_dict, ind_errors, target_coords, calc_error):
+    def calculate_ecpv(self, individual_results, ensemble_results_dict, ind_errors, target_coords, calc_error, tta=None):
         """ Function to calculate the predicted coordinates and uncertainty metrics using the variance between models.
 
         Args:
@@ -152,12 +154,33 @@ class EnsembleUncertainties():
             ensemble_results_dict (Dict): Updated dictionary we are saving the uncertainty and coordinate info to per sample.
             ind_errors (Dict): Updated dictionary of the individual landmark errors for each uncertainty metric.
         """
-
-        # @LAWRENCE - at this point there is only one set of predicted coords. What I think is happening:
-        # Say are two ensemble models, the latter's coordinates overwrite the previous' in the dict logger by way
-        # of run_iteration in model_trainer_base.
-        # This means that the e-cpv calculation always ends in 0
-        
+        if tta is not None:
+            for transforms, idx in zip(tta, [x for x in range(len(tta))]):
+                if idx not in [2, 4]:
+                    continue
+                inverted_predicted_coords = []
+                transform = transforms["transform"]
+                img_shape = individual_results[idx]['original_image_size']
+                coords_all = individual_results[idx]['predicted_coords']
+                key = list(transforms['transform'].keys())[0]
+                if "normal" in key:
+                    continue
+                elif "inverse_flip" in key:
+                    coords = torch.stack([extract_original_coords_from_flipud(coords, img_shape)
+                                        for coords in coords_all])
+                elif "inverse_fliplr" in key:
+                    coords = torch.stack([extract_original_coords_from_fliplr(coords, img_shape)
+                                        for coords in coords_all])
+                elif "inverse_movevertical" in key:
+                    coords = torch.stack([extract_coords_from_movevertical(
+                        transform["inverse_movevertical"], coords, img_shape) for coords in coords_all])
+                elif "inverse_movehorizontal" in key:
+                    coords = torch.stack([extract_coords_from_movehorizontal(
+                        transform["inverse_movehorizontal"], coords, img_shape) for coords in coords_all])
+                inverted_predicted_coords.append(coords)
+                individual_results[idx]['predicted_coords'] = inverted_predicted_coords
+            individual_results[2]['predicted_coords'] = individual_results[2]['predicted_coords'][0].detach().cpu().numpy()
+            individual_results[4]['predicted_coords'] = individual_results[4]['predicted_coords'][0].detach().cpu().numpy()
         #Calculate the E-CPV
         average_coords = np.mean([dic['predicted_coords'] for dic in individual_results] , axis=0)
         # average_coords_og_resolution = np.mean([dic['predicted_coords_original_resolution'] for dic in individual_results] , axis=0)

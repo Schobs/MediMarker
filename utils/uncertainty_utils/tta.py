@@ -38,7 +38,7 @@ def inverse_heatmaps(logged_vars: dict, output: dict, data_dict: dict) -> dict:
         except:
             transformation = logged_vars[img_count+batch_size]['transform']
         if "normal" in transformation:
-            continue
+            return output
         for heatmap_count in range(len(output[img_count])):
             heatmap = output[img_count][heatmap_count]
             org_heatmap = invert_heatmap(heatmap, transformation)
@@ -62,15 +62,7 @@ def invert_heatmap(heatmap : Union[torch.Tensor, np.ndarray], transformation: di
         Inverted heatmap.
     """
     transform = list(transformation.keys())[0]
-    if transform is "inverse_rotate":
-        try:
-            temp = heatmap.cpu().numpy()
-        except:
-            temp = heatmap
-        mag = transformation[transform]
-        new_heatmap = torch.from_numpy(iaa.Rotate(mag).augment_image(temp))
-        return new_heatmap
-    elif transform is "inverse_flip":
+    if transform is "inverse_flip":
         new_heatmap = torch.flipud(heatmap)
         return new_heatmap
     elif transform is "inverse_fliplr":
@@ -114,15 +106,16 @@ def invert_coordinates(orginal_coords : list, log_dict : dict, img_size : list =
         List of inverted coords.
     """
     inverted_predicted_coords = []
-    for funct, coords_all, img_shape in zip(log_dict['individual_results'][-orginal_coords.shape[0]:], orginal_coords, img_size):
+    transform = log_dict['individual_results'][-orginal_coords.shape[0]:]
+    for funct, coords_all, img_shape in zip(transform, orginal_coords, img_size):
         if type(img_shape) == int:
             img_shape = [512, 512]
         key = list(funct['transform'].keys())[0]
         if "normal" in key:
             coords = coords_all
-        elif "inverse_rotate" in key:
-            coords = torch.stack([extract_original_coords_from_rotation(
-                funct['transform']["inverse_rotate"], coords, img_shape) for coords in coords_all])
+        #elif "inverse_rotate" in key:
+        #    coords = torch.stack([extract_original_coords_from_rotation(
+        #        funct['transform']["inverse_rotate"], coords, img_shape) for coords in coords_all])
         elif "inverse_flip" in key:
             coords = torch.stack([extract_original_coords_from_flipud(coords, img_shape)
                                   for coords in coords_all])
@@ -218,7 +211,7 @@ def extract_original_coords_from_fliplr(flip_coords, training_resolution=[512, 5
     return conv_coords
 
 
-def extract_coords_from_movevertical(magnitude, coords):
+def extract_coords_from_movevertical(magnitude, coords, training_resolution=[512, 512]):
     """
     Extracts the coordinates of an image moved vertically based on the input magnitude and original coordinates.
 
@@ -239,7 +232,7 @@ def extract_coords_from_movevertical(magnitude, coords):
     return conv_coords
 
 
-def extract_coords_from_movehorizontal(magnitude, coords):
+def extract_coords_from_movehorizontal(magnitude, coords, training_resolution=[512, 512]):
     """
     Extracts new coordinates by moving the input coordinates horizontally by a certain magnitude.
 
@@ -280,23 +273,14 @@ def apply_tta_augmentation(data, seed):
     `inverse_transform` : Dict
         With the key being the name of the augmentation transform, and the value being the magnitude with which the transform was applied.
     """
-    functs_list = ["flipud", "fliplr", "movevertical", "movehorizontal"]
+    functs_list = ["flipud"] #"", "fliplr"
     function_index = math.floor(seed / 100000 * len(functs_list))
-    function_index = 0
     function_name = functs_list[function_index]
+    #function_name = "dadfA"
     img = data.cpu().detach().numpy()
     img_dims = img.shape
-    img = np.reshape(img, (img_dims[1], img_dims[2], img_dims[0]))
-    if function_name == "rotate":
-        max_rotation = 5
-        negative_sign = True if math.floor(seed / 2) == 0 else False
-        rotate_magnitude = math.floor(seed / 100000 * max_rotation)
-        if rotate_magnitude == 0:
-            rotate_magnitude = random.randint(1, max_rotation)
-        rotate_magnitude = rotate_magnitude * -1 if negative_sign and rotate_magnitude != 0 else rotate_magnitude
-        inverse_transform = {"inverse_rotate": rotate_magnitude * -1}
-        augemented_img = iaa.Rotate(rotate_magnitude).augment_image(img)
-    elif function_name == "flipud":
+    img = np.reshape(img, (img_dims[2], img_dims[3], img_dims[0]))
+    if function_name == "flipud":
         augemented_img = iaa.Flipud(1).augment_image(img)
         inverse_transform = {
             "inverse_flip": 1
@@ -330,6 +314,6 @@ def apply_tta_augmentation(data, seed):
         }
     else:
         return data, {"normal": None}
-    augemented_img = np.reshape(augemented_img, (img_dims[0], img_dims[1], img_dims[2]))
+    augemented_img = np.reshape(augemented_img, (img_dims[0], img_dims[1], img_dims[2], img_dims[3]))
     data = torch.from_numpy(augemented_img.copy())
     return data, inverse_transform
