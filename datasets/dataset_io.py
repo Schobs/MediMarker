@@ -412,11 +412,8 @@ class DatasetIO(ABC, metaclass=DatasetMeta):
             subject["landmark_indicators"].data = subject["landmark_indicators"].data.to(
                 device)
 
-            start_time = time.time()
             # Apply the transformations to the subject
             transformed_subject = self.transform(subject)
-            time_elapsed = time.time() - start_time
-            print("Time elapsed: " + str(time_elapsed) + " seconds")
 
             transformed_subject["image"].data = transformed_subject["image"].data.cpu(
             )
