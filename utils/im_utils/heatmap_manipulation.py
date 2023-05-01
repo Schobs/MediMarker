@@ -5,8 +5,55 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patchesplt
 import time
 import scipy.optimize as opt
+from sklearn.mixture import GaussianMixture
 
 # from inference.fit
+
+
+def get_coords_fit_gmm(images, predicted_coords_all, n_components=1, visualize=False):
+    all_fitted_dicts = []
+    all_hm_maxes = []
+    all_final_coords = []
+    for hm_stack_idx, hm_Stack in enumerate(images):
+        fitted_dicts = []
+        hm_maxes = []
+        final_coords = []
+
+        for hm_idx, hm in enumerate(hm_Stack):
+            predicted_heatmap = hm.detach().cpu().numpy()
+            predicted_coords = (
+                predicted_coords_all[hm_stack_idx][hm_idx].detach(
+                ).cpu().numpy()
+            )
+
+            x = np.linspace(
+                0, predicted_heatmap.shape[1], predicted_heatmap.shape[1])
+            y = np.linspace(
+                0, predicted_heatmap.shape[0], predicted_heatmap.shape[0])
+            x, y = np.meshgrid(x, y)
+
+            xy = np.column_stack((x.ravel(), y.ravel()))
+            gmm = GaussianMixture(n_components=n_components)
+            gmm.fit(xy, sample_weight=predicted_heatmap.ravel())
+
+            fitted_params = gmm.means_, gmm.covariances_
+            fitted_mean = fitted_params[0][0]
+            fitted_cov = fitted_params[1][0]
+            amplitude = np.max(predicted_heatmap)
+
+            final_coords.append(fitted_mean)
+            hm_maxes.append(amplitude)
+            fitted_dicts.append(
+                {
+                    "amplitude": amplitude,
+                    "mean": fitted_mean,
+                    "covariance": fitted_cov,
+                }
+            )
+        all_fitted_dicts.append(fitted_dicts)
+        all_final_coords.append(final_coords)
+        all_hm_maxes.append(hm_maxes)
+    return all_final_coords, all_hm_maxes, all_fitted_dicts
 
 
 def twoD_Gaussian(xdata_tuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
@@ -40,14 +87,17 @@ def get_coords_fit_gauss(images, predicted_coords_all, visualize=False):
         for hm_idx, hm in enumerate(hm_Stack):
             predicted_heatmap = hm.detach().cpu().numpy()
             predicted_coords = (
-                predicted_coords_all[hm_stack_idx][hm_idx].detach().cpu().numpy()
+                predicted_coords_all[hm_stack_idx][hm_idx].detach(
+                ).cpu().numpy()
             )
 
             # print("predicted_heatmap shape: ", predicted_heatmap.shape)
             # print("predicted_coords shape: ", predicted_coords.shape)
             # Create x and y indices
-            x = np.linspace(0, predicted_heatmap.shape[1], predicted_heatmap.shape[1])
-            y = np.linspace(0, predicted_heatmap.shape[0], predicted_heatmap.shape[0])
+            x = np.linspace(
+                0, predicted_heatmap.shape[1], predicted_heatmap.shape[1])
+            y = np.linspace(
+                0, predicted_heatmap.shape[0], predicted_heatmap.shape[0])
             x, y = np.meshgrid(x, y)
 
             # initial_guess = (3,predicted_heatmap.shape[0]/2,predicted_heatmap.shape[1]/2,3,3,0,0)
@@ -83,7 +133,8 @@ def get_coords_fit_gauss(images, predicted_coords_all, visualize=False):
                 fig, ax = plt.subplots(1, 3)
 
                 data_fitted_notheta = twoD_Gaussian(
-                    (x, y), *[popt[0], popt[1], popt[2], popt[3], popt[4], 0, popt[6]]
+                    (x, y), *[popt[0], popt[1], popt[2],
+                              popt[3], popt[4], 0, popt[6]]
                 )
                 ax[0].imshow(
                     predicted_heatmap,
@@ -153,7 +204,8 @@ def get_coords_fit_gauss(images, predicted_coords_all, visualize=False):
                 plt.show()
                 plt.close()
             del predicted_heatmap, data_fitted
-            print("initial guess: ", initial_guess, "and fitted: ", [popt[1], popt[2]])
+            print("initial guess: ", initial_guess,
+                  "and fitted: ", [popt[1], popt[2]])
             final_coords.append([popt[1], popt[2]])
             hm_maxes.append(popt[0])
             fitted_dicts.append(
@@ -254,7 +306,8 @@ def candidate_smoothing(
                 # y_disp = np.sign(predicted_disps[lm,1, x_idx,y_idx]) * (2**(abs(predicted_disps[lm,1,x_idx,y_idx]))-1)
                 # loc = [center_xy[0]+x_disp, center_xy[1]+y_disp]
 
-                center_xy = [x + (step_size // 2), y + (step_size // 2)]  # Different in phdnet_bugfixes
+                # Different in phdnet_bugfixes
+                center_xy = [x + (step_size // 2), y + (step_size // 2)]
                 # REMEMBER TO MINUS 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
                 if log_displacement_bool:
                     x_disp = np.sign(predicted_disps[lm, 0, x_idx, y_idx]) * (
@@ -310,7 +363,8 @@ def candidate_smoothing(
                 facecolor="none",
             )
             ax[0, 0].add_patch(rect4)
-            logger.info("[0,0]: get_coords from upscaled_hm: %s ", coords_from_uhm)
+            logger.info("[0,0]: get_coords from upscaled_hm: %s ",
+                        coords_from_uhm)
 
             # 2
             ax[0, 1].imshow(upscaled_hm)
@@ -331,28 +385,34 @@ def candidate_smoothing(
 
                     loc = [center_xy[0] + x_disp, center_xy[1] + y_disp]
                     if 0 <= loc[0] <= full_resolution[0] and 0 <= loc[1] <= full_resolution[1]:
-                        ax[0, 1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
-            logger.info("[0,1] average location: %s",  np.mean(all_locs, axis=0))
+                        ax[0, 1].arrow(
+                            center_xy[0], center_xy[1], x_disp, y_disp)
+            logger.info("[0,1] average location: %s",
+                        np.mean(all_locs, axis=0))
 
             ax[1, 0].imshow(vote_heatmap)
 
             coords_from_cm, arg_max_cm = get_coords(
                 torch.tensor(
-                    np.expand_dims(np.expand_dims(vote_heatmap, axis=0), axis=0)
+                    np.expand_dims(np.expand_dims(
+                        vote_heatmap, axis=0), axis=0)
                 ).contiguous()
             )
             coords_from_cm = coords_from_cm.detach().cpu().numpy()[0, 0]
-            logger.info("[1,0] get_coords from vote_heatmap %s and max pixel %s ", coords_from_cm, arg_max_cm)
+            logger.info(
+                "[1,0] get_coords from vote_heatmap %s and max pixel %s ", coords_from_cm, arg_max_cm)
 
             ax[1, 1].imshow(smoothed_heatmap)
 
             coords_from_sm, arg_max_vm = get_coords(
                 torch.tensor(
-                    np.expand_dims(np.expand_dims(smoothed_heatmap, axis=0), axis=0)
+                    np.expand_dims(np.expand_dims(
+                        smoothed_heatmap, axis=0), axis=0)
                 )
             )
             coords_from_sm = coords_from_sm.detach().cpu().numpy()[0, 0]
-            logger.info("[1, 1] get_coords from smoothed_heatmap %s and arg max %s: ", coords_from_sm, arg_max_vm)
+            logger.info(
+                "[1, 1] get_coords from smoothed_heatmap %s and arg max %s: ", coords_from_sm, arg_max_vm)
 
             plt.show()
 
