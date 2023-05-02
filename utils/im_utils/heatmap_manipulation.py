@@ -6,6 +6,8 @@ import matplotlib.patches as patchesplt
 import time
 import scipy.optimize as opt
 from sklearn.mixture import GaussianMixture
+#import imgaug
+import imgaug.augmenters as iaa
 
 # from inference.fit
 
@@ -54,6 +56,51 @@ def get_coords_fit_gmm(images, predicted_coords_all, n_components=1, visualize=F
         all_final_coords.append(final_coords)
         all_hm_maxes.append(hm_maxes)
     return all_final_coords, all_hm_maxes, all_fitted_dicts
+
+
+def transformed_twoD_Gaussian(xdata_tuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
+    (x, y) = xdata_tuple
+    xo = float(xo)
+    yo = float(yo)
+    a = (np.cos(theta) ** 2) / (2 * sigma_x**2) + (np.sin(theta) ** 2) / (
+        2 * sigma_y**2
+    )
+    b = -(np.sin(2 * theta)) / (4 * sigma_x**2) + (np.sin(2 * theta)) / (
+        4 * sigma_y**2
+    )
+    c = (np.sin(theta) ** 2) / (2 * sigma_x**2) + (np.cos(theta) ** 2) / (
+        2 * sigma_y**2
+    )
+    g = offset + amplitude * np.exp(
+        -(a * ((x - xo) ** 2) + 2 * b * (x - xo) * (y - yo) + c * ((y - yo) ** 2))
+    )
+
+    # Define the static transformation variables
+    scale_x, scale_y = (0.8, 1.2), (0.8, 1.2)
+    translate_x, translate_y = (-0.07, 0.07), (-0.07, 0.07)
+    rotate, shear = (-45, 45), (-16, 16)
+
+    # Apply the transformation from iaa.Sequential
+    g_transformed = iaa.Sequential(
+        [
+            iaa.Sometimes(
+                0.5,
+                iaa.Affine(
+                    scale={"x": scale_x, "y": scale_y},
+                    translate_percent={"x": translate_x, "y": translate_y},
+                    rotate=rotate,
+                    shear=shear,
+                    order=[0, 1],
+                ),
+            ),
+            iaa.Flipud(p=0.5),
+            iaa.CenterCropToFixedSize(512, 512),
+        ]
+    )(g.reshape(512, 512))
+
+    return g_transformed.ravel()
+
+# The get_coords_fit_transformed_gauss function remains the same
 
 
 def twoD_Gaussian(xdata_tuple, amplitude, xo, yo, sigma_x, sigma_y, theta, offset):
