@@ -10,7 +10,7 @@ from models.unetr import UNETR
 import torch
 import numpy as np
 
-from utils.im_utils.heatmap_manipulation import get_coords, get_coords_fit_gauss
+from utils.im_utils.heatmap_manipulation import get_coords, get_coords_fit_gauss, get_coords_fit_gmm
 import matplotlib.pyplot as plt
 
 # torch.multiprocessing.set_start_method('spawn')# good solution !!!!
@@ -233,8 +233,8 @@ class UnetrTrainer(NetworkTrainer):
             # it is too expensive to fit a gauss to the resized heatmap to get the coords from the full heatmap,
             # so just use the resized heatmap coords and remember that the fitted cov is for lower res.
             if not self.resize_first:
-                pred_coords, _, fitted_dicts = get_coords_fit_gauss(
-                    model_output, input_size_coords, visualize=self.trainer_config.INFERENCE.DEBUG
+                pred_coords, _, fitted_dicts = get_coords_fit_gmm(
+                    model_output, input_size_coords, 2, visualize=self.trainer_config.INFERENCE.DEBUG
                 )
                 pred_coords = torch.tensor(pred_coords).to(self.device)
                 extra_info["pred_coords_input_size"] = pred_coords.cpu(
