@@ -39,7 +39,7 @@ TRAINER:
 INFERENCE:
   EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False #Set to true to get some visualization of predicted heatmaps!
-  FIT_GAUSS: True
+  FIT_GAUSS: False
 
 SAMPLER:
   NUM_WORKERS: 3 #Set this to your cpu cores -1, with around a max of 8. if using hpc make sure to request 9 cores. try setting to 0 to see speed up/down.
