@@ -1,9 +1,7 @@
-# =============================================================================
-# Author: Lawrence Schobs, laschobs@sheffield.ac.uk
-# =============================================================================
-
 """
-Define the learning model and configure training parameters.
+Define the learning model and configure training parameters. Now includes Monte-Carlo dropout layers.
+
+Author: Lawrence Schobs, Ethan Jones
 """
 
 from copy import deepcopy
@@ -197,7 +195,7 @@ class UNet(nn.Module):
         # Encoder
         for encoder_lvl in range(len(self.conv_blocks_encoder)-1):
             x = self.conv_blocks_encoder[encoder_lvl](x)
-            x = nn.Dropout2d(p=self.dropout, inplace=False)(x)
+            x = nn.Dropout2d(p=self.dropout, inplace=False)(x) #Define dropout layer after conv blocks
             # print("encoder lvl %s : %s " % (encoder_lvl, x.shape))
 
             skips.append(x)
@@ -215,7 +213,7 @@ class UNet(nn.Module):
 
             x = torch_concat((x, skips[-(decoder_lvl + 1)]), dim=1)
             # print("decoder_lvl %s, concat with skip: %s " % (decoder_lvl, x.shape))
-            x = nn.Dropout2d(p=self.dropout, inplace=True)(x)
+            x = nn.Dropout2d(p=self.dropout, inplace=False)(x) #Define dropout layer after conv blocks
             x = self.conv_blocks_decoder[decoder_lvl](x)
             # print("decoder_lvl %s,after decoder convs: %s " % (decoder_lvl, x.shape))
             if self.deep_supervision:

@@ -8,6 +8,8 @@ Functions:
 - test_extract_original_coords_from_fliplr(): Test function for the extract_original_coords_from_fliplr() function.
 - test_extract_coords_from_movevertical(): Test function for the extract_coords_from_movevertical() function.
 - test_extract_coords_from_movehorizontal(): Test function for the extract_coords_from_movehorizontal() function.
+
+Author: Ethan Jones
 """
 
 import sys
@@ -16,7 +18,7 @@ import os
 import numpy as np
 import torch
 
-# Add the parent directory of the module to the Python path
+# Add the parent directory of the module to path... not sure of best practice here...
 module_path = os.path.abspath(os.path.join('..', '/utils/uncertainty_utils'))
 sys.path.append(module_path)
 
@@ -97,5 +99,3 @@ def test_extract_coords_from_movehorizontal():
     expected_output = torch.tensor([250, 200])
     output = extract_coords_from_movehorizontal(magnitude, coords)
     assert torch.allclose(output, expected_output)
-
-

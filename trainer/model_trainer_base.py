@@ -1,5 +1,7 @@
 """
 Module housing the model trainer superclass extended for all supported models within the LaNNU-Net framework.
+
+Auhtor: Lawrence Schobs and Ethan Jones
 """
 import copy
 import enum
@@ -541,22 +543,31 @@ class NetworkTrainer(ABC):
         torch.save(state, path)
 
     def run_inference_mcdrop(self, split, checkpoint, debug=False):
-        """"""
-        # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
+        """
+        Ensemble-like infernce using Monte-Carlo dropout layers to fetch different predictions for identical versions of
+        a single image.
+
+        Args:
+            split (str): Split to run inference on
+            checkpoint_list ([str"]): List of paths of checkpoints to load
+            debug (bool, optional): Debug mode. Defaults to False.
+        Raises:
+            NotImplementedError: Patch-based ensemble inference not implemented.
+        Returns:
+            all_summary_results: Summary of results for all uncertainty measures from EnsembleUncertainties
+            ind_results: Individual results for each sample for all uncertainty measures from EnsembleUncertainties
+        """
         if self.sampler_mode == "patch":
             if (
                 self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
                 == "patchify_and_stitch"
             ):
-                # In this case we are patchifying the image
                 inference_full_image = False
             else:
-                # else we are doing it fully_convolutional
                 inference_full_image = True
         else:
-            # This case is the full sampler
             inference_full_image = True
-        num_vers = 3
+        num_vers = 3 #Number of identical versions
         inference_resolution = self.training_resolution
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         self.test_dataloader = DataLoader(
@@ -566,7 +577,7 @@ class NetworkTrainer(ABC):
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
         )
-        # Initialise ensemble postprocessing and uncertainty estimation
+        #Initialise ensemble postprocessing and uncertainty estimation
         uncertainty_estimation_keys = (
             self.trainer_config.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS
         )
@@ -574,7 +585,6 @@ class NetworkTrainer(ABC):
         ensemble_handler = EnsembleUncertainties(
             uncertainty_estimation_keys, smha_model_idx, self.landmarks
         )
-        # network evaluation mode
         self.network.eval()
         ensemble_result_dicts = {
             uncert_key: [] for uncert_key in ensemble_handler.uncertainty_keys
@@ -590,10 +600,10 @@ class NetworkTrainer(ABC):
                     evaluation_logs = self.dict_logger.mcdrop_inference_log_template()
                     direct_data_dict = next(generator)
                     augmented_dict = direct_data_dict.copy()
-                    diff_vers = {x : augmented_dict for x in range(num_vers)}
+                    diff_vers = {x : augmented_dict for x in range(num_vers)} #Duplicate each image
                     for i in range(num_vers):
                         batch = diff_vers.get(i)
-                        l, _ = self.run_iteration(
+                        l, _ = self.run_iteration( #Run iter for each batch
                             generator,
                             self.test_dataloader,
                             backprop=False,
@@ -609,7 +619,7 @@ class NetworkTrainer(ABC):
                     ) = ensemble_handler.ensemble_inference_with_uncertainties(
                         evaluation_logs
                     )
-                    # Update the dictionaries with the results
+                    #Update the dictionaries with the results
                     for k_ in list(ensemble_result_dicts.keys()):
                         ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
                     for ens_key, coord_extact_methods in ind_landmark_errors.items():
@@ -621,7 +631,6 @@ class NetworkTrainer(ABC):
             print("No more in generator")
             del generator
         else:
-            # this is where we patchify and stitch the input image
             raise NotImplementedError()
         ind_results = {}
         all_summary_results = {}
@@ -635,22 +644,31 @@ class NetworkTrainer(ABC):
 
 
     def run_inference_tta(self, split, checkpoint, debug=False):
-        """"""
-        # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
+        """
+        Ensemble-like infernce using augmentations to fetch different predictions for transforms versions of
+        a single image.
+
+        Args:
+            split (str): Split to run inference on
+            checkpoint_list ([str"]): List of paths of checkpoints to load
+            debug (bool, optional): Debug mode. Defaults to False.
+        Raises:
+            NotImplementedError: Patch-based ensemble inference not implemented.
+        Returns:
+            all_summary_results: Summary of results for all uncertainty measures from EnsembleUncertainties
+            ind_results: Individual results for each sample for all uncertainty measures from EnsembleUncertainties
+        """
         if self.sampler_mode == "patch":
             if (
                 self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE
                 == "patchify_and_stitch"
             ):
-                # In this case we are patchifying the image
                 inference_full_image = False
             else:
-                # else we are doing it fully_convolutional
                 inference_full_image = True
         else:
-            # This case is the full sampler
             inference_full_image = True
-        num_tta_iterations = 4
+        num_tta_iterations = 4 #Number of transformed versions
         inference_resolution = self.training_resolution
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         self.test_dataloader = DataLoader(
@@ -660,7 +678,7 @@ class NetworkTrainer(ABC):
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
         )
-        # Initialise ensemble postprocessing and uncertainty estimation
+        #Initialise ensemble postprocessing and uncertainty estimation
         uncertainty_estimation_keys = (
             self.trainer_config.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS
         )
@@ -668,7 +686,6 @@ class NetworkTrainer(ABC):
         ensemble_handler = EnsembleUncertainties(
             uncertainty_estimation_keys, smha_model_idx, self.landmarks
         )
-        # network evaluation mode
         self.network.eval()
         ensemble_result_dicts = {
             uncert_key: [] for uncert_key in ensemble_handler.uncertainty_keys
@@ -684,8 +701,8 @@ class NetworkTrainer(ABC):
                     evaluation_logs = self.dict_logger.tta_inference_log_template()
                     direct_data_dict = next(generator)
                     augmented_dict = direct_data_dict.copy()
-                    diff_vers = {x : augmented_dict for x in range(num_tta_iterations+1)}
-                    all_inverse_transformations = {x: [] for x in range(num_tta_iterations+1)}
+                    diff_vers = {x : augmented_dict for x in range(num_tta_iterations+1)} #Duplicate each image
+                    all_inverse_transformations = {x: [] for x in range(num_tta_iterations+1)} #Keep track of transforms so can be reversed.
                     for idx in range(num_tta_iterations+1):
                         batch = diff_vers.get(idx)
                         if idx != 0:
@@ -695,7 +712,6 @@ class NetworkTrainer(ABC):
                         else:
                             all_inverse_transformations[idx].append({"normal": None})
                         inverse_transforms = all_inverse_transformations.get(idx)
-                        #print(idx, len(batch['image']), inverse_transforms)
                         [evaluation_logs["individual_results"].append({"transform": x}) for x in inverse_transforms]
                         l, _ = self.run_iteration(
                             generator,
@@ -713,7 +729,7 @@ class NetworkTrainer(ABC):
                     ) = ensemble_handler.ensemble_inference_with_uncertainties(
                         evaluation_logs, tta=True
                     )
-                    # Update the dictionaries with the results
+                    #Update the dictionaries with the results
                     for k_ in list(ensemble_result_dicts.keys()):
                         ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
                     for ens_key, coord_extact_methods in ind_landmark_errors.items():
@@ -725,7 +741,6 @@ class NetworkTrainer(ABC):
             print("No more in generator")
             del generator
         else:
-            # this is where we patchify and stitch the input image
             raise NotImplementedError()
         ind_results = {}
         all_summary_results = {}

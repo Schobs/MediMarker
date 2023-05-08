@@ -52,7 +52,7 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
 
         ])
 
-    elif data_augmentation == "TTA":
+    elif data_augmentation == "TTA": #Same augmentations as TTA inference method
       transform = iaa.Sequential([
             iaa.flip.Flipud(p=0.5),
             iaa.flip.Fliplr(p=0.5),

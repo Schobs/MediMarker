@@ -156,7 +156,7 @@ class IntermediateOutputLoss(nn.Module):
             l += this_lvl_loss
             losses_seperated["hm_loss_level_"+str(i)] = this_lvl_loss
         losses_seperated["hm_loss_all"] = l.detach().clone()
-        if self.sigma_loss:
+        if self.sigma_loss: #Sigma regression seems to work, but very, very slowly...
             sig_squared = torch.FloatTensor([sig**2 for sig in sigmas])
             sig_l = self.sigma_weight * torch.mean(sig_squared) + 1e-18
             losses_seperated["sigma_loss"] = sig_l

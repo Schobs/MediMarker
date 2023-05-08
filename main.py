@@ -145,7 +145,6 @@ def main():
             print(str(model_name) + "model now loaded")
             trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
 
-            # @ETHAN: if tta do run_TTA else run_inferenxe
             summary_results, ind_results = trainer.run_inference(split="testing", debug=cfg.INFERENCE.DEBUG)
             all_model_summaries[model_name] = summary_results
             all_model_individuals[model_name] = ind_results

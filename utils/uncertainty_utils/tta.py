@@ -1,5 +1,5 @@
 """
-Utility module containing methods for the TTA implementation for uncertinty estimation
+Utility module containing methods for the TTA implementation for uncertinty estimation.
 
 Author: Ethan Jones
 Date: 2023-04-25
@@ -273,10 +273,9 @@ def apply_tta_augmentation(data, seed):
     `inverse_transform` : Dict
         With the key being the name of the augmentation transform, and the value being the magnitude with which the transform was applied.
     """
-    functs_list = ["flipud"] #"", "fliplr"
+    functs_list = ["flipud"] #Include the other options...
     function_index = math.floor(seed / 100000 * len(functs_list))
     function_name = functs_list[function_index]
-    #function_name = "dadfA"
     img = data.cpu().detach().numpy()
     img_dims = img.shape
     img = np.reshape(img, (img_dims[2], img_dims[3], img_dims[0]))
