@@ -1,3 +1,9 @@
+"""
+Functions to generate ensemble-like results. Supports the framework's TTA and MC-drop ensemble-like methods.
+
+Author: Lawrence Schobs and Ethan Jones
+"""
+
 import numpy as np
 import torch
 from utils.im_utils.heatmap_manipulation import get_coords

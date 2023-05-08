@@ -94,6 +94,7 @@ def main():
                 df.to_excel(writer_, n)
         writer.add_tag("completed ensemble_inference")
         writer.add_tag("completed inference")
+    ##============= Ethan's methods ============###
     elif cfg.INFERENCE.MCDROP_ENSEMBLE_INFERENCE: #For MC-drop inferencing...
         if writer is not None:
                 writer.add_tag("mcdrop_inference")

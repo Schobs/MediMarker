@@ -1,5 +1,5 @@
 """
-Define the learning model and configure training parameters. Now includes Monte-Carlo dropout layers.
+Define the learning model and configure training parameters. Now includes option for Monte-Carlo dropout layers.
 
 Author: Lawrence Schobs, Ethan Jones
 """

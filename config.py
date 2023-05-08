@@ -56,7 +56,7 @@ _C.SOLVER.NUM_RES_SUPERVISIONS = 5
 _C.SOLVER.AUTO_MIXED_PRECISION = True
 _C.SOLVER.DEEP_SUPERVISION = True
 _C.SOLVER.LOSS_FUNCTION = "mse" # # ["mse", "awl"]
-_C.SOLVER.REGRESS_SIGMA = False
+_C.SOLVER.REGRESS_SIGMA = True #For sigma regess...
 _C.SOLVER.REGRESS_SIGMA_LOSS_WEIGHT = 0.005
 
 # ----------------------------------------------------------------------------
@@ -68,7 +68,7 @@ _C.TRAINER.SAVE_LATEST_ONLY = True
 _C.TRAINER.CACHE_DATA = True
 _C.TRAINER.FOLD = 0
 _C.TRAINER.INFERENCE_ONLY = False
-_C.TRAINER.MCDROP_RATE = 0.0
+_C.TRAINER.MCDROP_RATE = 0.0 #Dropout rate
 
 # ----------------------------------------------------------------------------
 # Model settings settings
@@ -103,7 +103,7 @@ _C.INFERENCE.TTA_ENSEMBLE_INFERENCE = False # average predictions from multiple 
 _C.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS = ["smha", "emha", "ecpv"] #keys for uncertainty estimation. 
 _C.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX = 0 #keys for uncertainty estimation. 
 _C.INFERENCE.ENSEMBLE_CHECKPOINTS = [] # list of checkpoints to ensemble
-_C.INFERENCE.MCDROP_ENSEMBLE_INFERENCE = False
+_C.INFERENCE.MCDROP_ENSEMBLE_INFERENCE = False  # average predictions from identical image samples using dropout layers
 _C.INFERENCE.DEBUG = False
 
 # ---------------------------------------------------------------------------- #

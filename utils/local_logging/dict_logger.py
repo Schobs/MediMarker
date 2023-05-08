@@ -1,3 +1,9 @@
+"""
+Module containing classes and functions for the local logging functionality of the framework - uses dictionaries by default.
+
+Author: Lawrence Schobs, Ethan Jones
+"""
+
 import torch
 import numpy as np
 import copy

@@ -1,3 +1,9 @@
+"""
+Module containing transforms that can be applied to data during training.
+
+Author: Lawrence Schobs and Ethan Jones
+"""
+
 import imgaug.augmenters as iaa
 
 import albumentations as A
