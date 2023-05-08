@@ -32,7 +32,7 @@ class ConvNormNonlin(nn.Module):
         self.conv_kwargs = conv_kwargs
         self.conv_op = conv_op
         self.norm_op = norm_op
-        self.dropout = dropout 
+        self.dropout = dropout #Define the dropout rate
 
         # Convolutional operation
         self.convolution = self.conv_op(input_channels, output_channels, **self.conv_kwargs)
@@ -83,7 +83,7 @@ class UNet(nn.Module):
         self.upsample_operation = upsample_operation
         self.max_features = max_features
         self.deep_supervision = deep_supervision
-        self.dropout = dropout
+        self.dropout = dropout #Define the dropout rate
 
         # Define the network
         self.conv_blocks_encoder = []

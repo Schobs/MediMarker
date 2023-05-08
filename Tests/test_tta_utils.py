@@ -1,13 +1,7 @@
 """
-Module containing unit tests for functions in the 'tta' module.
+Module containing unit tests for functions in the 'tta' utils module.
 
 Each test function tests a specific function from the 'tta' module using various input and output cases.
-
-Functions:
-- test_extract_original_coords_from_flipud(): Test function for the extract_original_coords_from_flipud() function.
-- test_extract_original_coords_from_fliplr(): Test function for the extract_original_coords_from_fliplr() function.
-- test_extract_coords_from_movevertical(): Test function for the extract_coords_from_movevertical() function.
-- test_extract_coords_from_movehorizontal(): Test function for the extract_coords_from_movehorizontal() function.
 
 Author: Ethan Jones
 """

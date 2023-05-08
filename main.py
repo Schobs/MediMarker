@@ -94,7 +94,7 @@ def main():
                 df.to_excel(writer_, n)
         writer.add_tag("completed ensemble_inference")
         writer.add_tag("completed inference")
-    elif cfg.INFERENCE.MCDROP_ENSEMBLE_INFERENCE:
+    elif cfg.INFERENCE.MCDROP_ENSEMBLE_INFERENCE: #For MC-drop inferencing...
         if writer is not None:
                 writer.add_tag("mcdrop_inference")
                 trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)
@@ -117,7 +117,7 @@ def main():
                 writer.add_tag("completed mcdrop_inference")
                 writer.add_tag("completed inference")
     else:
-        if cfg.INFERENCE.TTA_ENSEMBLE_INFERENCE:
+        if cfg.INFERENCE.TTA_ENSEMBLE_INFERENCE: #For TTA inferencing...
             if writer is not None:
                 writer.add_tag("tta_inference")
                 trainer.load_checkpoint(cfg.MODEL.CHECKPOINT, training_bool=False)

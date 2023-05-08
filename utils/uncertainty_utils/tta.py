@@ -31,18 +31,18 @@ def inverse_heatmaps(logged_vars: dict, output: dict, data_dict: dict) -> dict:
     `output` : Dict
         Batch of inverted heatmaps.
     """
-    batch_size = len(data_dict['image'])
+    batch_size = len(data_dict['image']) #Find num of images in the batch
     for img_count in range(len(output)):
         try:
             transformation = logged_vars[img_count]['transform']
         except:
             transformation = logged_vars[img_count+batch_size]['transform']
         if "normal" in transformation:
-            return output
+            return output #Normal transform doesn't need inverting
         for heatmap_count in range(len(output[img_count])):
             heatmap = output[img_count][heatmap_count]
             org_heatmap = invert_heatmap(heatmap, transformation)
-            output[img_count][heatmap_count] = org_heatmap
+            output[img_count][heatmap_count] = org_heatmap #Overwrite the transformed heatmap with the inverted.
     return output
 
 def invert_heatmap(heatmap : Union[torch.Tensor, np.ndarray], transformation: dict) -> torch.Tensor:
@@ -61,7 +61,7 @@ def invert_heatmap(heatmap : Union[torch.Tensor, np.ndarray], transformation: di
     `heatmap` : torch.Tensor
         Inverted heatmap.
     """
-    transform = list(transformation.keys())[0]
+    transform = list(transformation.keys())[0] #Find the transform that needs applying...
     if transform is "inverse_flip":
         new_heatmap = torch.flipud(heatmap)
         return new_heatmap
@@ -82,7 +82,7 @@ def invert_heatmap(heatmap : Union[torch.Tensor, np.ndarray], transformation: di
             temp = heatmap
         mag = transformation[transform]
         new_heatmap = torch.from_numpy(iaa.TranslateX(px=(mag)).augment_image(temp))
-    return heatmap
+    return new_heatmap #Return new heatmap
 
 def invert_coordinates(orginal_coords : list, log_dict : dict, img_size : list = [512, 512]) -> list:
     """
@@ -106,9 +106,9 @@ def invert_coordinates(orginal_coords : list, log_dict : dict, img_size : list =
         List of inverted coords.
     """
     inverted_predicted_coords = []
-    transform = log_dict['individual_results'][-orginal_coords.shape[0]:]
+    transform = log_dict['individual_results'][-orginal_coords.shape[0]:] #Find the transform...
     for funct, coords_all, img_shape in zip(transform, orginal_coords, img_size):
-        if type(img_shape) == int:
+        if type(img_shape) == int: #Exception handling due to different image sizes
             img_shape = [512, 512]
         key = list(funct['transform'].keys())[0]
         if "normal" in key:
@@ -131,7 +131,7 @@ def invert_coordinates(orginal_coords : list, log_dict : dict, img_size : list =
         inverted_predicted_coords.append(coords)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     inverted_predicted_coords = torch.stack(inverted_predicted_coords).to(device)
-    return inverted_predicted_coords
+    return inverted_predicted_coords #Return inverted coords
 
 def extract_original_coords_from_rotation(rotation_mag : float, rotated_coords : tuple, training_resolution : list = [512, 512]) -> torch.Tensor:
     """
@@ -278,7 +278,7 @@ def apply_tta_augmentation(data, seed):
     function_name = functs_list[function_index]
     img = data.cpu().detach().numpy()
     img_dims = img.shape
-    img = np.reshape(img, (img_dims[2], img_dims[3], img_dims[0]))
+    img = np.reshape(img, (img_dims[2], img_dims[3], img_dims[0])) #Re-size to allow for imgaug transforms.
     if function_name == "flipud":
         augemented_img = iaa.Flipud(1).augment_image(img)
         inverse_transform = {
@@ -315,4 +315,4 @@ def apply_tta_augmentation(data, seed):
         return data, {"normal": None}
     augemented_img = np.reshape(augemented_img, (img_dims[0], img_dims[1], img_dims[2], img_dims[3]))
     data = torch.from_numpy(augemented_img.copy())
-    return data, inverse_transform
+    return data, inverse_transform #Return transformed image and dict containing inverse transform to be applied later....

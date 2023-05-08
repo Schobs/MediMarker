@@ -88,7 +88,7 @@ class DictLogger():
         if log_coords:
             if "individual_results_extra_keys" in vars_to_log and "tta_augmentations" in log_dict["individual_results_extra_keys"]:
                 img_size = data_dict['original_image_size'].cpu().numpy()
-                pred_coords = invert_coordinates(pred_coords, log_dict, img_size)
+                pred_coords = invert_coordinates(pred_coords, log_dict, img_size) #Invert coordinates to orgiginal coordinate space here.
             pred_coords = pred_coords.reshape(target_coords.shape)
             coord_error = torch.linalg.norm((pred_coords - target_coords), axis=2)
             if split == "validation":

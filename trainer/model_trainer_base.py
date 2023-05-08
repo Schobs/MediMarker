@@ -706,13 +706,13 @@ class NetworkTrainer(ABC):
                     for idx in range(num_tta_iterations+1):
                         batch = diff_vers.get(idx)
                         if idx != 0:
-                            aug_seed = np.random.randint(100000)
-                            diff_vers[idx]['image'], inverse_transformation = apply_tta_augmentation(batch['image'], aug_seed)
+                            aug_seed = np.random.randint(100000) #Get rand augmentation seed
+                            diff_vers[idx]['image'], inverse_transformation = apply_tta_augmentation(batch['image'], aug_seed) #Apply rand transform
                             all_inverse_transformations[idx].append(inverse_transformation)
                         else:
                             all_inverse_transformations[idx].append({"normal": None})
-                        inverse_transforms = all_inverse_transformations.get(idx)
-                        [evaluation_logs["individual_results"].append({"transform": x}) for x in inverse_transforms]
+                        inverse_transforms = all_inverse_transformations.get(idx) 
+                        [evaluation_logs["individual_results"].append({"transform": x}) for x in inverse_transforms] #Get transform to invert and add to eval logs to use later
                         l, _ = self.run_iteration(
                             generator,
                             self.test_dataloader,
