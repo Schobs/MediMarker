@@ -6,7 +6,7 @@ import numpy as np
 from time import time
 from utils.im_utils.visualisation import plot_target
 from utils.logging.comet_logging import comet_log_yaml_parameters
-
+from utils.model_utils.torch_to_onnx import torch_to_onnx
 # import multiprocessing as mp
 from utils.logging.dict_logger import DictLogger
 from torch.cuda.amp import GradScaler, autocast
@@ -409,6 +409,7 @@ class NetworkTrainer(ABC):
             data_dict = direct_data_dict
 
         data = (data_dict["image"]).to(self.device)
+        torch_to_onnx(self.network, data, self.output_folder+"/model.onnx")
 
         # if "047" not in data_dict["uid"] and "47" not in data_dict["uid"] and "370" not in data_dict["uid"] and "347" not in data_dict["uid"]:
         #     self.logger.info("no found uid: %s ", data_dict["uid"])

@@ -170,7 +170,7 @@ def argument_checking(yaml_args):
 
      # temp for not implemented yet
     try:
-        if yaml_args.SAMPLER.SAMPLE_MODE != "patch_centred" and yaml_args.MODEL.ARCHITECTURE != "GPFlow":
+        if yaml_args.SAMPLER.SAMPLE_MODE == "patch_centred" and yaml_args.MODEL.ARCHITECTURE != "GPFlow":
             raise ValueError(
                 'SAMPLER.SAMPLER.SAMPLE_MODE can only be patch_centred when using GPFlow'
             )

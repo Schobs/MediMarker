@@ -35,9 +35,10 @@ TRAINER:
   INFERENCE_ONLY: False
 
 SAMPLER:
-  DATA_AUG: 'AffineComplex'
+  DATA_AUG: None
   INPUT_SIZE : [512,512]
   NUM_WORKERS: 8 
+  DEBUG: True
 
 MODEL:
   GAUSS_SIGMA: 3
