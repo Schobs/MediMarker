@@ -48,6 +48,7 @@ class NetworkTrainer(ABC):
         self.inference_log_heatmap_wo_noise = self.trainer_config.INFERENCE.LOG_HEATMAPS_WO_NOISE
         self.log_targ_hm = self.trainer_config.INFERENCE.LOG_HEATMAP_PLOT_TARG
         self.inference_eval_mode = self.trainer_config.INFERENCE.EVALUATION_MODE
+        self.inference_intermediate_outputs = self.trainer_config.INFERENCE.SAVE_INTERMEDIATE_OUTPUTS_ONLY
 
         # Dataset class to use
         self.dataset_class = dataset_class
@@ -409,14 +410,7 @@ class NetworkTrainer(ABC):
             data_dict = direct_data_dict
 
         data = (data_dict["image"]).to(self.device)
-        torch_to_onnx(self.network, data, self.output_folder+"/model.onnx")
-
-        # if "047" not in data_dict["uid"] and "47" not in data_dict["uid"] and "370" not in data_dict["uid"] and "347" not in data_dict["uid"]:
-        #     self.logger.info("no found uid: %s ", data_dict["uid"])
-
-        #     return 0, generator
-        # else:
-        #     self.logger.info("found uid: %s ", data_dict["uid"])
+        # torch_to_onnx(self.network, data, self.output_folder+"/model.onnx")
 
         # This happens when we regress sigma with > 0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
@@ -713,7 +707,34 @@ class NetworkTrainer(ABC):
             _type_: _description_
         """
 
+    def get_intermediate_representations(self, generator, split, debug=False):
+
+        # instantiate interested variables log!
+        intermediate_outputs_dict = {}
+
+        # network evaluation mode
+        self.network.eval()
+
+        # then iterate through dataloader and save to log
+
+        all_layers_to_iterate = ["B", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"]
+
+        for layer in all_layers_to_iterate:
+            intermediate_outputs_dict[layer] = {}
+
+        for data_dict in generator:
+            data = (data_dict["image"]).to(self.device)
+
+            for layer in all_layers_to_iterate:
+                int_output = self.network.get_intermediate_representation(data, layer)
+                intermediate_outputs_dict[layer][data_dict["uid"]] = int_output
+
+        # torch.save(intermediate_outputs_dict, os.path.join(self.output_folder, "intermediate_outputs_dict_foldX_Y.pth"))
+        torch.save(intermediate_outputs_dict, os.path.join(self.output_folder,
+                   "intermediate_outputs_dict_fold{}_{}.pth".format(self.generic_dataset_args["fold"], split)))
+
     # @abstractmethod
+
     def run_inference(self, split, debug=False):
         """Function to run inference on a full sized input
 
@@ -767,30 +788,35 @@ class NetworkTrainer(ABC):
         # then iterate through dataloader and save to log
         generator = iter(test_dataloader)
         if inference_full_image:
-            while generator != None:
-                print("-", end="")
-                l, generator = self.run_iteration(
-                    generator,
-                    test_dataloader,
-                    backprop=False,
-                    split=split,
-                    log_coords=True,
-                    logged_vars=evaluation_logs,
-                    debug=debug,
-                    restart_dataloader=False
-                )
+            if self.inference_intermediate_outputs:
+                ind_results = self.get_intermediate_representations(generator, split, debug=debug)
+                return None, ind_results
 
-                if self.inference_log_heatmaps:
-                    self.save_heatmaps(evaluation_logs)
+            else:
+                while generator != None:
+                    print("-", end="")
+                    l, generator = self.run_iteration(
+                        generator,
+                        test_dataloader,
+                        backprop=False,
+                        split=split,
+                        log_coords=True,
+                        logged_vars=evaluation_logs,
+                        debug=debug,
+                        restart_dataloader=False
+                    )
 
-                    # per_epoch_logs.pop("individual_results", None)
+                    if self.inference_log_heatmaps:
+                        self.save_heatmaps(evaluation_logs)
 
-                for idx, results_dict in enumerate(evaluation_logs['individual_results']):
-                    results_dict.pop("final_heatmaps", None)
-                    results_dict.pop("final_heatmaps_wo_like_noise", None)
+                        # per_epoch_logs.pop("individual_results", None)
 
-            del generator
-            print()
+                    for idx, results_dict in enumerate(evaluation_logs['individual_results']):
+                        results_dict.pop("final_heatmaps", None)
+                        results_dict.pop("final_heatmaps_wo_like_noise", None)
+
+                del generator
+                print()
         else:
             # this is where we patchify and stitch the input image
             raise NotImplementedError()

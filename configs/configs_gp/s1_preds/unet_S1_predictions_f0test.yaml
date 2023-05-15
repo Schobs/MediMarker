@@ -22,6 +22,7 @@ SOLVER:
 INFERENCE:
   SPLIT: "testing"
   FIT_GAUSS: True
+  
 
 
 DATASET:
@@ -49,7 +50,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 5
 
-  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAC_DS5//model_best_valid_coord_error_fold1.model"
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAC_DS5//model_best_valid_coord_error_fold0.model"
 
 
 SSH: 

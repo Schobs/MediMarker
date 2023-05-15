@@ -166,6 +166,8 @@ _C.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX = 0  # keys for uncertainty estimation.
 _C.INFERENCE.ENSEMBLE_CHECKPOINTS = []  # list of checkpoints to ensemble
 
 _C.INFERENCE.DEBUG = False
+
+_C.INFERENCE.SAVE_INTERMEDIATE_OUTPUTS_ONLY = False
 # ---------------------------------------------------------------------------- #
 # Misc options
 # ---------------------------------------------------------------------------- #

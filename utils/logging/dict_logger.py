@@ -64,25 +64,9 @@ class DictLogger():
                     eval_logs["individual_results_extra_keys"].append("final_heatmaps_wo_like_noise")
             eval_logs["individual_results_extra_keys"].extend(['kernel_cov_matr','likelihood_noise','full_cov_matrix'])
             
-        # else:
-        #     raise ValueError("Model type not recognised")
 
         return eval_logs
     
-    # def evaluation_log_template_gp(self):        
-
-    #     eval_logs = {"individual_results": [], "landmark_errors": [[] for x in range(self.num_landmarks)],
-    #         "landmark_errors_original_resolution": [[] for x in range(self.num_landmarks)],
-    #         "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['hm_max', 'pred_coords_input_size', 'target_coords_input_size', 'kernel_cov_matr',  'likelihood_noise',  'full_cov_matrix']}
-
-    #     if self.is_log_inference_heatmap:
-    #         eval_logs["individual_results_extra_keys"].append("final_heatmaps")
-    #         if self.log_inference_heatmap_wo_like:
-    #             eval_logs["individual_results_extra_keys"].append("final_heatmaps_wo_like_noise")
-
-
-    #     if self.log_fitted_gauss:
-    #          eval_logs["individual_results_extra_keys"].append("fitted_gauss")
 
     #     return eval_logs
 
@@ -95,6 +79,7 @@ class DictLogger():
         "sample_info_log_keys": self.standard_info_keys, "individual_results_extra_keys": ['final_heatmaps', 'hm_max', 'coords_og_size']}
 
 
+    
     def get_epoch_logger(self):
         return copy.deepcopy(self.per_epoch_logs)
 

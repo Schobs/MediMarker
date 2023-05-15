@@ -2,7 +2,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1/f0_test/"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1/f1_val/"
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
@@ -18,8 +18,9 @@ SOLVER:
 
 
 INFERENCE:
-  SPLIT: "testing"
-  FIT_GAUSS: True
+
+  SPLIT: "validation"
+  SAVE_INTERMEDIATE_OUTPUTS_ONLY: True
 
 
 DATASET:
@@ -36,8 +37,8 @@ TRAINER:
   SAVE_LATEST_ONLY: False
   CACHE_DATA: False
   INFERENCE_ONLY: True
-  FOLD: 0
-  VALIDATION_LOG_HEATMAPS: False
+  FOLD: 1
+  VALIDATION_LOG_HEATMAPS: True
   
 SAMPLER:
   DATA_AUG: 'AffineComplex'

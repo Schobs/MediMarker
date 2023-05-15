@@ -2,7 +2,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1/f0_test/"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1_int/f0_test/"
 
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
@@ -13,13 +13,15 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE_TRAIN: 12
+  DATA_LOADER_BATCH_SIZE_EVAL: 1
+  # AUTO_MIXED_PRECISION: False
   # MAX_EPOCHS: 258
   # REGRESS_SIGMA: True
 
 
 INFERENCE:
   SPLIT: "testing"
-  FIT_GAUSS: True
+  SAVE_INTERMEDIATE_OUTPUTS_ONLY: True
 
 
 DATASET:
@@ -47,7 +49,7 @@ SAMPLER:
 MODEL:
   GAUSS_SIGMA: 5
 
-  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAC_DS5//model_best_valid_coord_error_fold1.model"
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAC_DS5//model_best_valid_coord_error_fold0.model"
 
 
 SSH: 

@@ -7,11 +7,11 @@ Define the learning model and configure training parameters.
 """
 
 from copy import deepcopy
+import re
 
 
 import torch.nn as nn
 from torch import cat as torch_concat
-from torch import device, cuda
 
 
 class ConvNormNonlin(nn.Module):
@@ -270,36 +270,28 @@ class UNet(nn.Module):
         skips = []
         seg_outputs = []
 
-        # print("intital: ", x.shape)
         # Encoder
         for encoder_lvl in range(len(self.conv_blocks_encoder) - 1):
             x = self.conv_blocks_encoder[encoder_lvl](x)
-            # print("encoder lvl %s : %s " % (encoder_lvl, x.shape))
 
             skips.append(x)
 
         # Bottleneck (don't add to skip)
         x = self.conv_blocks_encoder[-1](x)
-        # print("bottleneck lvl: %s " % (x.shape))
-        # print(("bottleneck lvl %s .") % (x.shape,))
 
         # Decoder (with transpose convolutions)
         for decoder_lvl in range(len(self.conv_blocks_decoder)):
 
             x = self.upsample_transp_convs[decoder_lvl](x)
-            # print("decoder_lvl %s, transpose up : %s " % (decoder_lvl, x.shape))
 
             x = torch_concat((x, skips[-(decoder_lvl + 1)]), dim=1)
-            # print("decoder_lvl %s, concat with skip: %s " % (decoder_lvl, x.shape))
 
             x = self.conv_blocks_decoder[decoder_lvl](x)
-            # print("decoder_lvl %s,after decoder convs: %s " % (decoder_lvl, x.shape))
 
             if self.deep_supervision:
                 seg_outputs.append(
                     (self.intermediate_outputs[decoder_lvl](x))
                 )  # Don't use an activation function
-                # print("seg outputs level ", decoder_lvl, " is ", seg_outputs[-1].shape)
         if not self.deep_supervision:
             seg_outputs.append(
                 (self.intermediate_outputs[-1](x))
@@ -307,27 +299,66 @@ class UNet(nn.Module):
 
         return seg_outputs
 
-    # def get_resolutions_feature_levels(self, input_size, start_features=32, max_features=512):
-    #     if input_size[0] != input_size[1]:
-    #         raise NotImplementedError("only square inputs currently configured.")
+    def get_intermediate_representation(self, x, layer):
+        """
+        This function obtains the output of a specified layer in the UNet architecture when given an input. The specified
+        layer could be an encoder layer (denoted by "E" followed by the layer number, e.g., "E1" for the first encoder 
+        layer), a decoder layer (denoted by "D" followed by the layer number), or the bottleneck layer (denoted by "B").
 
-    #     num_features = start_features
-    #     res_layers = []
-    #     feature_levels = []
+        Args:
+            x (torch.Tensor): The input tensor to the model.
+            layer (str): The layer for which the output is required. The layer is specified as a string with the following 
+                        format: "EX" for encoder layers (where X is the layer number), "DX" for decoder layers, and "B" for 
+                        the bottleneck layer.
 
-    #     res = input_size[0]
-    #     while res > 4:
-    #         res_layers.append(input)
-    #         feature_levels.append(num_features)
+        Returns:
+            torch.Tensor: The output tensor from the specified layer.
 
-    #         if num_features < 512:
-    #             num_features = num_features*2
+        Raises:
+            Exception: An exception is raised if the layer specified does not exist in the model.
+            ValueError: A ValueError is raised if the layer parameter is not a string or does not follow the required format.
+        """
 
-    #         res = res/2
-    #     return res_layers, feature_levels
+        # Check that the layer parameter is in the correct format
+        if not re.match(r'^(E|D)\d+$|^B$', layer):
+            raise ValueError(
+                f"Invalid layer parameter {layer}. Layer parameter should start with 'E' or 'D', followed by a number, or be 'B'. Try E1, E2, B, D1, D2 etc.")
 
-    # def get_activation_function(str_):
-    #     if str_.lower() == "leaky_relu":
-    #         return nn.LeakyReLU(negative_slope=0.01)
-    #     else:
-    #         raise NotImplementedError("the only activation function supported is leaky_relu")
+        skips = []
+        if layer.startswith("E"):
+            try:
+                layer_idx = int(layer[1:])
+                for i in range(layer_idx):
+                    x = self.conv_blocks_encoder[i](x)
+                return x
+            except IndexError:
+                raise Exception(f"No encoder layer exists at index: {layer_idx}")
+        elif layer.startswith("D"):
+            try:
+                layer_idx = int(layer[1:])
+                for i in range(len(self.conv_blocks_encoder) - 1):
+                    x = self.conv_blocks_encoder[i](x)
+                    skips.append(x)
+
+                # Bottleneck (don't add to skip)
+                x = self.conv_blocks_encoder[-1](x)
+
+                for decoder_lvl in range(layer_idx):
+                    x = self.upsample_transp_convs[decoder_lvl](x)
+                    x = torch_concat((x, skips[-(decoder_lvl + 1)]), dim=1)
+                    x = self.conv_blocks_decoder[decoder_lvl](x)
+                return x
+            except IndexError:
+                raise Exception(f"No decoder layer exists at index: {layer_idx}")
+        elif layer == "B":
+            try:
+                # -1 because we don't want to add the last encoder layer to skips
+                for encoder_lvl in range(len(self.conv_blocks_encoder) - 1):
+                    x = self.conv_blocks_encoder[encoder_lvl](x)
+                x = self.conv_blocks_encoder[-1](x)
+                return x
+            except IndexError:
+                raise Exception("No bottleneck layer exists.")
+        else:
+            raise ValueError(
+                "Invalid layer parameter. Layer parameter should start with 'E' or 'D', or be 'B'. Try E1, E2, B, D1, D2 etc.")

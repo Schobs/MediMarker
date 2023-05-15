@@ -186,6 +186,7 @@ def main():
             output_append = ""
 
     ########### Now Save all model results to a spreadsheet #############
+
     if writer is not None:
         html_to_log = save_comet_html(all_model_summaries, all_model_individuals)
         writer.log_html(html_to_log)
