@@ -1,3 +1,4 @@
+import copy
 import os
 import types
 from inference.ensemble_inference_helper import EnsembleUncertainties
@@ -707,7 +708,7 @@ class NetworkTrainer(ABC):
             _type_: _description_
         """
 
-    def get_intermediate_representations(self, generator, split, debug=False):
+    def get_intermediate_representations(self, dataloader, split, debug=False):
 
         # instantiate interested variables log!
         intermediate_outputs_dict = {}
@@ -716,23 +717,36 @@ class NetworkTrainer(ABC):
         self.network.eval()
 
         # then iterate through dataloader and save to log
-
         all_layers_to_iterate = ["B", "D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"]
+        # all_layers_to_iterate = ["D6", "D7"]
 
         for layer in all_layers_to_iterate:
-            intermediate_outputs_dict[layer] = {}
+            # save_folder_int = self.output_folder+"/intermediate_outputs/fold" + \
+            #     self.generic_dataset_args["fold"] + "/"+layer + "/"
+            save_folder_int_split_by_split = self.output_folder+"/intermediate_outputs/fold" + \
+                str(self.generic_dataset_args["fold"]) + "/"+layer + "/" + split + "/"
 
-        for data_dict in generator:
-            data = (data_dict["image"]).to(self.device)
+            # os.makedirs(save_folder_int, exist_ok=True)
+            os.makedirs(save_folder_int_split_by_split, exist_ok=True)
 
-            for layer in all_layers_to_iterate:
-                int_output = self.network.get_intermediate_representation(data, layer)
-                intermediate_outputs_dict[layer][data_dict["uid"]] = int_output
+            # intermediate_outputs_dict = {}
+            generator = iter(dataloader)
 
-        # torch.save(intermediate_outputs_dict, os.path.join(self.output_folder, "intermediate_outputs_dict_foldX_Y.pth"))
-        torch.save(intermediate_outputs_dict, os.path.join(self.output_folder,
-                   "intermediate_outputs_dict_fold{}_{}.pth".format(self.generic_dataset_args["fold"], split)))
+            for c_ix, data_dict in enumerate(generator):
+                self.logger.info("processing batch %s", c_ix)
+                data = (data_dict["image"]).to(self.device)
 
+                int_output = self.network.get_intermediate_representation(data, layer).cpu().detach().numpy()
+                for idx, uid in enumerate(data_dict["uid"]):
+                    # torch.save(int_output[idx], os.path.join(save_folder_int, uid+".pth"))
+                    torch.save(int_output[idx], os.path.join(save_folder_int_split_by_split, uid+".pth"))
+
+                    # intermediate_outputs_dict[uid]=int_output[idx]
+                del int_output
+
+            # torch.save(intermediate_outputs_dict, os.path.join(self.output_folder, "intermediate_outputs_dict_foldX_Y.pth"))
+            # torch.save(intermediate_outputs_dict, os.path.join(self.output_folder,
+            #                                                    "intermediate_outputs_dict_fold{}_{}_{}.pth".format(self.generic_dataset_args["fold"], split, layer)))
     # @abstractmethod
 
     def run_inference(self, split, debug=False):
@@ -789,7 +803,7 @@ class NetworkTrainer(ABC):
         generator = iter(test_dataloader)
         if inference_full_image:
             if self.inference_intermediate_outputs:
-                ind_results = self.get_intermediate_representations(generator, split, debug=debug)
+                ind_results = self.get_intermediate_representations(test_dataloader, split, debug=debug)
                 return None, ind_results
 
             else:
