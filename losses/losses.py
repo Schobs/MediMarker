@@ -428,3 +428,4 @@ class GPLoss(nn.Module):
         loss_seperated = {"all_loss": l}
 
         return l, loss_seperated
+
