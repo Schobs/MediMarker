@@ -42,27 +42,27 @@ First, when you generate your JSON file, simply add an additional key in each sa
        
     }
 
-Then, extend [dataset_base.py](./datasets/dataset_base.py) and define a list called additional_sample_attribute_keys with the keys you want to save in the output csv files. Pass these through to super.\__init__ function.See [dataset_aspire.py](./datasets/dataset_aspire.py)  of an example of how to do this. In that example we wanted to save the suid of the CMRI along with the patient ID in the output csv file so the doctor's could match the patient and scan to their database.
+Then, extend [dataset_base.py](../../datasets/dataset_base.py) and define a list called additional_sample_attribute_keys with the keys you want to save in the output csv files. Pass these through to super.\__init__ function.See [dataset_aspire.py](../../datasets/dataset_aspire.py)  of an example of how to do this. In that example we wanted to save the suid of the CMRI along with the patient ID in the output csv file so the doctor's could match the patient and scan to their database.
 
-Make sure you set the DATASET.DATASET_CLASS to the name of your new dataset class in the yaml file and add the key to [dataset_index.py](./datasets/dataset_index.py).
+Make sure you set the DATASET.DATASET_CLASS to the name of your new dataset class in the yaml file and add the key to [dataset_index.py](../../datasets/dataset_index.py).
 
 ![dataset path](../images/datasets_path.png)
 
 
 ## Changing the .yaml Config File
-There are many other options you can configure in the .yaml config file. All default options can be found in the [default config file](config.py). Simply override these configurations in your own config file, as you did when [creating your .yaml config file](#creating-a-yaml-config-file). You can change the following options:
+There are many other options you can configure in the .yaml config file. All default options can be found in the [default config file](../../config.py). Simply override these configurations in your own config file, as you did when [creating your .yaml config file](using_own_dataset.md#3-create-a-yaml-config-file). You can change the following options:
 
-The list is quite overwhelming, but the key ones to get started are explained in [Create A yaml Config File](#3-create-a-yaml-config-file).
+The list is quite overwhelming, but the key ones to get started are explained in [Create A yaml Config File](using_own_dataset.md#3-create-a-yaml-config-file).
 
 
 
 ### DATASET
 Parameters concerning dataset details and dataset paths.
-- **DATASET_CLASS** (str): The name of the dataset class to use. The  class must be implemented following my instructions [here](#advanced-dataset-configuration).
+- **DATASET_CLASS** (str): The name of the dataset class to use. The  class must be implemented following the instructions [here](advanced_yaml_config.md#advanced-dataset-configuration).
     
      *Default:* "generic" - This should be good for the average user.
 
-- **ROOT** (str): The path to the root image folder. Organized as described [here](#expected-directory-format).
+- **ROOT** (str): The path to the root image folder. Organized as described [here](using_own_dataset.md#1-expected-directory-format).
     
      *Default:* '''
 
@@ -70,7 +70,7 @@ Parameters concerning dataset details and dataset paths.
     
      *Default:* '''
 
-- **SRC_TARGETS** (str): The path to either the JSON annotation root folder (when using CV), or exact JSON annotation file (when not using CV), as described [here](#2-create-a-json-file).
+- **SRC_TARGETS** (str): The path to either the JSON annotation root folder (when using CV), or exact JSON annotation file (when not using CV), as described [here](using_own_dataset.md#2-create-a-json-file).
     
      *Default:* '''
     
@@ -93,19 +93,19 @@ Parameters concerning dataset details and dataset paths.
 ### SAMPLER
 Parameters concerning both full image & patch sampling, data augmentation and cpu workers.
 
-- **DEBUG** (bool): If True, will display plots to help debug the sampler and write to logs. See [Debugging](#debugging) for more detail.
+- **DEBUG** (bool): If True, will display plots to help debug the sampler and write to logs. See [Debugging](debugging.md) for more detail.
 
     *Default:* False
 
-- **INPUT_SIZE** [int, int]: The size you want to resize the images to for training. Regardless of resolution uniformity in the dataset, you need to resize them to a common size. If possible, use the median size of the dataset. If the median resolution is too big to fit into memory, [512, 512] is a good bet. Alternatively you can use full-resolution images and do patch-based sampling, explained in [Patch-Based Training](#patch-based-training).
+- **INPUT_SIZE** [int, int]: The size you want to resize the images to for training. Regardless of resolution uniformity in the dataset, you need to resize them to a common size. If possible, use the median size of the dataset. If the median resolution is too big to fit into memory, [512, 512] is a good bet. Alternatively you can use full-resolution images and do patch-based sampling, explained in [Patch-Based Training](adding_new_models.md#patch-based).
     
      *Default:* [512, 512] 
 
-- **DATA_AUG** (str): The data augmentation scheme to use. See [Data Augmentation](#data-augmentation) for a list of the different schemes. Set to None for no data augmentation.
+- **DATA_AUG** (str): The data augmentation scheme to use. See [Data Augmentation](adding_new_models.md#data-augmentation) for a list of the different schemes. Set to None for no data augmentation.
 
     *Default:* 'AffineComplex'
 
-- **DATA_AUG_PACKAGE** ('imgaug' OR 'albumentations'): The data augmentation package to use. Albumentations is faster, but does not support all the augmentations that imgaug does. See [Data Augmentation](#data-augmentation) for more details.
+- **DATA_AUG_PACKAGE** ('imgaug' OR 'albumentations'): The data augmentation package to use. Albumentations is faster, but does not support all the augmentations that imgaug does. See [Data Augmentation](adding_new_models.md#data-augmentation) for more details.
 
     *Default:* 'imgaug'
 
@@ -236,7 +236,7 @@ Configurations for the trainer. These are high level configurations that are not
 
      *Default:* True
 
-- **FOLD** (int): Which fold to train on. This will match your JSON annotation file that you named "fold0.json", "fold1.json" etc from [this section](#2-create-a-json-file). If set to -1, then it will load the exact JSON specified in DATASET.SRC_TARGETS instead.
+- **FOLD** (int): Which fold to train on. This will match your JSON annotation file that you named "fold0.json", "fold1.json" etc from [Create a JSON file](using_own_dataset.md#2-create-a-json-file). If set to -1, then it will load the exact JSON specified in DATASET.SRC_TARGETS instead.
 
      *Default:* 0
 
@@ -267,7 +267,7 @@ Configurations relating to model choice. Includes sub-configurations for each mo
 - **MODEL_GDRIVE_DL_PATH** (str): The path to a model on the Google Drive Cloud, which will be downloaded and used if provided. It will be downloaded to whatever you provide as MODEL.CHECKPOINT, so make sure you provide a checkpoint that doesn't exist if using this.
 
 #### MODEL.UNET
-Config parameters for the default U-Net model found [here](./models/UNet_Classic.py). More documentation for this model can be found [here](implemented_models.md#u-net)
+Config parameters for the default U-Net model found [here](../../models/UNet_Classic.py). More documentation for this model can be found [here](implemented_models.md#u-net)
  - **MIN_FEATURE_RESOLUTION** (int): This relates to the automatic configuration of the U-Net architecture. The architecture will continuously downsample the feature resolution and add a symmetrical layer until the feature resolution reaches a minimum resolution of ([int, int]). For example, if you set MIN_FEATURE_RESOLUTION = 4 and your SAMPLER.INPUT_SIZE = [512,512], the architecture will downsample the feature resolution until it reaches 4x4 i.e. 512 -> 256 -> 128 -> 64 -> 32 -> 16 -> 8 -> 4. Therefore, the architecture will have 8 layers.
 
 
@@ -284,7 +284,7 @@ Config parameters for the default U-Net model found [here](./models/UNet_Classic
     
 
 #### MODEL.PHD-NET
-Config parameters for the PHD-Net model found [here](./models/PHD_Net.py).  More documentation for this model can be found [here](implemented_models.md#phd-net).
+Config parameters for the PHD-Net model found [here](../../models/PHD_Net.py).  More documentation for this model can be found [here](implemented_models.md#phd-net).
 - **BRANCH_SCHEME**
 - **MAXPOOL_FACTOR**
 - **CLASS_LABEL_SCHEME**
@@ -314,7 +314,7 @@ Parameters relating to inference time.
 
     *False*: Performs inference using a single model. If MODEL.CHECKPOINT **is not** None it will use that model checkpoint for inference. If  MODEL.CHECKPOINT is None it will perform inference over all model checkpoints in OUTPUT.OUTPUT_DIR and save results separately.
 
-    *True*: Performs inference using an ensemble of models, whose paths are defined in INFERENCE.ENSEMBLE_CHECKPOINTS. More details of this process are found under Section [Ensembling and Uncertainty](#ensembling-and-uncertainty).
+    *True*: Performs inference using an ensemble of models, whose paths are defined in INFERENCE.ENSEMBLE_CHECKPOINTS. More details of this process are found under Section [Ensembling and Uncertainty](ensembling_and_uncertainty.md#ensembling-and-uncertainty).
 
     *Default*: False
 
@@ -330,12 +330,12 @@ Parameters relating to inference time.
   
     *Default:* 0
 
-- **DEBUG** (bool): If True, shows inference debug information e.g. plots of predicted heatmaps and landmarks. See [Debugging](#debugging) for more info.
+- **DEBUG** (bool): If True, shows inference debug information e.g. plots of predicted heatmaps and landmarks. See [Debugging](debugging.md) for more info.
 
     *Default*: False
 
 #### OUTPUT
-Parameters relating to where and how to save model outputs, and the Comet.ml logger. For more info on the Comet.ml logger see [here](#logging)
+Parameters relating to where and how to save model outputs, and the Comet.ml logger. For more info on the Comet.ml logger see [Logging](logging.md).
 
 - **VERBOSE** (bool): If True, logs extra debugging info. If False, just standard logging. (Currently does not do anything.)
 
@@ -346,7 +346,7 @@ Parameters relating to where and how to save model outputs, and the Comet.ml log
 
     *Default*: "/output/"
 
-- **USE_COMETML_LOGGING** (bool): If True, logs to Comet.ml. If False, does not log to Comet.ml. **Strongly recommended for researchers/developers**. See [Logging](#logging) for more info.
+- **USE_COMETML_LOGGING** (bool): If True, logs to Comet.ml. If False, does not log to Comet.ml. **Strongly recommended for researchers/developers**. See [Logging](logging.md) for more info.
 
     *Default*: True
 

@@ -146,3 +146,5 @@ Now your dataset is in the correct directory structure and you have the JSON ann
 - SAMPLER.INPUT_SIZE: The size you want to resize the images to for training. Regardless of resolution uniformity in the dataset, you need to resize them to a common size. If possible, use the median size of the dataset. If the median resolution is too big to fit into memory, [512, 512] is a good bet. Alternatively you can use full-resolution images via patch-based training, explained in [[Patch-based Training]]. This will be automated in future.
 
 There are many other options you can set in the config file such as data augmentation scheme, learning schedule, architecture choice & parameters, loss function, sigma regression etc. See [[Config File]] for more information.
+
+For the full documentation for the config file, see [Changing the .yaml Config File](advanced_yaml_config.md#changing-the-yaml-config-file).

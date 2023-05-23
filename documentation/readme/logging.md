@@ -16,6 +16,9 @@ First, you must sign up to comet.ml. Then:
    1) Customize OUTPUT.COMET_WORKSPACE to some string.
    2) Customize OUTPUT.COMET_PROJECT_NAME to some string.
 
+
+For full explanation of comet.ml logging config options, see the [OUTPUT config documentation](advanced_yaml_config.md#output).
+
 Every time you run the main.py file, it generates an experiment you can track online. The URL to find the experiment is printed on the terminal, or you can find it saved in a .txt file in the OUTPUT.OUTPUT_DIR file, in a file named with the timestamp of when you run the code. 
 
 It saves a graph of your model, tracks your training loss, validation loss as well as the validation set coordinate error. It saves the configuration file too so you can reproduce your results. 

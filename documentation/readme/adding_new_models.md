@@ -12,6 +12,8 @@ First create your model class using nn.Module as your super class. In the \__ini
 Then, add a forward() function that passes your input through the model until you get your output/s. 
 
 You can add more complex things if you want, but the above steps are the minumum.
+
+
 ![model class path](../images/models_path.png)
 
 ### The Model Trainer Class
@@ -47,7 +49,7 @@ Here, extend LabelGenerator in /LaNNU-Net/transforms/generate_labels.py. We use 
 
 - generate_labels(self, landmarks, x_y_corner_patch, landmarks_in_indicator, image_size, sigmas, num_res_levels, lambda_scale=100, dtype=np.float32, to_tensor=True):
     - landmarks ([[int,int]]): A 2D list of ints where each entry is the [x,y] coordinate of a landmark.
-    -  x_y_corner_patch ([int, int]): The coordinates of the top left of the image sample you are creating a heatmap for. If you are using the entire image (so SAMPLER.SAMPLE_MODE = 'full'), then this is [0,0]. If you are doing patch-based training, then this is the coordinates where the top left of the image patch is in the original image. See where this function is called in [dataset_base.py](./datasets/dataset_base.py) for more info on this.
+    -  x_y_corner_patch ([int, int]): The coordinates of the top left of the image sample you are creating a heatmap for. If you are using the entire image (so SAMPLER.SAMPLE_MODE = 'full'), then this is [0,0]. If you are doing patch-based training, then this is the coordinates where the top left of the image patch is in the original image. See where this function is called in [dataset_base.py](../../datasets/dataset_base.py) for more info on this.
     -  landmarks_in_indicator ([int]): A list of 1s and 0s where 1 indicates the landmark was in the model input image and 0 if not. If using SAMPLER.SAMPLE_MODE = 'full' with no data augmentation, then this list will always be 1s. If using data augmentation, then sometimes a landmark will be cut off and it will be 0. If using SAMPLER.SAMPLE_MODE = 'patch' then some landmarks will be in the patch and others not.
     -  image_size ([int, int]): Size of the heatmap to produce.
     -  sigmas ([float]): List of sigmas for the size of the heatmap. Each sigma is for the heatmap for a level of deep supervision. The first sigma defines the sigma for the full-size resolution heatmap, the next for the half-resolution heatmap, the next for the 1/8 resolution heatmap etc.
@@ -77,21 +79,21 @@ Here, extend LabelGenerator in /LaNNU-Net/transforms/generate_labels.py. We use 
 
 
 ## Changing the Loss Function
-To add a new loss function, simply add it to the [losses/](./losses) directory or directly to [losses.py](./losses/losses.py). 
+To add a new loss function, simply add it to the [losses/](../../losses) directory or directly to [losses.py](../../losses/losses.py). 
 
-Then in you model_trainer class, load it in. This is the only place you should be using your loss function. Use a string identifier in your config file in SOLVER.LOSS_FUNCTION for this. See [model_trainer_unet](./trainer/model_trainer_unet.py) and [model_trainer_phdnet](./trainer/model_trainer_phdnet.py) for examples.
+Then in you model_trainer class, load it in. This is the only place you should be using your loss function. Use a string identifier in your config file in SOLVER.LOSS_FUNCTION for this. See [model_trainer_unet](../../trainer/model_trainer_unet.py) and [model_trainer_phdnet](../../trainer/model_trainer_phdnet.py) for examples.
 
 ## Changing the Training Schedule
 LannU-Net uses poly scheduler as default. This smoothly reduces the learning rate from the initial learning rate throughout training. 
 
-If you don't want this, then in your own model_trainer class override the  maybe_update_lr() function from [model_trainer_base.py](./trainer/model_trainer_base.py).
+If you don't want this, then in your own model_trainer class override the  maybe_update_lr() function from [model_trainer_base.py](../..//trainer/model_trainer_base.py).
 
 ## Data Augmentation
-Data augmentation will improve your results, but you have to be careful not to overdo it.  LannU-Net supports two augmentation packages: [imgaug](https://imgaug.readthedocs.io/en/latest/) and [albumentations](https://albumentations.ai/). Albumentations is faster, but does not support warping images with landmarks. Therefore, *imgaug is recommended and the only one I have properly tested*. You might need to add a little code to the [dataset class](./datasets/dataset_base.py) to get albumentations to work again.
+Data augmentation will improve your results, but you have to be careful not to overdo it.  LannU-Net supports two augmentation packages: [imgaug](https://imgaug.readthedocs.io/en/latest/) and [albumentations](https://albumentations.ai/). Albumentations is faster, but does not support warping images with landmarks. Therefore, *imgaug is recommended and the only one I have properly tested*. You might need to add a little code to the [dataset class](../../datasets/dataset_base.py) to get albumentations to work again.
 
 By default, I have written several schemes of various intensity. They transform the image as well as the target landmarks to the new transformed image.
 
-You can see them all in detail in [get_imgaug_transforms.py](./transforms/dataloader_transforms.py).  To set which scheme to use, set SAMPLER.DATA_AUG to the corresponding string key.
+You can see them all in detail in [get_imgaug_transforms.py](../../transforms/dataloader_transforms.py).  To set which scheme to use, set SAMPLER.DATA_AUG to the corresponding string key.
 **I  strongly recommend starting with "AffineComplex"**.
 
 
@@ -109,7 +111,7 @@ Instead of using the entire images, we sample *patches* from the image and train
 
 If your images are too large to fit into memory, you can use patch-based training on the full resolution images instead of resizing them using the default SAMPLER.SAMPLE_MODE = 'full'. Currently, this method has problems converging during training and requires more work.
 
-There are various settings you can alter in the config file under SAMPLER.PATCH, which are detailed [here](#changing-the-yaml-config-file).
+There are various settings you can alter in the config file under SAMPLER.PATCH, which are detailed [here](advanced_yaml_config.md#changing-the-yaml-config-file).
 
 The most important settings are SAMPLER.PATCH.SAMPLE_PATCH_SIZE, which dictates how large the patch is. 
 
@@ -148,10 +150,10 @@ Check out these .yamls for how to do it.
 
 **Important**: You won't be able to fill in MODEL.MODEL_GDRIVE_DL_PATH, because the google form won't give you that info. Don't worry, I will fill that in for you later. Just leave it blank for now. I'm not sure of a better system than this, if you know a better one let me know.
 
-Then add a little README.md file to explain how to run it. You should add a section under [Implemented Models](documentation/readme/implemented_models.md#) to describe your model, and link to that section here. Check out the [U-Net_Classic_README](../../configs/examples/U-Net_Classic/U-Net_Classic_README.md#) for an example.
+Then add a little README.md file to explain how to run it. You should add a section under [Implemented Models](implemented_models.md#) to describe your model, and link to that section here. Check out the [U-Net_Classic_README](../../configs/examples/U-Net_Classic/U-Net_Classic_README.md#) for an example.
 
 
 
 ###  3) Update the config documentation
 
-Please update the [Changing the .yaml Config File](documentation/readme/advanced_yaml_config.md#changing-the-yaml-config-file) with your added config options.
+Please update the [Changing the .yaml Config File](advanced_yaml_config.md#changing-the-yaml-config-file) with your added config options.
