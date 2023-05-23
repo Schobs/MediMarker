@@ -48,14 +48,15 @@ For advanced users, we provide the following features:
   - [Changing the .yaml Config File](documentation/readme/advanced_yaml_config.md#changing-the-yaml-config-file)
     - [DATASET](documentation/readme/advanced_yaml_config.md#dataset)
     - [SAMPLER](documentation/readme/advanced_yaml_config.md#sampler)
-      - [SAMPLER.PATCH](documentation/readme/advanced_yaml_config.md#samplerpatch)
     - [SOLVER](documentation/readme/advanced_yaml_config.md#solver)
     - [TRAINER](documentation/readme/advanced_yaml_config.md#trainer)
     - [MODEL](documentation/readme/advanced_yaml_config.md#model)
       - [MODEL.UNET](documentation/readme/advanced_yaml_config.md#modelunet)
       - [MODEL.PHD-NET](documentation/readme/advanced_yaml_config.md#modelphd-net)
-      - [INFERENCE](documentation/readme/advanced_yaml_config.md#inference)
-      - [OUTPUT](documentation/readme/advanced_yaml_config.md#output)
+    - [INFERENCE](documentation/readme/advanced_yaml_config.md#inference)
+    - [OUTPUT](documentation/readme/advanced_yaml_config.md#output)
+    - [SSH](documentation/readme/advanced_yaml_config.md#ssh)
+
 
 - [Ensembling and Uncertainty](documentation/readme/ensembling_and_uncertainty.md#ensembling-and-uncertainty)
 - [Adding Your Own Model Architecture and Task](documentation/readme/adding_new_models.md)
