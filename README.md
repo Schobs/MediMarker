@@ -57,7 +57,6 @@ For advanced users, we provide the following features:
     - [OUTPUT](documentation/readme/advanced_yaml_config.md#output)
     - [SSH](documentation/readme/advanced_yaml_config.md#ssh)
 
-
 - [Ensembling and Uncertainty](documentation/readme/ensembling_and_uncertainty.md#ensembling-and-uncertainty)
 - [Adding Your Own Model Architecture and Task](documentation/readme/adding_new_models.md)
   - [The Model Class](documentation/readme/adding_new_models.md#the-model-class)

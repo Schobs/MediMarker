@@ -151,3 +151,7 @@ Check out these .yamls for how to do it.
 Then add a little README.md file to explain how to run it. You should add a section under [Implemented Models](documentation/readme/implemented_models.md#) to describe your model, and link to that section here. Check out the [U-Net_Classic_README](../../configs/examples/U-Net_Classic/U-Net_Classic_README.md#) for an example.
 
 
+
+###  3) Update the config documentation
+
+Please update the [Changing the .yaml Config File](documentation/readme/advanced_yaml_config.md#changing-the-yaml-config-file) with your added config options.
