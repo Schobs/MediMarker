@@ -1,6 +1,7 @@
 outputs/
 outputs2/
 outputsISBI/
+model_zoo/
 profiler/
 scripts/scripts_sharc/
 configs/configs_legacy/
@@ -12,3 +13,4 @@ __pycache__/
 *$py.class
 *.pyc
 *.out
+*.model

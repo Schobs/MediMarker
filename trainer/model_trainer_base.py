@@ -20,6 +20,7 @@ import pandas as pd
 
 import logging
 from utils.setup.argument_utils import checkpoint_loading_checking
+from utils.setup.download_models import download_model_from_google_drive
 
 
 class NetworkTrainer(ABC):
@@ -40,10 +41,13 @@ class NetworkTrainer(ABC):
 
         # This is the trainer config dict
         self.trainer_config = trainer_config
+        self.model_type = self.trainer_config.MODEL.ARCHITECTURE
         self.is_train = is_train
 
         # Dataset class to use
         self.dataset_class = dataset_class
+        self.dataset_name = self.trainer_config.DATASET.NAME
+
         # Dataloader info
         self.data_loader_batch_size_train = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN
         self.data_loader_batch_size_eval = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_EVAL
@@ -101,6 +105,8 @@ class NetworkTrainer(ABC):
 
         # Set up directories
         self.output_folder = output_folder
+        self.google_drive_model_path = self.trainer_config.MODEL.MODEL_GDRIVE_DL_PATH
+        # self.google_drive_save_local_path = self.trainer_config.OUTPUT.MODEL_GDRIVE_DL_LOCAL_PATH
 
         # Trainer variables
         self.perform_validation = self.trainer_config.TRAINER.PERFORM_VALIDATION
@@ -200,6 +206,7 @@ class NetworkTrainer(ABC):
 
         self.was_initialized = True
 
+        self.maybe_download_model()
         self.maybe_load_checkpoint()
 
         self.print_initiaization_info = False
@@ -905,6 +912,11 @@ class NetworkTrainer(ABC):
             all_summary_results[u_key] = summary_results
 
         return all_summary_results, ind_results
+
+    def maybe_download_model(self):
+        if self.google_drive_model_path:
+            download_model_from_google_drive(self.google_drive_model_path,
+                                             self.continue_checkpoint)
 
     def maybe_load_checkpoint(self):
         """Helper function from initialisation that loads checkpoint"""
