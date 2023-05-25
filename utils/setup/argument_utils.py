@@ -108,6 +108,12 @@ def infer_additional_arguments(yaml_args):
                     yaml_args.MODEL.CHECKPOINT = str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
                                                      Path(yaml_args.MODEL.CHECKPOINT).relative_to(Path(yaml_args.MODEL.CHECKPOINT).anchor))
 
+            if len(yaml_args.INFERENCE.ENSEMBLE_CHECKPOINTS) > 0:
+                if yaml_args.SSH.MATCH_SSH_STRING_FOR_AMEND in yaml_args.INFERENCE.ENSEMBLE_CHECKPOINTS[0]:
+
+                    yaml_args.INFERENCE.ENSEMBLE_CHECKPOINTS = [str(Path(yaml_args.SSH.LOCAL_PATH_TO_SSH_MOUNT) /
+                                                                Path(x).relative_to(Path(x).anchor)) for x in yaml_args.INFERENCE.ENSEMBLE_CHECKPOINTS]
+
     # Set logger path
 
     yaml_args.OUTPUT.LOGGER_OUTPUT = os.path.join(yaml_args.OUTPUT.OUTPUT_DIR,  "_Fold" + str(

@@ -23,6 +23,7 @@ import pandas as pd
 
 import logging
 from utils.setup.argument_utils import checkpoint_loading_checking
+from utils.setup.download_models import download_model_from_google_drive
 
 
 class NetworkTrainer(ABC):
@@ -43,6 +44,7 @@ class NetworkTrainer(ABC):
 
         # This is the trainer config dict
         self.trainer_config = trainer_config
+        self.model_type = self.trainer_config.MODEL.ARCHITECTURE
         self.is_train = is_train
         self.validation_log_heatmaps = trainer_config.TRAINER.VALIDATION_LOG_HEATMAPS
         self.inference_log_heatmaps = trainer_config.INFERENCE.LOG_HEATMAPS
@@ -53,7 +55,12 @@ class NetworkTrainer(ABC):
 
         # Dataset class to use
         self.dataset_class = dataset_class
+<<<<<<< HEAD
         self.to_pytorch_tensor = self.trainer_config.DATASET.TO_PYTORCH_TENSOR
+=======
+        self.dataset_name = self.trainer_config.DATASET.NAME
+
+>>>>>>> main
         # Dataloader info
         self.data_loader_batch_size_train = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN
         self.data_loader_batch_size_eval = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_EVAL
@@ -128,7 +135,13 @@ class NetworkTrainer(ABC):
 
         # Set up directories
         self.output_folder = output_folder
+<<<<<<< HEAD
         self.local_logger_type = self.trainer_config.OUTPUT.LOCAL_LOGGER_TYPE
+=======
+        self.google_drive_model_path = self.trainer_config.MODEL.MODEL_GDRIVE_DL_PATH
+        # self.google_drive_save_local_path = self.trainer_config.OUTPUT.MODEL_GDRIVE_DL_LOCAL_PATH
+
+>>>>>>> main
         # Trainer variables
         self.perform_validation = self.trainer_config.TRAINER.PERFORM_VALIDATION
         self.continue_checkpoint = self.trainer_config.MODEL.CHECKPOINT
@@ -233,6 +246,7 @@ class NetworkTrainer(ABC):
 
         self.was_initialized = True
 
+        self.maybe_download_model()
         self.maybe_load_checkpoint()
 
         self.print_initiaization_info = False
@@ -334,6 +348,12 @@ class NetworkTrainer(ABC):
                 with torch.no_grad():
                     self.network.eval()
                     generator = iter(self.valid_dataloader)
+
+                    # If debugging, need to log some extra info than
+                    if self.trainer_config.INFERENCE.DEBUG:
+                        valid_logs = self.dict_logger.get_evaluation_logger()
+                    else:
+                        valid_logs = per_epoch_logs
                     while generator != None:
                         l, generator = self.run_iteration(
                             generator,
@@ -341,8 +361,9 @@ class NetworkTrainer(ABC):
                             backprop=False,
                             split="validation",
                             log_coords=True,
-                            logged_vars=per_epoch_logs,
-                            restart_dataloader=False
+                            logged_vars=valid_logs,
+                            restart_dataloader=False,
+                            debug=self.trainer_config.INFERENCE.DEBUG
                         )
 
             self.epoch_end_time = time()
@@ -411,7 +432,12 @@ class NetworkTrainer(ABC):
             data_dict = direct_data_dict
 
         data = (data_dict["image"]).to(self.device)
+<<<<<<< HEAD
         # torch_to_onnx(self.network, data, self.output_folder+"/model.onnx")
+=======
+        # if "PHD_715" not in data_dict["uid"]:
+        #     return 0, generator
+>>>>>>> main
 
         # This happens when we regress sigma with > 0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
@@ -953,6 +979,7 @@ class NetworkTrainer(ABC):
             # Need to load and get results from each checkpoint. Load checkpoint for each batch because of memory issues running through entire dataloader
             # and saving multiple outputs for every checkpoint. In future can improve this by going through X (e.g.200 samples/10 batches) before changing checkpoint.
             while generator != None:
+                self.logger.info("Next")
                 try:
                     evaluation_logs = self.dict_logger.ensemble_inference_log_template()
                     direct_data_dict = next(generator)
@@ -1009,6 +1036,11 @@ class NetworkTrainer(ABC):
             all_summary_results[u_key] = summary_results
 
         return all_summary_results, ind_results
+
+    def maybe_download_model(self):
+        if self.google_drive_model_path:
+            download_model_from_google_drive(self.google_drive_model_path,
+                                             self.continue_checkpoint)
 
     def maybe_load_checkpoint(self):
         """Helper function from initialisation that loads checkpoint"""
@@ -1122,7 +1154,7 @@ class NetworkTrainer(ABC):
 
         # Image loading size different for patch vs. full image sampling
         if self.sampler_mode in ["patch_bias", "patch_centred"]:
-            img_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM,
+            img_resolution = self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM
         else:
             img_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
 
@@ -1148,7 +1180,7 @@ class NetworkTrainer(ABC):
         self.valid_dataloader = DataLoader(
             valid_dataset,
             batch_size=valid_batch_size,
-            shuffle=False,
+            shuffle=True,
             num_workers=self.num_workers_cfg,
             persistent_workers=self.persist_workers,
             worker_init_fn=NetworkTrainer.worker_init_fn,

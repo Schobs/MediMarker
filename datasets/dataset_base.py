@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_centred, get_patch_stitching_info
+from utils.im_utils.patch_helpers import sample_patch_with_bias, sample_patch_centred
 
 import numpy as np
 import torch
@@ -13,11 +13,9 @@ from transforms.transformations import (
     standardize_landmarks_func,
 )
 
-from tqdm import tqdm
 from transforms.dataloader_transforms import get_aug_package_loader
 
 from utils.data.load_data import get_datatype_load, load_aspire_datalist, load_and_resize_image, maybe_get_coordinates_from_xlsx, resize_coordinates
-from utils.im_utils.visualisation import visualize_patch
 
 
 import logging
@@ -238,6 +236,10 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
         with alive_bar(len(datalist), force_tty=True) as loading_bar:
             loading_bar.text('Loading Data...')
             for idx, data in enumerate(datalist):
+<<<<<<< HEAD
+=======
+                # self.logger.info("idx: %s", idx)
+>>>>>>> main
                 # Add coordinate labels as sample attribute, if annotations available
                 if (not isinstance(data["coordinates"], list)) or (
                     "has_annotation" in data.keys() and data["has_annotation"] == False
@@ -408,6 +410,7 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             # list where [0] is image and [1] are coords.
             transformed_sample = self.transform(image=untransformed_im[0], keypoints=kps)
 
+<<<<<<< HEAD
             # image = (1,512,512)
             # heatmap for 1st landmark = (19, 1, 512 , 512)
 
@@ -428,6 +431,14 @@ class DatasetBase(ABC, metaclass=DatasetMeta):
             # label = self.transform(image=heatmap)
 
             input_image = normalize_cmr(transformed_sample[0], to_tensor=self.to_pytorch)
+=======
+            # TODO: try and not renormalize if we're patch sampling, maybe?
+            if self.sample_mode != "patch_bias":
+                input_image = normalize_cmr(transformed_sample[0], to_tensor=True)
+            else:
+                input_image = torch.from_numpy(np.expand_dims(transformed_sample[0], axis=0)).float()
+
+>>>>>>> main
             input_coords = np.array([[coo.x, coo.y] for coo in transformed_sample[1]])
 
             # Recalculate indicators incase transform pushed out/in coords.

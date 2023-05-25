@@ -1,0 +1,51 @@
+
+ 
+OUTPUT: 
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing4/"
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
+  COMET_WORKSPACE: "schobs"
+
+SOLVER:
+  DEEP_SUPERVISION: True
+  NUM_RES_SUPERVISIONS: 5
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE_TRAIN: 12
+  MAX_EPOCHS: 10
+  # REGRESS_SIGMA: True
+  DATA_LOADER_BATCH_SIZE_EVAL: -1
+
+
+
+
+
+DATASET:
+  # DEBUG: True
+  ROOT: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks'
+  SRC_TARGETS: '/shared/tale2/Shared/schobs/data/ISBI2015_landmarks/lann_folds/w_valid'
+  NAME:  "ISBI 2015 Junior"
+  IMAGE_MODALITY: 'Cephalometric'
+  LANDMARKS : [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]
+    
+ 
+TRAINER:
+  PERFORM_VALIDATION: True
+  SAVE_LATEST_ONLY: False
+  CACHE_DATA: False
+  INFERENCE_ONLY: False
+
+SAMPLER:
+  DATA_AUG: None
+  INPUT_SIZE : [512,512]
+  NUM_WORKERS: 8 
+  DEBUG: True
+
+MODEL:
+  GAUSS_SIGMA: 3
+<<<<<<< HEAD:configs/configs_bess/nnunet/rebuttal/ISBITEST.yaml
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing/model_best_valid_coord_error_fold0.model"
+=======
+  # CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing/model_best_valid_coord_error_fold0.model"
+SSH:
+  AUTO_AMEND_PATHS: True
+>>>>>>> main:configs/dev/configs_bess/nnunet/rebuttal/ISBITEST.yaml

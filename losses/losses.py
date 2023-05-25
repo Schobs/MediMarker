@@ -336,8 +336,40 @@ class MultiBranchPatchLoss(nn.Module):
 
     def weighted_mse_loss(self, input_, target, weights):
         """Mean squared error loss with weights."""
+        # x = torch.tensor([[[[1, 2, 3], [1, 2, 3]], [[1, 2, 3], [1, 2, 3]]]])
+        # y = torch.tensor([[[[1, 2, 3], [1, 2, 3]], [[1, 2, 3], [1, 2, 3]]]])
 
-        return torch.mean(weights * (input_ - target) ** 2)
+        # x = torch.tensor([[[
+        #     [
+        #         [2, 1, 2],
+        #         [1, 0, 1],
+        #         [2, 1, 2]
+
+        #     ],
+        #     [
+        #         [2, 1, 2],
+        #         [1, 0, 1],
+        #         [2, 1, 2]
+        #     ]
+
+        # ]]])
+        # y = torch.tensor([[[
+        #     [
+        #         [2, 1, 2],
+        #         [1, 0, 1],
+        #         [2, 1, 2]
+
+        #     ],
+        #     [
+        #         [2, 1, 2],
+        #         [1, 0, 1],
+        #         [2, 1, 2]
+        #     ]
+
+        # ]]])
+        ling_alg = torch.mean(weights * torch.linalg.norm((input_ - target), axis=2))
+        # mean_mse = torch.mean(weights * (input_ - target) ** 2)
+        return ling_alg
 
     def forward(self, predictions, labels, sigmas):
         """The forward pass of the loss function.
@@ -357,24 +389,6 @@ class MultiBranchPatchLoss(nn.Module):
         pred_displacements = predictions[1]
         pred_class = predictions[0]
 
-        # print(
-        #     "pred_class shape: ",
-        #     pred_class.shape,
-        #     "pred_displacements shape: ",
-        #     pred_displacements.shape,
-        # )
-        # print(
-        #     "labels shape class ",
-        #     len(labels["patch_heatmap"]),
-        #     labels["patch_heatmap"].shape,
-        # )
-        # print(
-        #     "labels shape disp ",
-        #     len(labels["patch_displacements"]),
-        #     labels["patch_displacements"].shape,
-        # )
-
-        # print()
         if self.branch_scheme == "displacement" or self.branch_scheme == "multi":
             if self.distance_weighted_bool:
                 weights = labels["displacement_weights"]

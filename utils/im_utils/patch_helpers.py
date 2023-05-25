@@ -27,13 +27,53 @@ def sample_patch_with_bias(image, landmarks, sample_patch_bias, load_im_size,  s
     logger = logging.getLogger()
     z_rand = np.random.uniform(0, 1)
     landmarks_in_indicator = []
-    if z_rand >= (1 - sample_patch_bias):
 
-        # Keep sampling until landmark is in patch
-        while 1 not in landmarks_in_indicator:
-            landmarks_in_indicator = []
+    # If patch size is same as input size, the patch is the entire image by default.
+    if load_im_size == sample_patch_size:
+        x_rand = 0
+        y_rand = 0
+    else:
+        if z_rand >= (1 - sample_patch_bias):
 
-            #
+            # Keep sampling until landmark is in patch
+            while 1 not in landmarks_in_indicator:
+                landmarks_in_indicator = []
+
+                #
+                y_rand = np.random.randint(
+                    0, load_im_size[1] - sample_patch_size[1]
+                )
+                x_rand = np.random.randint(
+                    0, load_im_size[0] - sample_patch_size[0]
+                )
+
+                for lm in landmarks:
+                    landmark_in = 0
+
+                    # Safe region means landmark is not right on the edge
+                    if (
+                        y_rand + lm_safe_region
+                        <= lm[1]
+                        <= (y_rand + sample_patch_size[1]) - lm_safe_region
+                    ):
+                        if (
+                            x_rand + lm_safe_region
+                            <= lm[0]
+                            <= (x_rand + sample_patch_size[0]) - lm_safe_region
+                        ):
+                            landmark_in = 1
+
+                    landmarks_in_indicator.append(landmark_in)
+
+                # Tested with the extremes, its all ok.
+                # y_rand = self.load_im_size[1]-self.sample_patch_size[1]
+                # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
+                # y_rand = 0
+                # x_rand = 0
+                # y_rand = safe_padding
+                # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
+
+        else:
             y_rand = np.random.randint(
                 0, load_im_size[1] - sample_patch_size[1]
             )
@@ -43,12 +83,10 @@ def sample_patch_with_bias(image, landmarks, sample_patch_bias, load_im_size,  s
 
             for lm in landmarks:
                 landmark_in = 0
-
-                # Safe region means landmark is not right on the edge
                 if (
                     y_rand + lm_safe_region
                     <= lm[1]
-                    <= (y_rand + sample_patch_size[1]) - lm_safe_region
+                    <= y_rand + sample_patch_size[1] - lm_safe_region
                 ):
                     if (
                         x_rand + lm_safe_region
@@ -56,39 +94,7 @@ def sample_patch_with_bias(image, landmarks, sample_patch_bias, load_im_size,  s
                         <= (x_rand + sample_patch_size[0]) - lm_safe_region
                     ):
                         landmark_in = 1
-
                 landmarks_in_indicator.append(landmark_in)
-
-            # Tested with the extremes, its all ok.
-            # y_rand = self.load_im_size[1]-self.sample_patch_size[1]
-            # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
-            # y_rand = 0
-            # x_rand = 0
-            # y_rand = safe_padding
-            # x_rand = self.load_im_size[0]-self.sample_patch_size[0]
-
-    else:
-        y_rand = np.random.randint(
-            0, load_im_size[1] - sample_patch_size[1]
-        )
-        x_rand = np.random.randint(
-            0, load_im_size[0] - sample_patch_size[0]
-        )
-
-        for lm in landmarks:
-            landmark_in = 0
-            if (
-                y_rand + lm_safe_region
-                <= lm[1]
-                <= y_rand + sample_patch_size[1] - lm_safe_region
-            ):
-                if (
-                    x_rand + lm_safe_region
-                    <= lm[0]
-                    <= (x_rand + sample_patch_size[0]) - lm_safe_region
-                ):
-                    landmark_in = 1
-            landmarks_in_indicator.append(landmark_in)
 
     # Add the safe padding size
     y_rand_safe = y_rand + safe_padding

@@ -1,7 +1,9 @@
 
+
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing4/"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/s1/f3_test/"
+
   USE_COMETML_LOGGING: True
   COMET_API_KEY: "B5Nk91E6iCmWvBznXXq3Ijhhp"
   COMET_WORKSPACE: "schobs"
@@ -11,12 +13,13 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE_TRAIN: 12
-  MAX_EPOCHS: 10
+  # MAX_EPOCHS: 258
   # REGRESS_SIGMA: True
-  DATA_LOADER_BATCH_SIZE_EVAL: -1
 
 
-
+INFERENCE:
+  SPLIT: "testing"
+  FIT_GAUSS: True
 
 
 DATASET:
@@ -32,14 +35,18 @@ TRAINER:
   PERFORM_VALIDATION: True
   SAVE_LATEST_ONLY: False
   CACHE_DATA: False
-  INFERENCE_ONLY: False
+  INFERENCE_ONLY: True
+  FOLD: 3
 
 SAMPLER:
-  DATA_AUG: None
+  DATA_AUG: 'AffineComplex'
   INPUT_SIZE : [512,512]
-  NUM_WORKERS: 8 
-  DEBUG: True
+  NUM_WORKERS: 0
 
 MODEL:
-  GAUSS_SIGMA: 3
-  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/sept22/isbiworkshop_testing/model_best_valid_coord_error_fold0.model"
+  GAUSS_SIGMA: 8
+  CHECKPOINT: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/ISBI/param_search/ISBI_512F_512Res_5GS_4MFR_AugAC_DS5//model_best_valid_coord_error_fold3.model"
+
+
+SSH: 
+  AUTO_AMEND_PATHS: True

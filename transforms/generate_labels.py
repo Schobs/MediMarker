@@ -809,6 +809,7 @@ class PHDNetLabelGenerator(LabelGenerator):
         self.sample_grid_size = sample_grid_size
         self.log_transform_displacements_bool = log_transform_displacements_bool
         self.clamp_dist = clamp_dist
+        self.logger = logging.getLogger()
 
     def stitch_heatmap(self, patch_predictions, stitching_info):
         """
@@ -913,8 +914,8 @@ class PHDNetLabelGenerator(LabelGenerator):
         untransformed_im = image[0]
         untransformed_coords = np.array(coordinates[0])
 
-        print(
-            "all shapes: ",
+        self.logger.info(
+            "all shapes untransformed_im %s, untransformed_coords %s, patch_heatmap_label %s, patch_disp_label %s, patch_disp_weights %s, transformed_targ_coords %s, full_res_coords %s, transformed_input_image %s, : ",
             untransformed_im.shape,
             untransformed_coords.shape,
             patch_heatmap_label.shape,
@@ -926,12 +927,12 @@ class PHDNetLabelGenerator(LabelGenerator):
         )
 
         # difference between these is removing the padding (so -128, or whatever the patch padding was)
-        print(
-            "untransformed and transformed coords: ",
+        self.logger.info(
+            "untransformed %s and transformed coords %s: ",
             untransformed_coords,
             transformed_targ_coords,
         )
-        print("xy corner: ", xy_corner)
+        self.logger.info("xy corner: %s", xy_corner)
         # 1) reconstructed lm on untrans image
         # 2) show untrans image with untrans lm
         # 3) show input image (transformed_input_image) with target coords (transformed_targ_coords)
@@ -942,7 +943,7 @@ class PHDNetLabelGenerator(LabelGenerator):
         fig, ax = plt.subplots(nrows=2, ncols=3)
 
         # 2)
-        print("Full resolution coords: ", full_res_coords)
+        self.logger.info("0,0]:  Full resolution coords: %s ", full_res_coords)
         ax[0, 0].imshow(untransformed_im)
         rect1 = patchesplt.Rectangle(
             (untransformed_coords[0], untransformed_coords[1]),
@@ -968,7 +969,7 @@ class PHDNetLabelGenerator(LabelGenerator):
 
         # 4)
         downsampled_coords = transformed_targ_coords / (2**self.maxpool_factor)
-        print("downscampled coords to fit on heatmap label: ", downsampled_coords)
+        self.logger.info("0,1]: downscampled coords to fit on heatmap label: %s ", downsampled_coords)
         ax[0, 2].imshow(patch_heatmap_label[0])
         rect3 = patchesplt.Rectangle(
             (downsampled_coords[0], downsampled_coords[1]),
@@ -1003,7 +1004,7 @@ class PHDNetLabelGenerator(LabelGenerator):
         coords_from_uhm, arg_max = get_coords(
             torch.tensor(np.expand_dims(np.expand_dims(upscaled_hm, axis=0), axis=0))
         )
-        print("get_coords from upscaled_hm: ", coords_from_uhm)
+        self.logger.info(" [0,2]: get_coords from upscaled_hm: %s ", coords_from_uhm)
 
         ax[1, 0].imshow(upscaled_hm)
         rect4 = patchesplt.Rectangle(
@@ -1045,10 +1046,10 @@ class PHDNetLabelGenerator(LabelGenerator):
 
                 if self.log_transform_displacements_bool:
                     x_disp = np.sign(patch_disp_label[0, x_idx, y_idx]) * (
-                        2 ** (abs(patch_disp_label[0, x_idx, y_idx])) - 1
+                        2 ** (abs(patch_disp_label[0, x_idx, y_idx]))
                     )
                     y_disp = np.sign(patch_disp_label[1, x_idx, y_idx]) * (
-                        2 ** (abs(patch_disp_label[1, x_idx, y_idx])) - 1
+                        2 ** (abs(patch_disp_label[1, x_idx, y_idx]))
                     )
                 else:
                     x_disp = patch_disp_label[0, x_idx, y_idx]
@@ -1057,7 +1058,30 @@ class PHDNetLabelGenerator(LabelGenerator):
                 loc = [center_xy[0] + x_disp, center_xy[1] + y_disp]
                 ax[1, 1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
                 all_locs.append(loc)
-        print("average location: ", np.mean(all_locs, axis=0))
+        self.logger.info(" [1,1]: average location: %s ", np.mean(all_locs, axis=0))
+
+        all_locs_logged = []
+        ax[1, 2].imshow(transformed_input_image)
+        for x_idx, x in enumerate(
+            range(0, self.sample_grid_size[0], (2**self.maxpool_factor))
+        ):
+            for y_idx, y in enumerate(
+                range(0, self.sample_grid_size[1], (2**self.maxpool_factor))
+            ):
+
+                center_xy = [
+                    x + ((2**self.maxpool_factor) // 2),
+                    y + ((2**self.maxpool_factor) // 2),
+                ]
+                # REMEMBER TO ADD 1 TO REVERSE THE LOG SHIFT WHEN CALCULATING THE LABELS!
+
+                x_disp = patch_disp_label[0, x_idx, y_idx]
+                y_disp = patch_disp_label[1, x_idx, y_idx]
+
+                loc = [center_xy[0] + x_disp, center_xy[1] + y_disp]
+                ax[1, 2].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
+                all_locs_logged.append(loc)
+        self.logger.info("[1,2]: average location: %s ", np.mean(all_locs_logged, axis=0))
         plt.show()
         plt.close()
 
@@ -1086,8 +1110,8 @@ class PHDNetLabelGenerator(LabelGenerator):
             extra_info["debug_candidate_smoothed_maps"].cpu().detach().numpy()
         )
 
-        print(
-            "all shapes: ",
+        self.logger.info(
+            "all shapes: \n patch_heatmap_label %s \n patch_disp_label %s \n patch_disp_weights %s \n input_size_pred_coords %s  \n transformed_targ_coords %s \n full_res_coords %s \n transformed_input_image %s \n predicted_heatmap %s  \n predicted_displacements %s  \n predicted_coords %s ",
             patch_heatmap_label.shape,
             patch_disp_label.shape,
             patch_disp_weights.shape,
@@ -1101,26 +1125,24 @@ class PHDNetLabelGenerator(LabelGenerator):
         )
 
         for sample_idx, ind_sample in enumerate(logged_vars):
-            print(
-                "\n uid: %s. Mean Error: %s "
-                % (ind_sample["uid"], ind_sample["Error All Mean"])
+            self.logger.info(
+                "\n uid: %s. Mean Error: %s ",
+                ind_sample["uid"], ind_sample["Error All Mean"]
             )
             for coord_idx, pred_coord in enumerate(predicted_coords[sample_idx]):
-                print(
-                    "L%s: Full Res Prediction: %s, Full Res Target: %s, Error: %s. Input Res Pred %s, input res targ %s."
-                    % (
-                        coord_idx,
-                        pred_coord,
-                        full_res_coords[sample_idx][coord_idx],
-                        ind_sample["L" + str(coord_idx)],
-                        transformed_targ_coords[sample_idx][coord_idx],
-                        input_size_pred_coords[sample_idx][coord_idx],
-                    )
+                self.logger.info(
+                    "L%s: Full Res Prediction: %s, Full Res Target: %s, Error: %s. Input Res Pred %s, input res targ %s.",
+                    coord_idx,
+                    pred_coord,
+                    full_res_coords[sample_idx][coord_idx],
+                    ind_sample["L" + str(coord_idx)],
+                    input_size_pred_coords[sample_idx][coord_idx],
+                    transformed_targ_coords[sample_idx][coord_idx],
                 )
 
                 # difference between these is removing the padding (so -128, or whatever the patch padding was)
-                print(
-                    "predicted (red) vs  target coords (green): ",
+                self.logger.info(
+                    "predicted (red) %s vs  target coords (green) %s: ",
                     input_size_pred_coords[sample_idx][coord_idx],
                     transformed_targ_coords[sample_idx][coord_idx],
                 )
@@ -1179,10 +1201,9 @@ class PHDNetLabelGenerator(LabelGenerator):
                     )
                 )
                 max_square = max_square.cpu().detach().numpy()[0, 0]
-                print(
-                    "\n Downsampled on output HM: targ (g): %s, pred (r): %s, max square (m): %s"
-                    % (downsampled_targ, downsampled_pred, max_square)
-                )
+                self.logger.info("[0,1] Downsampled on output HM: targ (g): %s, pred (r): %s, max square (m): %s",
+                                 downsampled_targ, downsampled_pred, max_square
+                                 )
 
                 ax[0, 1].imshow(predicted_heatmap[sample_idx][coord_idx])
                 rect3 = patchesplt.Rectangle(
@@ -1239,9 +1260,13 @@ class PHDNetLabelGenerator(LabelGenerator):
                     facecolor="none",
                 )
                 ax[1, 0].add_patch(rect6)
+
+                self.logger.info("[1,0] CSM, pred coords (R) %s and targ coords (G) %s",
+                                 predicted_coords[sample_idx][coord_idx], transformed_targ_coords[sample_idx][coord_idx])
+
                 # 4)
                 ax[1, 1].imshow(transformed_input_image[sample_idx][0])
-
+                all_locs = []
                 for x_idx, x in enumerate(
                     range(0, self.sample_grid_size[0], (2**self.maxpool_factor))
                 ):
@@ -1269,7 +1294,7 @@ class PHDNetLabelGenerator(LabelGenerator):
                                         ]
                                     )
                                 )
-                                - 1
+
                             )
                             y_disp = np.sign(
                                 predicted_displacements[sample_idx][coord_idx][
@@ -1284,7 +1309,7 @@ class PHDNetLabelGenerator(LabelGenerator):
                                         ]
                                     )
                                 )
-                                - 1
+
                             )
                         else:
                             x_disp = predicted_displacements[sample_idx][coord_idx][
@@ -1295,7 +1320,11 @@ class PHDNetLabelGenerator(LabelGenerator):
                             ]
 
                         loc = [center_xy[0] + x_disp, center_xy[1] + y_disp]
-                        ax[1, 1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
+                        all_locs.append(loc)
+                        if 0 <= loc[0] <= self.sample_grid_size[0] and 0 <= loc[1] <= self.sample_grid_size[1]:
+                            ax[1, 1].arrow(center_xy[0], center_xy[1], x_disp, y_disp)
+
+                self.logger.info("[1,1] Average displacement loc: %s", np.mean(all_locs, axis=0))
 
                 # 5)
 
@@ -1305,6 +1334,8 @@ class PHDNetLabelGenerator(LabelGenerator):
 
 def generate_heatmaps(
     landmarks, image_size, sigma, num_res_levels, lambda_scale=100, dtype=np.float32
+
+
 ):
     heatmap_list = []
 
@@ -1514,8 +1545,9 @@ def gen_patch_displacements_heatmap(
             # distance_y = min(abs(landmark[1] - center_xy[1]) , clamp_dist)
             # distance_x = min(abs(landmark[0] - center_xy[0]), clamp_dist)
 
-            distance_y = abs(landmark[1] - center_xy[1])
-            distance_x = abs(landmark[0] - center_xy[0])
+            # Prevent log(0)
+            distance_y = max(0.000001, abs(landmark[1] - center_xy[1]))
+            distance_x = max(0.000001, abs(landmark[0] - center_xy[0]))
             # v = [distance_x, distance_y]
             # distance_x, distance_y = ()
 
@@ -1531,17 +1563,17 @@ def gen_patch_displacements_heatmap(
             if log_transform_displacements_bool:
                 # shift log function by 1 so now the asymtope is at -1 instead of 0.
                 if landmark[1] > center_xy[1]:
-                    displace_y = math.log(distance_y + 1, 2)
+                    displace_y = math.log(distance_y, 2)
                 elif landmark[1] < center_xy[1]:
-                    displace_y = -math.log(distance_y + 1, 2)
+                    displace_y = -math.log(distance_y, 2)
                 else:
                     displace_y = 0
 
                 # shift log function by 1 so now the asymtope is at -1 instead of 0.
                 if landmark[0] > center_xy[0]:
-                    displace_x = math.log(distance_x + 1, 2)
+                    displace_x = math.log(distance_x, 2)
                 elif landmark[0] < center_xy[0]:
-                    displace_x = -math.log(distance_x + 1, 2)
+                    displace_x = -math.log(distance_x, 2)
                 else:
                     displace_x = 0
 
@@ -1677,10 +1709,10 @@ def gen_patch_displacements_heatmap(
 
                 if log_transform_displacements_bool:
                     x_disp = np.sign(x_y_displacements[x_idx, y_idx, 0]) * (
-                        2 ** (abs(x_y_displacements[x_idx, y_idx, 0])) - 1
+                        2 ** (abs(x_y_displacements[x_idx, y_idx, 0]))
                     )
                     y_disp = np.sign(x_y_displacements[x_idx, y_idx, 1]) * (
-                        2 ** (abs(x_y_displacements[x_idx, y_idx, 1])) - 1
+                        2 ** (abs(x_y_displacements[x_idx, y_idx, 1]))
                     )
                 else:
                     x_disp = x_y_displacements[x_idx, y_idx, 0]

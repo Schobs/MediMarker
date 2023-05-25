@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/256_patch_matern_l8"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/GP/256_patch_matern"
 
  
   USE_COMETML_LOGGING: True
@@ -32,7 +32,7 @@ DATASET:
   SRC_TARGETS: '/home/schobs/Documents/PhD/data/ISBI2015_landmarks/lann_folds/w_valid'
   NAME:  "ISBI 2015 Junior"
   IMAGE_MODALITY: 'Cephalometric'
-  LANDMARKS : [8]
+  LANDMARKS : [0]
   TRAINSET_SIZE: -1 # -1 for full trainset size or int <= len(training_set)
 
  

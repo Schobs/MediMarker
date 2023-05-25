@@ -18,8 +18,10 @@ _C.DATASET = CN()
 _C.DATASET.DATASET_CLASS = "generic"  # see datasets.dataset_index for available datasets or add new ones yourself.
 
 _C.DATASET.ROOT = ""
-_C.DATASET.NAME = "ASPIRE"
-_C.DATASET.SRC_TARGETS = "/shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV"
+_C.DATASET.NAME = "ASPIRE_4CH"
+_C.DATASET.SRC_TARGETS = (
+    "/shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV"
+)
 _C.DATASET.IMAGE_MODALITY = "CMRI"
 _C.DATASET.LANDMARKS = []
 # _C.DATASET.ORIGINAL_IMAGE_SIZE = [512,512] #legacy, can ignore.
@@ -45,7 +47,7 @@ _C.SAMPLER.NUM_WORKERS = 0
 _C.SAMPLER.PATCH = CN()
 # ['full', 'input_size'] # if input_size, will resize image to SAMPLER.INPUT_SIZE first.
 _C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = "input_size"
-_C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [512, 512]
+_C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [128, 128]
 # ["patchify_and_stitch", "fully_convolutional"] # patchify_and_stitch if you wish to patchify and stitch the RESOLUTION_TO_SAMPLE_FROM sized image, fully_convolutional to use input size directly RESOLUTION_TO_SAMPLE_FROM
 _C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional"
 
@@ -101,11 +103,10 @@ _C.TRAINER.VALIDATION_LOG_HEATMAPS = False
 # U-Net Model configs# ---------------------------------------------------------------------------- #
 _C.MODEL = CN()
 _C.MODEL.ARCHITECTURE = "U-Net"  # ["U-Net" , "PHD-Net"]
-# _C.MODEL.ACTIVATION_FUNCTION = "leaky_relu"
 _C.MODEL.GAUSS_SIGMA = 4
 _C.MODEL.HM_LAMBDA_SCALE = 100.0
-# _C.MODEL.KERNEL_SIZE = 3
 _C.MODEL.CHECKPOINT = None
+_C.MODEL.MODEL_GDRIVE_DL_PATH = None
 
 _C.MODEL.UNET = CN()
 _C.MODEL.UNET.MIN_FEATURE_RESOLUTION = 4
