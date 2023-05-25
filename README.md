@@ -123,8 +123,9 @@ If you included a *testing* list in your JSON (this is the case for the above ex
 3) Setting DATASET.SRC_TARGETS to the path of the new JSON file with the *testing* list.
 4) Setting TRAINER.FOLD to -1 (if it is not -1 it will automatically try to find the fold0.json, fold1.json etc. files from the SRC_TARGETS folder).
 
-**Please see [Using Your Own Dataset](documentation/readme/using_own_dataset.md) for more details. 
-**
+**Please see [Using Your Own Dataset](documentation/readme/using_own_dataset.md) for more details.**
+
+
 
 
 

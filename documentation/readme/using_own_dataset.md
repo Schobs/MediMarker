@@ -148,3 +148,14 @@ Now your dataset is in the correct directory structure and you have the JSON ann
 There are many other options you can set in the config file such as data augmentation scheme, learning schedule, architecture choice & parameters, loss function, sigma regression etc. See [[Config File]] for more information.
 
 For the full documentation for the config file, see [Changing the .yaml Config File](advanced_yaml_config.md#changing-the-yaml-config-file).
+
+
+## Inference Only
+You can perform inference on a pre-trained model on a new dataset. Simply follow the steps 1, 2 and 3 above, but only include a *testing* list in the .json. Again, it does not matter if your data has annotations or not, just following the correct instructions above. The name of the .json file does not matter if you are not using folds, but make sure to set TRAINER.FOLD=-1 in the .yaml config file, and follow along the explanation in [Inference (Testing)](inference.md). 
+
+
+
+## Refine Predictions from a previous stage
+You can also refine predictions from a previous stage of training. Follow steps 1,2 and 3 as usual. Then, provide a .xlsx file with the coordinates of the previous stage. The format of the .xlsx file should be the same as the one created at inference by LannU-Net. If you are not sure what this looks like, just train a model for 1 epoch and perform inference on the same dataset. The .xlsx file will be created in the OUTPUT_DIR. 
+
+Currently, the refining stage is only avaliable when doing patch-based training, where the patches selected for training are biased around the stage 1 prediction. See the [SAMPLER.PATCH config options](advanced_yaml_config.md#samplerpatch) for more information, specifically the ones that start with CENTRED_PATCH.
