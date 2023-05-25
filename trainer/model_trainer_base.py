@@ -55,12 +55,10 @@ class NetworkTrainer(ABC):
 
         # Dataset class to use
         self.dataset_class = dataset_class
-<<<<<<< HEAD
+
         self.to_pytorch_tensor = self.trainer_config.DATASET.TO_PYTORCH_TENSOR
-=======
         self.dataset_name = self.trainer_config.DATASET.NAME
 
->>>>>>> main
         # Dataloader info
         self.data_loader_batch_size_train = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN
         self.data_loader_batch_size_eval = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_EVAL
@@ -135,13 +133,9 @@ class NetworkTrainer(ABC):
 
         # Set up directories
         self.output_folder = output_folder
-<<<<<<< HEAD
         self.local_logger_type = self.trainer_config.OUTPUT.LOCAL_LOGGER_TYPE
-=======
         self.google_drive_model_path = self.trainer_config.MODEL.MODEL_GDRIVE_DL_PATH
-        # self.google_drive_save_local_path = self.trainer_config.OUTPUT.MODEL_GDRIVE_DL_LOCAL_PATH
 
->>>>>>> main
         # Trainer variables
         self.perform_validation = self.trainer_config.TRAINER.PERFORM_VALIDATION
         self.continue_checkpoint = self.trainer_config.MODEL.CHECKPOINT
@@ -354,6 +348,7 @@ class NetworkTrainer(ABC):
                         valid_logs = self.dict_logger.get_evaluation_logger()
                     else:
                         valid_logs = per_epoch_logs
+
                     while generator != None:
                         l, generator = self.run_iteration(
                             generator,
@@ -364,6 +359,7 @@ class NetworkTrainer(ABC):
                             logged_vars=valid_logs,
                             restart_dataloader=False,
                             debug=self.trainer_config.INFERENCE.DEBUG
+
                         )
 
             self.epoch_end_time = time()
@@ -432,12 +428,8 @@ class NetworkTrainer(ABC):
             data_dict = direct_data_dict
 
         data = (data_dict["image"]).to(self.device)
-<<<<<<< HEAD
+
         # torch_to_onnx(self.network, data, self.output_folder+"/model.onnx")
-=======
-        # if "PHD_715" not in data_dict["uid"]:
-        #     return 0, generator
->>>>>>> main
 
         # This happens when we regress sigma with > 0 workers due to multithreading issues.
         # Currently does not support patch-based, which is raised on run of programme by argument checker.
@@ -979,7 +971,6 @@ class NetworkTrainer(ABC):
             # Need to load and get results from each checkpoint. Load checkpoint for each batch because of memory issues running through entire dataloader
             # and saving multiple outputs for every checkpoint. In future can improve this by going through X (e.g.200 samples/10 batches) before changing checkpoint.
             while generator != None:
-                self.logger.info("Next")
                 try:
                     evaluation_logs = self.dict_logger.ensemble_inference_log_template()
                     direct_data_dict = next(generator)

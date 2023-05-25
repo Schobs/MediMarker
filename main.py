@@ -204,6 +204,7 @@ def main():
     ) as writer_:
         for n, df in (all_model_summaries).items():
             df.to_excel(writer_, n[-31:])  # ensure sheet names aren't too long
+            df.to_excel(writer_, n[-31:])  # ensure sheet names aren't too long
 
     logger.info(
         "saving individual sample results locally to: %s",
@@ -219,6 +220,7 @@ def main():
         )
     ) as writer_:
         for n, df in (all_model_individuals).items():
+            df.to_excel(writer_, n[-31:])  # ensure sheet names aren't too long
             df.to_excel(writer_, n[-31:])  # ensure sheet names aren't too long
 
     if writer is not None:
