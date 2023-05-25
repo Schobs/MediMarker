@@ -50,8 +50,8 @@
             "name": "Python: LannUNet Misc",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceRoot}/main.py",
-            "args": ["--cfg", "${workspaceRoot}/configs/configs_bess/gp_project/conv_baseline.yaml"],
+            "program": "${workspaceRoot}/LanNNU-Net/main.py",
+            "args": ["--cfg", "${workspaceRoot}/LaNNU-Net/configs/configs_bess/gp_project/conv_baseline.yaml"],
             "console": "integratedTerminal",
             "justMyCode": true
         }, 
