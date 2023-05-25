@@ -40,6 +40,8 @@ For advanced users, we provide the following features:
 - [Train your model!](documentation/readme/train_own_model.md)
   - [Training](documentation/readme/train_own_model.md#training)
   - [Inference (Testing)](documentation/readme/inference.md)
+  - [Evaluation](documentation/readme/evaluation.md)
+
 - [Implemented Models](documentation/readme/implemented_models.md)
   - [U-Net](documentation/readme/implemented_models.md#u-net)
   - [PHD-Net](documentation/readme/implemented_models.md#phd-net)
