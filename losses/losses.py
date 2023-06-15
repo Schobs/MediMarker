@@ -287,6 +287,7 @@ class MultiBranchPatchLoss(nn.Module):
         branch_scheme,
         class_loss_scheme,
         distance_weighted_bool,
+        num_landmarks,
         binary_weighted_weights=4096,
     ):
         """Initialize the loss function class.
@@ -306,6 +307,7 @@ class MultiBranchPatchLoss(nn.Module):
         self.branch_scheme = branch_scheme
         self.criterion_reg = nn.MSELoss(reduction="mean")
         self.distance_weighted_bool = distance_weighted_bool
+        self.num_landmarks = num_landmarks
         self.loss_seperated_keys = ["all_loss_all", "displacement_loss", "heatmap_loss"]
         self.binary_weighted_weights = binary_weighted_weights
 
@@ -334,39 +336,10 @@ class MultiBranchPatchLoss(nn.Module):
 
         return torch.mean(weights * torch.abs(input_ - target))
 
+    #visualise these weights
     def weighted_mse_loss(self, input_, target, weights):
         """Mean squared error loss with weights."""
-        # x = torch.tensor([[[[1, 2, 3], [1, 2, 3]], [[1, 2, 3], [1, 2, 3]]]])
-        # y = torch.tensor([[[[1, 2, 3], [1, 2, 3]], [[1, 2, 3], [1, 2, 3]]]])
-
-        # x = torch.tensor([[[
-        #     [
-        #         [2, 1, 2],
-        #         [1, 0, 1],
-        #         [2, 1, 2]
-
-        #     ],
-        #     [
-        #         [2, 1, 2],
-        #         [1, 0, 1],
-        #         [2, 1, 2]
-        #     ]
-
-        # ]]])
-        # y = torch.tensor([[[
-        #     [
-        #         [2, 1, 2],
-        #         [1, 0, 1],
-        #         [2, 1, 2]
-
-        #     ],
-        #     [
-        #         [2, 1, 2],
-        #         [1, 0, 1],
-        #         [2, 1, 2]
-        #     ]
-
-        # ]]])
+        
         ling_alg = torch.mean(weights * torch.linalg.norm((input_ - target), axis=2))
         # mean_mse = torch.mean(weights * (input_ - target) ** 2)
         return ling_alg
@@ -382,44 +355,65 @@ class MultiBranchPatchLoss(nn.Module):
         Returns:
             _type_: _description_
         """
-
-        losses_seperated = {}
+        losses_seperated = {
+            "displacement_loss": 0,
+            "heatmap_loss": 0,
+            "all_loss_all": 0,
+        }
         total_loss = 0
+        pred_displacements_all = predictions[1]
+        pred_class_all = predictions[0]
 
-        pred_displacements = predictions[1]
-        pred_class = predictions[0]
 
-        if self.branch_scheme == "displacement" or self.branch_scheme == "multi":
-            if self.distance_weighted_bool:
-                weights = labels["displacement_weights"]
+        #First split the data into chunks for each landmark::
 
-                loss_disp = self.weighted_mse_loss(
-                    pred_displacements, labels["patch_displacements"], weights
-                )
+        #get the current two elements from [12, 1, 6, 16, 16] to be of shape [12, 1, 2, 16, 16]
+        pred_displacements = torch.chunk(pred_displacements_all, self.num_landmarks, dim=2)
 
-                # intermediate_loss =  torch.abs(pred_displacements - labels['patch_displacements'])
-                # weighted_intermediate_loss = intermediate_loss * weights
-                # print("\n Loss shapes: ",pred_displacements.shape, labels['patch_displacements'].shape, weights.shape, intermediate_loss.shape, weighted_intermediate_loss.shape )
-                # print("sample preds, targs and weights: ")
-                # print(pred_displacements[0,0,:,0,0], labels['patch_displacements'][0,0,:,0,0], weights[0,0,0,0])
-                # print(intermediate_loss[0,0,:,0,0], weighted_intermediate_loss[0,0,:,0,0])
-                # print("and the mean disp: ", torch.mean(weighted_intermediate_loss))
+        #get the current classification prediction
+        pred_class = torch.chunk(pred_class_all, self.num_landmarks, dim=1)
 
-            else:
-                loss_disp = self.criterion_reg(
-                    pred_displacements, labels["patch_displacements"]
-                )
+        #get the current patch displacements
+        patch_disps = torch.chunk(labels["patch_displacements"], self.num_landmarks, dim=1)
 
-            total_loss += loss_disp
-            losses_seperated["displacement_loss"] = loss_disp
+        #get the current weights
+        weights = torch.chunk(labels["displacement_weights"], self.num_landmarks, dim=1)
 
-        if self.branch_scheme == "heatmap" or self.branch_scheme == "multi":
-            loss_class = self.class_criterion(pred_class, labels["patch_heatmap"])
+        #get patch heatmap labels
+        patch_heatmap = torch.chunk(labels["patch_heatmap"], self.num_landmarks, dim=1)
 
-            total_loss += loss_class
-            losses_seperated["heatmap_loss"] = loss_class
 
-        losses_seperated["all_loss_all"] = total_loss
+        #Iterate over the landmarks
+        for i in range(self.num_landmarks):
+            #Now calculate the loss, sum it and take mean at the end
+            if self.branch_scheme == "displacement" or self.branch_scheme == "multi":
+                if self.distance_weighted_bool:
+
+                    loss_disp = self.weighted_mse_loss(
+                        pred_displacements[i], patch_disps[i], weights[i]
+                    )
+
+                else:
+                    loss_disp = self.criterion_reg(
+                        pred_displacements[i], patch_disps[i]
+                    )
+
+                total_loss += loss_disp
+                losses_seperated["displacement_loss"] += loss_disp
+
+            if self.branch_scheme == "heatmap" or self.branch_scheme == "multi":
+                loss_class = self.class_criterion(pred_class[i], patch_heatmap[i])
+
+                total_loss += loss_class
+                losses_seperated["heatmap_loss"] += loss_class
+
+            losses_seperated["all_loss_all"] += total_loss
+
+        #get the mean of the losses
+        total_loss = total_loss / self.num_landmarks
+        losses_seperated["displacement_loss"] = losses_seperated["displacement_loss"] / self.num_landmarks
+        losses_seperated["heatmap_loss"] = losses_seperated["heatmap_loss"] / self.num_landmarks
+        losses_seperated["all_loss_all"] = losses_seperated["all_loss_all"] / self.num_landmarks
 
         return total_loss, losses_seperated
 

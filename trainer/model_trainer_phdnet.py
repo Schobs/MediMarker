@@ -1,6 +1,8 @@
 from torch import nn
 import os
 from utils.setup.initialization import InitWeights_KaimingUniform
+from models.PHD_ResNet import PHDResNet, ResNetBlock
+from models.PHD_Transformer import ViT
 from losses.losses import MultiBranchPatchLoss
 from models.PHD_Net_Res import PHD_Net_Res as PHDNet
 import torch
@@ -78,10 +80,11 @@ class PHDNetTrainer(NetworkTrainer):
         ################# Settings for saving checkpoints ##################################
         # self.save_every = 25
 
-    def initialize_network(self):
-
+    def initialize_network(self, num_landmarks):
         # Let's make the network
-        self.network = PHDNet(self.branch_scheme)
+        self.num_landmarks = num_landmarks
+        self.network = ViT(num_landmarks = num_landmarks, branch_scheme = self.branch_scheme, image_size=512, patch_size=16, dim=768, 
+                           depth=8, heads=12, mlp_dim=3072, dropout = 0.1, emb_dropout = 0.1) 
         self.network.to(self.device)
 
         # Log network and initial weights
@@ -106,8 +109,7 @@ class PHDNetTrainer(NetworkTrainer):
 
         print("Initialised optimizer.")
 
-    def initialize_loss_function(self):
-
+    def initialize_loss_function(self, num_landmarks):
         # Loss params
         loss_str = self.trainer_config.SOLVER.LOSS_FUNCTION
         if loss_str == "mse":
@@ -115,6 +117,7 @@ class PHDNetTrainer(NetworkTrainer):
                 self.branch_scheme,
                 self.class_label_scheme,
                 self.trainer_config.MODEL.PHDNET.WEIGHT_DISP_LOSS_BY_HEATMAP,
+                num_landmarks,
             )
         else:
             raise ValueError(f'the loss function {loss_str} is not implemented for PHD-Net. Try \"mse\".')
@@ -129,52 +132,67 @@ class PHDNetTrainer(NetworkTrainer):
             output: model output - a stack of heatmaps
 
         Returns:
-            [int, int]: predicted coordinates
+            [(int, int)]: predicted coordinates
         """
 
-        extra_info = {"hm_max": None}
+        extra_info = {"hm_max": None, "final_heatmaps": None, "debug_candidate_smoothed_maps": None}
         original_image_size = original_image_size.cpu().detach().numpy()[:, ::-1, :]
 
-        model_output = [x.detach().cpu().numpy() for x in model_output]
+        #model_output = [x.detach().cpu().numpy() for x in model_output]
 
-        smoothed_candidate_maps = []
+        pred_class_all = model_output[0]
+        pred_displacements_all = model_output[1]
 
-        for sample_idx in range(len(model_output[0])):
+        #get the current two elements from [12, 1, 6, 16, 16] to be of shape [12, 1, 2, 16, 16]
+        pred_displacements = torch.chunk(pred_displacements_all, self.num_landmarks, dim=2)
+        pred_displacements = [x.detach().cpu().numpy() for x in pred_displacements]
 
-            sample_og_size = [
-                original_image_size[sample_idx][0][0],
-                original_image_size[sample_idx][1][0],
-            ]
-            # self.trainer_config.INFERENCE.DEBUG
-            csm = candidate_smoothing(
-                [model_output[0][sample_idx], model_output[1][sample_idx]],
-                sample_og_size,
-                self.maxpool_factor,
-                log_displacement_bool=self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS,
-            )
-            if self.resize_first:
-                csm = Resize(sample_og_size, interpolation=InterpolationMode.BICUBIC)(
-                    csm
+        #get the current classification prediction
+        pred_class = torch.chunk(pred_class_all, self.num_landmarks, dim=1)
+        pred_class = [x.detach().cpu().numpy() for x in pred_class]
+
+        pred_coords = None
+        max_values = None
+        for i in range(self.num_landmarks):
+            smoothed_candidate_maps = []
+
+            for sample_idx in range(len(pred_class[i])):
+
+                sample_og_size = [
+                    original_image_size[sample_idx][0][0],
+                    original_image_size[sample_idx][1][0],
+                ]
+                # self.trainer_config.INFERENCE.DEBUG
+                csm = candidate_smoothing(
+                    [pred_class[i][sample_idx], pred_displacements[i][sample_idx]],
+                    sample_og_size,
+                    self.maxpool_factor,
+                    log_displacement_bool=self.trainer_config.MODEL.PHDNET.LOG_TRANSFORM_DISPLACEMENTS,
                 )
+                if self.resize_first:
+                    csm = Resize(sample_og_size, interpolation=InterpolationMode.BICUBIC)(
+                        csm
+                    )
 
-            smoothed_candidate_maps.append(csm)
+                smoothed_candidate_maps.append(csm)
 
-        smoothed_candidate_maps = torch.stack(smoothed_candidate_maps).to(self.device)
-        # Get only the full resolution heatmap
-        # model_output = model_output[-1]
+            smoothed_candidate_maps = torch.stack(smoothed_candidate_maps).to(self.device)
 
-        # final_heatmap = model_output
-        # if self.resize_first:
-        #     #torch resize does HxW so need to flip the diemsions
-        #     final_heatmap = Resize(self.orginal_im_size[::-1], interpolation=  InterpolationMode.BICUBIC)(final_heatmap)
+            preds, maxes = get_coords(smoothed_candidate_maps)
 
-        # coords_from_uhm, arg_max_uhm = get_coords(torch.tensor(np.expand_dims(np.expand_dims(upscaled_hm, axis=0), axis=0)))
+            if pred_coords == None:
+                pred_coords = preds
+                max_values = maxes
+                extra_info["hm_max"] = maxes
+                extra_info["final_heatmaps"] = smoothed_candidate_maps
+                extra_info["debug_candidate_smoothed_maps"] = smoothed_candidate_maps
+            else:
+                pred_coords = torch.cat((pred_coords, preds), dim=1)
+                max_values = torch.cat((max_values, maxes), dim=1)
+                extra_info["hm_max"] = torch.cat((extra_info["hm_max"], maxes), dim=1)
+                extra_info["final_heatmaps"] = torch.cat((extra_info["final_heatmaps"], smoothed_candidate_maps), dim=1)
+                extra_info["debug_candidate_smoothed_maps"] = torch.cat((extra_info["debug_candidate_smoothed_maps"], smoothed_candidate_maps), dim=1)
 
-        pred_coords, max_values = get_coords(smoothed_candidate_maps)
-        extra_info["hm_max"] = max_values
-        extra_info["final_heatmaps"] = smoothed_candidate_maps
-
-        extra_info["debug_candidate_smoothed_maps"] = smoothed_candidate_maps
 
         return pred_coords, extra_info
 

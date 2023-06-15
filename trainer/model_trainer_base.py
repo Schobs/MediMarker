@@ -20,7 +20,6 @@ import pandas as pd
 
 import logging
 from utils.setup.argument_utils import checkpoint_loading_checking
-from utils.setup.download_models import download_model_from_google_drive
 
 
 class NetworkTrainer(ABC):
@@ -41,13 +40,10 @@ class NetworkTrainer(ABC):
 
         # This is the trainer config dict
         self.trainer_config = trainer_config
-        self.model_type = self.trainer_config.MODEL.ARCHITECTURE
         self.is_train = is_train
 
         # Dataset class to use
         self.dataset_class = dataset_class
-        self.dataset_name = self.trainer_config.DATASET.NAME
-
         # Dataloader info
         self.data_loader_batch_size_train = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_TRAIN
         self.data_loader_batch_size_eval = self.trainer_config.SOLVER.DATA_LOADER_BATCH_SIZE_EVAL
@@ -105,8 +101,6 @@ class NetworkTrainer(ABC):
 
         # Set up directories
         self.output_folder = output_folder
-        self.google_drive_model_path = self.trainer_config.MODEL.MODEL_GDRIVE_DL_PATH
-        # self.google_drive_save_local_path = self.trainer_config.OUTPUT.MODEL_GDRIVE_DL_LOCAL_PATH
 
         # Trainer variables
         self.perform_validation = self.trainer_config.TRAINER.PERFORM_VALIDATION
@@ -172,6 +166,10 @@ class NetworkTrainer(ABC):
         self.epoch_start_time = time()
         self.epoch_end_time = time()
 
+        self.num_landmarks = len(self.trainer_config.DATASET.LANDMARKS)
+        print('num landmarks: ' + str(self.num_landmarks))
+        
+
     def initialize(self, training_bool=True):
         """
         Initialize profiler, comet logger, training/val dataloaders, network, optimizer,
@@ -187,9 +185,9 @@ class NetworkTrainer(ABC):
         if training_bool:
             self.set_training_dataloaders()
 
-        self.initialize_network()
+        self.initialize_network(self.num_landmarks)
         self.initialize_optimizer_and_scheduler()
-        self.initialize_loss_function()
+        self.initialize_loss_function(self.num_landmarks)
         self._maybe_init_amp()
 
         if self.comet_logger:
@@ -206,7 +204,6 @@ class NetworkTrainer(ABC):
 
         self.was_initialized = True
 
-        self.maybe_download_model()
         self.maybe_load_checkpoint()
 
         self.print_initiaization_info = False
@@ -226,7 +223,7 @@ class NetworkTrainer(ABC):
         """
 
     @abstractmethod
-    def initialize_loss_function(self):
+    def initialize_loss_function(self, num_landmarks):
         """
         Initialize the loss function here!
 
@@ -416,6 +413,9 @@ class NetworkTrainer(ABC):
         so = time()
         if self.auto_mixed_precision:
             with autocast():
+
+                
+
                 output = self.network(data)
                 del data
                 # Only attempts loss if annotations avaliable for entire batch
@@ -435,6 +435,7 @@ class NetworkTrainer(ABC):
                     loss_dict = {}
 
         else:
+            print(f"DATA SIZE: {str(data.shape)}")
             output = self.network(data)
             del data
 
@@ -455,6 +456,8 @@ class NetworkTrainer(ABC):
         # Log info from this iteration.
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
+
+                #can print target_coords to see actual landmark
 
                 (
                     pred_coords,
@@ -508,6 +511,7 @@ class NetworkTrainer(ABC):
             _type_: _description_
         """
         if log_coords:
+
             pred_coords_input_size, extra_info = self.get_coords_from_heatmap(
                 output, data_dict["original_image_size"]
             )
@@ -855,7 +859,6 @@ class NetworkTrainer(ABC):
             # Need to load and get results from each checkpoint. Load checkpoint for each batch because of memory issues running through entire dataloader
             # and saving multiple outputs for every checkpoint. In future can improve this by going through X (e.g.200 samples/10 batches) before changing checkpoint.
             while generator != None:
-                self.logger.info("Next")
                 try:
                     evaluation_logs = self.dict_logger.ensemble_inference_log_template()
                     direct_data_dict = next(generator)
@@ -912,11 +915,6 @@ class NetworkTrainer(ABC):
             all_summary_results[u_key] = summary_results
 
         return all_summary_results, ind_results
-
-    def maybe_download_model(self):
-        if self.google_drive_model_path:
-            download_model_from_google_drive(self.google_drive_model_path,
-                                             self.continue_checkpoint)
 
     def maybe_load_checkpoint(self):
         """Helper function from initialisation that loads checkpoint"""

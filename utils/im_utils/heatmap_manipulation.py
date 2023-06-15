@@ -218,6 +218,22 @@ def candidate_smoothing(
     debug=False,
     save_fig=False,
 ):
+    
+    """Implements candidate smoothing from [paper ref]. Combines the heatmap branch and displacement branch from PHD-Net
+
+    Args:
+        output (_type_): _description_
+        full_resolution (_type_): _description_
+        maxpool_factor (_type_): _description_
+        log_displacement_bool (bool, optional): _description_. Defaults to True.
+        smooth_factor (int, optional): _description_. Defaults to 4.
+        return_cropped_im (bool, optional): _description_. Defaults to False.
+        debug (bool, optional): _description_. Defaults to False.
+        save_fig (bool, optional): _description_. Defaults to False.
+
+    Returns:
+        _type_: _description_
+    """
     import transforms.generate_labels as gl
     logger = logging.getLogger()
 
@@ -282,7 +298,7 @@ def candidate_smoothing(
 
         smoothed_heatmap = vote_heatmap * upscaled_hm
         smoothed_heatmaps.append(torch.tensor(smoothed_heatmap))
-
+        
         if debug:
 
             # 1. show the upscaled heatmap with the extracted coords from hm branch only
