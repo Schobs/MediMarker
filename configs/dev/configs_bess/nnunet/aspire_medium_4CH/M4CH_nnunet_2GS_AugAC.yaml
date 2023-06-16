@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/M4CH/testing/nnuent/M4CH_nnunet_2GS_AugAC_CV_F"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/M4CH/thesis/nnuent/M4CH_nnunet_2GS_AugAC_CV_F"
 
  
 
@@ -10,7 +10,7 @@ SOLVER:
   NUM_RES_SUPERVISIONS: 5
   LOSS_FUNCTION: "mse"
   DATA_LOADER_BATCH_SIZE_TRAIN: 32
-
+  MAX_EPOCHS: 500
 
 
 MODEL:
@@ -30,13 +30,14 @@ TRAINER:
   SAVE_LATEST_ONLY: False
   INFERENCE_ONLY: False
   CACHE_DATA: True
-
+  FOLD: 0
+  
 INFERENCE:
   EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
   DEBUG: False
 
 SAMPLER:
-  NUM_WORKERS: 8
+  NUM_WORKERS: 4
   DATA_AUG: 'AffineComplex'
   INPUT_SIZE : [512,512]
 
