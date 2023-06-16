@@ -1,7 +1,7 @@
 
  
 OUTPUT: 
-  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/M4CH/thesis/nnuent/M4CH_nnunet_2GS_AugAC_CV_F"
+  OUTPUT_DIR: "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/M4CH/thesis/nnuent/M4CH_nnunet_2GS_AugAC_CV_L2"
 
  
 
@@ -22,7 +22,7 @@ DATASET:
   SRC_TARGETS: '/shared/tale2/Shared/data/CMRI/PAH-Baseline/Proc/landmark_localisation_annotations/4ch'
   NAME:  "APSIRE_MEDIUM_4CH"
   IMAGE_MODALITY: 'CMRI'
-  LANDMARKS : [0,1,2,3,]
+  LANDMARKS : [2]
     
   
 TRAINER:
