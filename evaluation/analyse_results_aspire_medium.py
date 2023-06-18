@@ -1,10 +1,17 @@
 import numpy as np
 import os
 import pandas as pd
+from openpyxl import load_workbook
 from pandas import ExcelWriter
 from localization_evaluation import success_detection_rate, generate_summary_df
 import copy
 
+def ensure_at_least_one_sheet_visible(filepath):
+    wb = load_workbook(filepath)
+    sheet_names = wb.sheetnames
+    if not any(sheet.sheet_state == 'visible' for sheet in wb.worksheets):
+        wb[sheet_names[0]].sheet_state = 'visible'
+    wb.save(filepath)
 
 def get_parameters(name):
     """Gets important parameters from a file name
@@ -19,9 +26,7 @@ def get_parameters(name):
     param_dict = {
         "Name": name,
         "Dataset": split_name[0],
-        "Model": split_name[1],
-        "Gauss Sigma": split_name[2],
-        "Aug": split_name[3],
+        "Model": split_name[1]
     }
 
     return param_dict
@@ -57,7 +62,8 @@ def analyse_all_folds(
 
     """
 
-    exp_path = os.path.join(root_path, name_of_exp)
+    #exp_path = os.path.join(root_path, name_of_exp)
+    exp_path = root_path
     individual_dicts = {}
     skipped_folds = []
     summary_dicts = {}
@@ -186,7 +192,9 @@ def analyse_all_folds(
 
 
 # root_path = "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2"
-root_path = "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/MSA/testing/nnuent"
+#root_path = "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/MSA/testing/nnuent"
+
+root_path = "acb20ts/results/4ch_new"
 # name_of_exp = "ISBI_256F_512Res_8GS_32MFR_AugACEL_DS3"
 models_to_test = [
     "model_best_valid_coord_error",
@@ -196,14 +204,14 @@ models_to_test = [
 # models_to_test = ["model_best_valid_coord_error"]
 
 early_stop_strategy = "150 epochs val best coord error"
-folds = [0, 1, 2, 3]
+folds = [0, 1, 2, 3, 4, 5]
 
 
 # Summarise all summaries into one big file #################
 
 
 # Walk through dir to get all exps
-all_exps = [x for x in os.listdir(root_path) if "SA" in x]
+all_exps = [x for x in os.listdir(root_path)]
 info_keys = [
     "Name",
     "Dataset",
@@ -229,10 +237,6 @@ for exp in all_exps:
 
             # Extract a summary from the summary!
             relevant_results = {}
-
-            # Get Info there
-            for info_key in info_keys:
-                relevant_results[info_key] = results[info_key]
 
             relevant_results["Skipped Folds"] = results["Skipped Folds"]
 
@@ -267,7 +271,6 @@ for failed_exp, info_dict in failed_experiments:
         summary_of_summaries[chkpt_key] = pd.concat(
             [results, pd.DataFrame.from_dict([new_row])]
         )
-
 
 with ExcelWriter(
     os.path.join(collation_location, "summary_of_summaries.xlsx")

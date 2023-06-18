@@ -1,0 +1,102 @@
+2023-03-28 15:04:45,691 - INFO -main-                main():40 - Set logger output path: home/acb20ts/results/test_resnet/_Fold0_2023-03-28_15:04:45_log.txt 
+2023-03-28 15:04:45,692 - INFO -main-                main():41 - Config 
+ DATASET:
+  DATASET_CLASS: generic
+  IMAGE_MODALITY: CMRI
+  LANDMARKS: [0, 1, 2]
+  NAME: APSIRE_MEDIUM_4CH
+  ROOT: /shared/ai4h/Shared/Data/medical/CMRI/PAH-Baseline/Proc/4ch
+  SRC_TARGETS: /shared/ai4h/Shared/Data/medical/CMRI/PAH-Baseline/Proc/landmark_localisation_annotations/4ch
+  TRAINSET_SIZE: -1
+INFERENCE:
+  DEBUG: False
+  ENSEMBLE_CHECKPOINTS: []
+  ENSEMBLE_INFERENCE: False
+  ENSEMBLE_UNCERTAINTY_KEYS: ['smha', 'emha', 'ecpv']
+  EVALUATION_MODE: scale_heatmap_first
+  FIT_GAUSS: False
+  SPLIT: testing
+  UNCERTAINTY_SMHA_MODEL_IDX: 0
+INFERRED_ARGS:
+  GEN_HM_IN_MAINTHREAD: False
+  RESIZE_FIRST: True
+  USE_FULL_RES_COORDS: True
+MODEL:
+  ARCHITECTURE: PHD-Net
+  CHECKPOINT: None
+  GAUSS_SIGMA: 4
+  HM_LAMBDA_SCALE: 1.0
+  PHDNET:
+    BRANCH_SCHEME: multi
+    CLAMP_DIST: None
+    CLASS_LABEL_SCHEME: gaussian
+    LOG_TRANSFORM_DISPLACEMENTS: True
+    MAXPOOL_FACTOR: 3
+    WEIGHT_DISP_LOSS_BY_HEATMAP: True
+  UNET:
+    INIT_FEATURES: 32
+    MAX_FEATURES: 512
+    MIN_FEATURE_RESOLUTION: 4
+OUTPUT:
+  COMET_API_KEY: 
+  COMET_PROJECT_NAME: landnnunet
+  COMET_TAGS: ['phdnet', 'test']
+  COMET_WORKSPACE: 
+  LOGGER_OUTPUT: home/acb20ts/results/test_resnet/_Fold0_2023-03-28_15:04:45_log.txt
+  OUTPUT_DIR: home/acb20ts/results/test_resnet
+  RESULTS_CSV_APPEND: None
+  USE_COMETML_LOGGING: False
+  VERBOSE: True
+SAMPLER:
+  DATA_AUG: AffineComplex
+  DATA_AUG_PACKAGE: imgaug
+  DEBUG: False
+  EVALUATION_SAMPLE_MODE: full
+  INPUT_SIZE: [512, 512]
+  NUM_WORKERS: 8
+  PATCH:
+    CENTRED_PATCH_COORDINATE_PATH: None
+    CENTRED_PATCH_COORDINATE_PATH_SHEET: None
+    CENTRED_PATCH_JITTER: 0.0
+    INFERENCE_MODE: fully_convolutional
+    RESOLUTION_TO_SAMPLE_FROM: [512, 512]
+    SAMPLER_BIAS: 0.66
+    SAMPLE_PATCH_SIZE: [128, 128]
+  SAMPLE_MODE: patch_bias
+SOLVER:
+  AUTO_MIXED_PRECISION: True
+  BASE_LR: 0.001
+  DATA_LOADER_BATCH_SIZE_EVAL: 12
+  DATA_LOADER_BATCH_SIZE_TRAIN: 12
+  DECAY_POLICY: poly
+  DEEP_SUPERVISION: False
+  EARLY_STOPPING_PATIENCE: 150
+  LOSS_FUNCTION: mse
+  MAX_EPOCHS: 300
+  MINI_BATCH_SIZE: 150
+  NUM_RES_SUPERVISIONS: 1
+  REGRESS_SIGMA: False
+  REGRESS_SIGMA_LOSS_WEIGHT: 0.005
+  SEED: None
+SSH:
+  AUTO_AMEND_PATHS: True
+  LOCAL_PATH_TO_SSH_MOUNT: /mnt/bess
+  MATCH_SSH_STRING_FOR_AMEND: /shared/tale2/
+TRAINER:
+  CACHE_DATA: False
+  FOLD: 0
+  INFERENCE_ONLY: False
+  PERFORM_VALIDATION: True
+  SAVE_EVERY: 10
+  SAVE_LATEST_ONLY: False
+  VALIDATE_EVERY: 1 
+2023-03-28 15:04:45,703 - INFO -main-                main():73 - TRAINING PHASE
+2023-03-28 15:04:45,708 - INFO -dataset_base-            __init__():173 - Using data augmentation package imgaug and strategy AffineComplex for training split.
+2023-03-28 15:04:45,709 - INFO -dataset_base-            __init__():183 - Loading training data for CV /shared/ai4h/Shared/Data/medical/CMRI/PAH-Baseline/Proc/landmark_localisation_annotations/4ch/fold0.json 
+2023-03-28 15:04:45,890 - INFO -dataset_base-            __init__():273 - Not caching training image data in memory, will load on the fly. Length of 429
+2023-03-28 15:04:45,894 - INFO -dataset_base-            __init__():163 - No data Augmentation for validation split.
+2023-03-28 15:04:45,895 - INFO -dataset_base-            __init__():183 - Loading validation data for CV /shared/ai4h/Shared/Data/medical/CMRI/PAH-Baseline/Proc/landmark_localisation_annotations/4ch/fold0.json 
+2023-03-28 15:04:45,921 - INFO -dataset_base-            __init__():273 - Not caching validation image data in memory, will load on the fly. Length of 144
+2023-03-28 15:04:45,921 - INFO -model_trainer_base-set_training_dataloaders():1036 - Using 8 Dataloader workers and persist workers bool : True 
+2023-03-28 15:04:45,991 - INFO -model_trainer_base-     _maybe_init_amp():256 - initialized auto mixed precision.
+2023-03-28 15:04:47,975 - INFO -model_trainer_base-               train():284 - training, 0

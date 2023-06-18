@@ -18,7 +18,7 @@ _C.DATASET = CN()
 _C.DATASET.DATASET_CLASS = "generic"  # see datasets.dataset_index for available datasets or add new ones yourself.
 
 _C.DATASET.ROOT = ""
-_C.DATASET.NAME = "ASPIRE_4CH"
+_C.DATASET.NAME = "ASPIRE"
 _C.DATASET.SRC_TARGETS = (
     "/shared/tale2/Shared/data/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV"
 )
@@ -49,7 +49,7 @@ _C.SAMPLER.NUM_WORKERS = 0
 _C.SAMPLER.PATCH = CN()
 # ['full', 'input_size'] # if input_size, will resize image to SAMPLER.INPUT_SIZE first.
 _C.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM = "input_size"
-_C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [128, 128]
+_C.SAMPLER.PATCH.SAMPLE_PATCH_SIZE = [512, 512]
 # ["patchify_and_stitch", "fully_convolutional"] # patchify_and_stitch if you wish to patchify and stitch the RESOLUTION_TO_SAMPLE_FROM sized image, fully_convolutional to use input size directly RESOLUTION_TO_SAMPLE_FROM
 _C.SAMPLER.PATCH.INFERENCE_MODE = "fully_convolutional"
 
@@ -91,7 +91,7 @@ _C.TRAINER.PERFORM_VALIDATION = True
 _C.TRAINER.SAVE_LATEST_ONLY = True
 _C.TRAINER.SAVE_EVERY = 10
 
-_C.TRAINER.VALIDATE_EVERY = 10
+_C.TRAINER.VALIDATE_EVERY = 1
 
 _C.TRAINER.CACHE_DATA = True
 _C.TRAINER.FOLD = 0
@@ -102,10 +102,11 @@ _C.TRAINER.INFERENCE_ONLY = True
 # U-Net Model configs# ---------------------------------------------------------------------------- #
 _C.MODEL = CN()
 _C.MODEL.ARCHITECTURE = "U-Net"  # ["U-Net" , "PHD-Net"]
+# _C.MODEL.ACTIVATION_FUNCTION = "leaky_relu"
 _C.MODEL.GAUSS_SIGMA = 4
 _C.MODEL.HM_LAMBDA_SCALE = 100.0
+# _C.MODEL.KERNEL_SIZE = 3
 _C.MODEL.CHECKPOINT = None
-_C.MODEL.MODEL_GDRIVE_DL_PATH = None
 
 _C.MODEL.UNET = CN()
 _C.MODEL.UNET.MIN_FEATURE_RESOLUTION = 4
@@ -115,7 +116,7 @@ _C.MODEL.UNET.INIT_FEATURES = 32
 
 _C.MODEL.PHDNET = CN()
 _C.MODEL.PHDNET.BRANCH_SCHEME = "multi"  # ['multi', 'heatmap', 'displacement']
-_C.MODEL.PHDNET.MAXPOOL_FACTOR = 3  # ['multi', 'heatmap', 'displacement']
+_C.MODEL.PHDNET.MAXPOOL_FACTOR = 4  # ['multi', 'heatmap', 'displacement']
 _C.MODEL.PHDNET.CLASS_LABEL_SCHEME = (
     "gaussian"  # ['binary', 'binary_weighted', 'gaussian']
 )

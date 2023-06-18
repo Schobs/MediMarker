@@ -1,0 +1,68 @@
+OUTPUT: 
+  OUTPUT_DIR: "acb20ts/results/4ch_new"
+  USE_COMETML_LOGGING: True
+  COMET_API_KEY: "8boE94zBSIbb7iJ0kaf2d0WGl"
+  COMET_WORKSPACE: "tomsmith01"
+  COMET_PROJECT_NAME: "transformer-testing"
+  
+SOLVER:
+  LOSS_FUNCTION: "mse"
+  DATA_LOADER_BATCH_SIZE_TRAIN: 12
+  MAX_EPOCHS: 500
+  AUTO_MIXED_PRECISION: True
+  MINI_BATCH_SIZE:  150
+
+  DEEP_SUPERVISION: False
+  NUM_RES_SUPERVISIONS: 1
+  BASE_LR: 0.001
+
+MODEL:
+  GAUSS_SIGMA: 4
+  ARCHITECTURE: "PHD-Net"
+  PHDNET:
+    LOG_TRANSFORM_DISPLACEMENTS: True
+  CHECKPOINT: 'acb20ts/results/4ch_new/model_latest_fold2.model'
+
+DATASET:
+  #ROOT: '/shared/ai4h/Shared/Data/medical/ISBI2015_landmarks/'
+  #SRC_TARGETS: '/shared/ai4h/Shared/Data/medical/ISBI2015_landmarks/lann_folds/w_valid/'
+  #NAME:  "ISBI"
+  #IMAGE_MODALITY: 'Cephalometric'
+  #LANDMARKS : [8]
+
+  ROOT: '/shared/ai4h/Shared/Data/medical/CMRI/PAH-Baseline/Proc/4ch'
+  SRC_TARGETS: '/shared/ai4h/Shared/Data/medical/CMRI/PAH-Baseline/Proc/landmark_localisation_annotations/4ch'
+  NAME:  "APSIRE_MEDIUM_4CH"
+  IMAGE_MODALITY: 'CMRI'
+  LANDMARKS : [0,1,2,3]
+
+  #ROOT: '/shared/ai4h/Shared/Data/medical/CMRI/ASPIRE/'
+  #SRC_TARGETS: '/shared/ai4h/Shared/Data/medical/CMRI/ASPIRE/cardiac4ch_labels_VPnC_CV'
+  #NAME:  "APSIRE_SMALL_4CH"
+  #IMAGE_MODALITY: 'CMRI'
+  #LANDMARKS : [0]
+
+
+
+SAMPLER:
+  DATA_AUG: 'AffineComplex'
+  INPUT_SIZE : [512, 512]
+  SAMPLE_MODE: 'full' # ['patch_bias', 'full']
+  NUM_WORKERS: 9
+  DEBUG: False
+  PATCH:
+    SAMPLER_BIAS: 0.66
+    RESOLUTION_TO_SAMPLE_FROM: 'input_size' # ['full', 'input_size']
+    SAMPLE_PATCH_SIZE: [512, 512]
+
+TRAINER:
+  FOLD: 2
+  PERFORM_VALIDATION: True
+  SAVE_LATEST_ONLY: True
+  CACHE_DATA: True
+  INFERENCE_ONLY: False
+  VALIDATE_EVERY: 10
+
+INFERENCE:
+  EVALUATION_MODE: "scale_heatmap_first" # ["scale_heatmap_first", "scale_pred_coords", "use_input_size"]
+  DEBUG: False
