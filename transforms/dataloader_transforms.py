@@ -5,22 +5,22 @@ Author: Lawrence Schobs and Ethan Jones
 """
 
 import imgaug.augmenters as iaa
-
 import albumentations as A
 import albumentations.augmentations.functional as F
 from albumentations.pytorch import ToTensorV2
 
 def get_aug_package_loader(aug_package):
-    """ returns a fucntion to load data augmentations from a given pakage.
+    """ 
+    Returns a funct to load data augmentations from a given package.
 
-    Args:
-        aug_package (str): the image augmentation package to use.
-
-    Raises:
-        ValueError: if an unsupported package is given by the user.
-
-    Returns:
-        function: function to load data augmentation for the given package.
+    Parameters
+    ----------
+    `aug_package` : str
+        the image augmentation package to use.
+    
+    Returns
+    -------
+    Function to load data augmentation for the given package.
     """
 
     if aug_package == "imgaug":
@@ -32,16 +32,19 @@ def get_aug_package_loader(aug_package):
 
 
 def get_imgaug_transforms(data_augmentation, final_im_size):
-    """ Returns a data augmentation sequence from the imgaug package
+    """
+    Returns a data augmentation sequence from the imgaug package
 
-    Args:
-        data_augmentation (str): name of the data augmentation strategy
+    Parameters
+    ----------
+    `data_augmentation` : str
+        The name of the data augmentation strategy.
+    `final_im_size` :
 
-    Raises:
-        ValueError: error if data_augmentation has not been defined as a strategy
-
-    Returns:
-        transform: sequence of transforms
+    Returns
+    -------
+    `transform`: iaa.Sequential
+        sequence of transforms
     """
     if data_augmentation =="AffineSimple":
 
@@ -244,16 +247,18 @@ def get_imgaug_transforms(data_augmentation, final_im_size):
     return transform
 
 def get_albumentation_transforms(data_augmentation):
-    """ Returns a data augmentation sequence from the albumentation package
+    """ 
+    Returns a data augmentation sequence from the albumentation package
 
-    Args:
-        data_augmentation (str): name of the data augmentation strategy
+    Parameters
+    ----------
+    `data_augmentation` : str
+        The name of the data augmentation strategy
 
-    Raises:
-        ValueError: error if data_augmentation has not been defined as a strategy
-
-    Returns:
-        transform: sequence of transforms
+    Returns
+    -------
+    `transform`: iaa.Sequential
+        sequence of transforms
     """
     if data_augmentation == "V1":
         transform = A.Compose(
@@ -350,5 +355,4 @@ def get_albumentation_transforms(data_augmentation):
         )
     else:
         raise ValueError("transformations mode for dataaugmentation not recognised, try None, V1, V2, V3 or V4")
-    
     return transform

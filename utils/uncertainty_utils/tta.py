@@ -113,9 +113,6 @@ def invert_coordinates(orginal_coords : list, log_dict : dict, img_size : list =
         key = list(funct['transform'].keys())[0]
         if "normal" in key:
             coords = coords_all
-        #elif "inverse_rotate" in key:
-        #    coords = torch.stack([extract_original_coords_from_rotation(
-        #        funct['transform']["inverse_rotate"], coords, img_shape) for coords in coords_all])
         elif "inverse_flip" in key:
             coords = torch.stack([extract_original_coords_from_flipud(coords, img_shape)
                                   for coords in coords_all])
@@ -177,12 +174,15 @@ def extract_original_coords_from_flipud(flip_coords, training_resolution=[512, 5
     """
     Extracts the original coordinates of a flipped image based on the flipped coordinates and the training resolution.
 
-    :param flip_coords: A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
-    :type flip_coords: torch.Tensor or numpy.ndarray
-    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
-    :type training_resolution: list
-    :return: A tensor representing the original coordinates of the flipped image, with shape (2,).
-    :rtype: torch.Tensor
+    Parameters
+    ----------
+    `flip_coords` : torch.Tensor or numpy.ndarray
+        The original coordinates to move.
+
+    Returns
+    -------
+    `conv_coords` : torch.Tensor
+        The new coordinates after flipping.
     """
     if type(flip_coords) == torch.Tensor:
         flip_coords = flip_coords.cpu().numpy()
@@ -196,12 +196,15 @@ def extract_original_coords_from_fliplr(flip_coords, training_resolution=[512, 5
     """
     Extracts the original coordinates of a flipped image based on the flipped coordinates and the training resolution.
 
-    :param flip_coords: A tensor or numpy array representing the flipped coordinates of an image, with shape (2,).
-    :type flip_coords: torch.Tensor or numpy.ndarray
-    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
-    :type training_resolution: list
-    :return: A tensor representing the original coordinates of the flipped image, with shape (2,).
-    :rtype: torch.Tensor
+    Parameters
+    ----------
+    `flip_coords` : torch.Tensor or numpy.ndarray
+        The original coordinates to move.
+
+    Returns
+    -------
+    `conv_coords` : torch.Tensor
+        The new coordinates after flipping.
     """
     if type(flip_coords) == torch.Tensor:
         flip_coords = flip_coords.cpu().numpy()
@@ -215,14 +218,16 @@ def extract_coords_from_movevertical(magnitude, coords, training_resolution=[512
     """
     Extracts the coordinates of an image moved vertically based on the input magnitude and original coordinates.
 
-    :param magnitude: The magnitude of the vertical movement.
-    :type magnitude: float
-    :param coords: A tensor or numpy array representing the original coordinates of an image, with shape (2,).
-    :type coords: torch.Tensor or numpy.ndarray
-    :param training_resolution: The resolution of the training images, represented as a list of width and height. Default is [512, 512].
-    :type training_resolution: list
-    :return: A tensor representing the coordinates of the moved image, with shape (2,).
-    :rtype: torch.Tensor
+    Parameters
+    ----------
+    `magnitude` : float 
+        The amount to move the coordinates horizontally.
+    `coords` :  torch.Tensor or numpy.ndarray
+        The original coordinates to move.
+
+    Returns
+    -------
+        torch.Tensor: The new coordinates after moving horizontally.
     """
     if type(coords) == torch.Tensor:
         coords = coords.cpu().numpy()
@@ -236,11 +241,15 @@ def extract_coords_from_movehorizontal(magnitude, coords, training_resolution=[5
     """
     Extracts new coordinates by moving the input coordinates horizontally by a certain magnitude.
 
-    Parameters:
-        magnitude (int or float): The amount to move the coordinates horizontally.
-        coords (torch.Tensor or numpy.ndarray): The original coordinates to move.
+    Parameters
+    ----------
+    `magnitude` : float 
+        The amount to move the coordinates horizontally.
+    `coords` :  torch.Tensor or numpy.ndarray
+        The original coordinates to move.
 
-    Returns:
+    Returns
+    -------
         torch.Tensor: The new coordinates after moving horizontally.
     """
     if type(coords) == torch.Tensor:

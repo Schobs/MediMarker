@@ -1,5 +1,5 @@
 """
-Module housing the model trainer superclass extended for all supported models within the LaNNU-Net framework.
+Module housing the model trainer superclass extended for all supported models within the framework.
 
 Auhtor: Lawrence Schobs and Ethan Jones
 """
@@ -31,11 +31,10 @@ from utils.uncertainty_utils.tta import apply_tta_augmentation, invert_coordinat
 
 class NetworkTrainer(ABC):
     """
-    Centralised super class for all model trainers within the LaNNU-Net framework.
+    Centralised super class for all model trainers within the framework.
     """
     @abstractmethod
     def __init__(self, trainer_config, is_train=True, dataset_class=None, output_folder=None, comet_logger=None, profiler=None):
-        # Device
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.trainer_config = trainer_config
         self.is_train = is_train
@@ -61,9 +60,8 @@ class NetworkTrainer(ABC):
         self.use_full_res_coords = self.trainer_config.INFERRED_ARGS.USE_FULL_RES_COORDS
         self.resize_first = self.trainer_config.INFERRED_ARGS.RESIZE_FIRST
         self.save_every = 25
-        # if false it will not store/overwrite _latest but separate files each
         self.save_latest_only = self.trainer_config.TRAINER.SAVE_LATEST_ONLY
-        self.save_intermediate_checkpoints = True  # whether or not to save checkpoint_latest
+        self.save_intermediate_checkpoints = True
         self.generic_dataset_args = {"landmarks": self.trainer_config.DATASET.LANDMARKS,
                                      "annotation_path": self.trainer_config.DATASET.SRC_TARGETS,
                                      "image_modality": self.trainer_config.DATASET.IMAGE_MODALITY,
@@ -92,7 +90,12 @@ class NetworkTrainer(ABC):
     def initialize(self, training_bool=True):
         """
         Initialize profiler, comet logger, training/val dataloaders, network, optimizer, loss, automixed precision
-        and maybe load a checkpoint. 
+        and maybe load a checkpoint.
+
+        Parameters
+        ----------
+        `training_bool` : boolean
+            Boolean flag controlling whether training is to take place.
         """
         if self.profiler:
             print("Initialized profiler")
@@ -115,37 +118,43 @@ class NetworkTrainer(ABC):
     @abstractmethod
     def initialize_network(self):
         """
-        Initialize the network here!
+        Initialize the network here.
         """
 
     @abstractmethod
     def initialize_optimizer_and_scheduler(self):
         """
-        Initialize the optimizer and LR scheduler here!
+        Initialize the optimizer and LR scheduler here.
         """
 
     @abstractmethod
     def initialize_loss_function(self):
         """
-        Initialize the loss function here!
+        Initialize the loss function here.
         """
 
     def maybe_update_lr(self, epoch=None, exponent=0.9):
         """
-        if epoch is not None we overwrite epoch. Else we use epoch = self.epoch + 1
-        (maybe_update_lr is called in on_epoch_end which is called before epoch is incremented.
-        Therefore we need to do +1 here)
+        Potentially update the learning rate.
+
+        Parameters
+        ----------
+        `epoch` : int
+            The epoch number.
+        `exponent` : float 
+            Exponent value used in the learning rate update (defaults to 0.9).
         """
         if epoch is None:
             ep = self.epoch + 1
         else:
             ep = epoch
-        poly_lr_update = self.initial_lr * (1 - ep / self.max_num_epochs)**exponent
+        poly_lr_update = self.initial_lr * (1 - ep / self.max_num_epochs) ** exponent
 
         self.optimizer.param_groups[0]['lr'] = poly_lr_update
 
     def _maybe_init_amp(self):
-        """Initialize automatic mixed precision training if enabled.
+        """
+        Initialize automatic mixed precision training if enabled.
         """
         if self.auto_mixed_precision and self.amp_grad_scaler is None:
             self.amp_grad_scaler = GradScaler()
@@ -172,7 +181,6 @@ class NetworkTrainer(ABC):
             generator = iter(self.train_dataloader)
             # We will log the training and validation info here. The keys we set describe all the info we are logging.
             per_epoch_logs = self.dict_logger.get_epoch_logger()
-            print("training")
             # Train for X number of batches per epoch e.g. 250
             for iter_b in range(self.num_batches_per_epoch):
                 l, generator = self.run_iteration(
@@ -180,8 +188,6 @@ class NetworkTrainer(ABC):
                 if self.comet_logger:
                     self.comet_logger.log_metric("training loss iteration", l, step)
                 step += 1
-            # del generator
-            print("validation")
             with torch.no_grad():
                 self.network.eval()
                 generator = iter(self.valid_dataloader)
@@ -320,13 +326,11 @@ class NetworkTrainer(ABC):
             #print(f"318: {pred_coords}, {target_coords}")
         else:
             pred_coords = extra_info = target_coords = pred_coords_input_size = None
-
         return pred_coords, pred_coords_input_size, extra_info, target_coords, logged_vars
 
     def on_epoch_end(self, per_epoch_logs):
         """
-         Always run to 1000 epochs
-        :return:
+        Always run to 1000 epochs
         """
         new_best_valid = False
         new_best_coord_valid = False
@@ -335,19 +339,15 @@ class NetworkTrainer(ABC):
         time_taken = self.epoch_end_time - self.epoch_start_time
         per_epoch_logs = self.dict_logger.log_epoch_end_variables(
             per_epoch_logs, time_taken, self.sigmas, self.optimizer.param_groups[0]['lr'])
-
         # log them else they are lost!
         if self.comet_logger:
             self.dict_logger.log_dict_to_comet(self.comet_logger, per_epoch_logs, self.epoch)
-
         print("Epoch %s logs: %s" % (self.epoch, per_epoch_logs))
-
         # Checks for it this epoch was best in validation loss or validation coord error!
         if per_epoch_logs["validation_all_loss_all"] < self.best_valid_loss:
             self.best_valid_loss = per_epoch_logs["validation_all_loss_all"]
             self.best_valid_loss_epoch = self.epoch
             new_best_valid = True
-
         if per_epoch_logs["valid_coord_error_mean"] < self.best_valid_coord_error:
             self.best_valid_coord_error = per_epoch_logs["valid_coord_error_mean"]
             self.best_valid_coords_epoch = self.epoch
@@ -355,21 +355,16 @@ class NetworkTrainer(ABC):
             self.epochs_wo_val_improv = 0
         else:
             self.epochs_wo_val_improv += 1
-
         if self.epochs_wo_val_improv == self.early_stop_patience:
             continue_training = False
             print("EARLY STOPPING. Validation Coord Error did not reduce for %s epochs. " % self.early_stop_patience)
-
         self.maybe_save_checkpoint(new_best_valid, new_best_coord_valid)
-
         self.maybe_update_lr(epoch=self.epoch)
-
         return continue_training
 
     def maybe_save_checkpoint(self, new_best_valid_bool, new_best_valid_coord_bool):
         """
         Saves a checkpoint every save_ever epochs.
-        :return:
         """
         fold_str = str(self.fold)
         if (self.save_intermediate_checkpoints and (self.epoch % self.save_every == (self.save_every - 1))) or self.epoch == self.max_num_epochs-1:
@@ -377,7 +372,6 @@ class NetworkTrainer(ABC):
             if not self.save_latest_only:
                 self.save_checkpoint(os.path.join(self.output_folder, "model_ep_" +
                                      str(self.epoch) + "_fold" + fold_str + ".model" % ()))
-
                 if self.epoch >= 150:
                     self.save_every = 50
                 if self.epoch >= 250:
@@ -387,9 +381,7 @@ class NetworkTrainer(ABC):
         if new_best_valid_bool:
             print("saving scheduled checkpoint file as it's new best on validation set...")
             self.save_checkpoint(os.path.join(self.output_folder, "model_best_valid_loss_fold" + fold_str + ".model"))
-
             print("done")
-
         if new_best_valid_coord_bool:
             print("saving scheduled checkpoint file as it's new best on validation set for coord error...")
             self.save_checkpoint(os.path.join(self.output_folder,
@@ -416,7 +408,6 @@ class NetworkTrainer(ABC):
         else:
             # C3 (and C1 if input size == full res size so full & target the same)
             target_coords = np.round(data_dict['target_coords']).to(self.device)
-
         # C2
         if self.use_full_res_coords and not self.resize_first:
             upscale_factor = data_dict["resizing_factor"].to(self.device)
@@ -426,20 +417,15 @@ class NetworkTrainer(ABC):
             upscaled_coords = torch.mul(pred_coords, upscale_factor)
             pred_coords = torch.round(upscaled_coords)
             # pred_coords = pred_coords * upscale_factor
-
         return pred_coords, target_coords
-
-    # @abstractmethod
 
     def patchify_and_predict(self, single_sample, logged_vars):
         """Function that takens in a large input image, patchifies it and runs each patch through the model & stitches heatmap together
-
         #1) should split up into patches of given patch-size.
         #2) should run patches through in batches using run_iteration, NOT LOGGING ANYTHING but needs to return the OUTPUTS somehow. 
             MUST ADD OPTION TO RETURN OUTPUTS in run_iteration?
         #3) Need to use method to stitch patches together (future, phdnet will use patch size 512 512 for now).
         #4) call log_key_variables function now with the final big heatmap as the "output". The logging should work as usual from that.
-
         Returns:
             _type_: _description_
         """
@@ -459,7 +445,6 @@ class NetworkTrainer(ABC):
         #3) need to put evaluation methods in evluation function & import and ues key_dict for analysis
         #4) return individual results & do summary results.
         """
-
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
         if self.sampler_mode == "patch":
             if self.trainer_config.SAMPLER.PATCH.INFERENCE_MODE == "patchify_and_stitch":
@@ -476,13 +461,10 @@ class NetworkTrainer(ABC):
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         self.test_dataloader = DataLoader(test_dataset, batch_size=self.data_loader_batch_size, shuffle=False, num_workers=self.num_workers_cfg,
                                           persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True)
-
         # instantiate interested variables log!
         evaluation_logs = self.dict_logger.get_evaluation_logger()
-
         # network evaluation mode
         self.network.eval()
-
         # then iterate through dataloader and save to log
         generator = iter(self.test_dataloader)
         if inference_full_image:
@@ -495,32 +477,32 @@ class NetworkTrainer(ABC):
         else:
             # this is where we patchify and stitch the input image
             raise NotImplementedError()
-
         summary_results, ind_results = self.evaluation_metrics(
             evaluation_logs["individual_results"], evaluation_logs["landmark_errors"])
-
         return summary_results, ind_results
 
     def evaluation_metrics(self, individual_results, landmark_errors):
-        """ Function to calculate evaluation metrics.
+        """
+        Function to calculate evaluation metrics.
         """
         radius_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, 40, 50, 100]
         outlier_results = {}
         for rad in radius_list:
             out_res_rad = success_detection_rate(individual_results,  rad)
             outlier_results[rad] = (out_res_rad)
-
         # Generate summary Results
         summary_results = generate_summary_df(landmark_errors, outlier_results)
         ind_results = pd.DataFrame(individual_results)
-
         return summary_results, ind_results
 
     def save_checkpoint(self, path):
-        """Save model checkpoint to path 
+        """
+        Save model checkpoint to path.
 
-        Args:
-            path (str): Path to save model checkpoint to.
+        Parameters
+        ----------
+        `path` : str
+            Path to save model checkpoint to.
         """
         state = {
             'epoch': self.epoch + 1,
@@ -534,12 +516,9 @@ class NetworkTrainer(ABC):
             "sigmas": self.sigmas,
             "training_sampler": self.sampler_mode,
             "training_resolution": self.training_resolution
-
         }
-
         if self.amp_grad_scaler is not None:
             state['amp_grad_scaler'] = self.amp_grad_scaler.state_dict()
-
         torch.save(state, path)
 
     def run_inference_mcdrop(self, split, checkpoint, debug=False):
@@ -547,15 +526,20 @@ class NetworkTrainer(ABC):
         Ensemble-like infernce using Monte-Carlo dropout layers to fetch different predictions for identical versions of
         a single image.
 
-        Args:
-            split (str): Split to run inference on
-            checkpoint_list ([str"]): List of paths of checkpoints to load
-            debug (bool, optional): Debug mode. Defaults to False.
-        Raises:
-            NotImplementedError: Patch-based ensemble inference not implemented.
-        Returns:
-            all_summary_results: Summary of results for all uncertainty measures from EnsembleUncertainties
-            ind_results: Individual results for each sample for all uncertainty measures from EnsembleUncertainties
+        Parameters
+        ----------
+        `split` : str
+            Split to run inference on
+        `checkpoint` : str
+            Path of checkpoint to load
+        `debug` : boolean
+            Debug mode. Defaults to False.
+        Returns
+        ------
+        `all_summary_results` : List
+            Summary of results for all uncertainty measures from EnsembleUncertainties
+        `ind_results` : List
+            Individual results for each sample for all uncertainty measures from EnsembleUncertainties
         """
         if self.sampler_mode == "patch":
             if (
@@ -648,15 +632,20 @@ class NetworkTrainer(ABC):
         Ensemble-like infernce using augmentations to fetch different predictions for transforms versions of
         a single image.
 
-        Args:
-            split (str): Split to run inference on
-            checkpoint_list ([str"]): List of paths of checkpoints to load
-            debug (bool, optional): Debug mode. Defaults to False.
-        Raises:
-            NotImplementedError: Patch-based ensemble inference not implemented.
-        Returns:
-            all_summary_results: Summary of results for all uncertainty measures from EnsembleUncertainties
-            ind_results: Individual results for each sample for all uncertainty measures from EnsembleUncertainties
+        Parameters
+        ----------
+        `split` : str
+            Split to run inference on
+        `checkpoint` : str
+            Path of checkpoint to load
+        `debug` : boolean
+            Debug mode. Defaults to False.
+        Returns
+        ------
+        `all_summary_results` : List
+            Summary of results for all uncertainty measures from EnsembleUncertainties
+        `ind_results` : List
+            Individual results for each sample for all uncertainty measures from EnsembleUncertainties
         """
         if self.sampler_mode == "patch":
             if (
@@ -753,18 +742,29 @@ class NetworkTrainer(ABC):
         return all_summary_results, ind_results
 
     def run_inference_ensemble_models(self, split, checkpoint_list, debug=False):
-        """Run inference on a list of checkpoints (ensemble) and return results and uncertainty measures.
-        Args:
-            split (str): Split to run inference on
-            checkpoint_list ([str"]): List of paths of checkpoints to load
-            debug (bool, optional): Debug mode. Defaults to False.
-        Raises:
-            NotImplementedError: Patch-based ensemble inference not implemented.
-        Returns:
-            all_summary_results: Summary of results for all uncertainty measures from EnsembleUncertainties
-            ind_results: Individual results for each sample for all uncertainty measures from EnsembleUncertainties
         """
+        Run inference on a list of checkpoints (ensemble) and return results and uncertainty measures.
+        
+        Parameters
+        ----------
+        `split` : str
+            Split to run inference on
+        `checkpoint_list` : List
+            List of paths of checkpoints to load
+        `debug` : boolean 
+            Debug mode. Defaults to False.
 
+        Returns
+        -------
+        `all_summary_results`: List
+            Summary of results for all uncertainty measures from EnsembleUncertainties
+        `ind_results` : List
+            Individual results for each sample for all uncertainty measures from EnsembleUncertainties
+
+        Raises
+        ------
+            `NotImplementedError` : Patch-based ensemble inference not implemented.
+        """
         # If trained using patch, return the full image, else ("full") will return the image size network was trained on.
         if self.sampler_mode in ["patch_bias", "patch_centred"]:
             if (
@@ -783,7 +783,6 @@ class NetworkTrainer(ABC):
         # Load dataloader (Returning coords dont matter, since that's handled in log_key_variables)
         test_dataset = self.get_evaluation_dataset(split, inference_resolution)
         test_batch_size = self.data_loader_batch_size
-
         test_dataloader = DataLoader(
             test_dataset,
             batch_size=test_batch_size,
@@ -791,20 +790,16 @@ class NetworkTrainer(ABC):
             num_workers=0,
             worker_init_fn=NetworkTrainer.worker_init_fn,
         )
-
         # Initialise ensemble postprocessing and uncertainty estimation
         uncertainty_estimation_keys = (
             self.trainer_config.INFERENCE.ENSEMBLE_UNCERTAINTY_KEYS
         )
         smha_model_idx = self.trainer_config.INFERENCE.UNCERTAINTY_SMHA_MODEL_IDX
-
         ensemble_handler = EnsembleUncertainties(
             uncertainty_estimation_keys, smha_model_idx, self.landmarks
         )
-
         # network evaluation mode
         self.network.eval()
-
         # Initialise esenmble results dictionaries
         ensemble_result_dicts = {
             uncert_key: [] for uncert_key in ensemble_handler.uncertainty_keys
@@ -813,7 +808,6 @@ class NetworkTrainer(ABC):
             uncert_key: [[] for x in range(len(self.landmarks))]
             for uncert_key in ensemble_handler.uncertainty_keys
         }
-
         # Iterate through dataloader and save to log
         generator = iter(test_dataloader)
         if inference_full_image:
@@ -836,7 +830,6 @@ class NetworkTrainer(ABC):
                             debug=debug,
                             direct_data_dict=direct_data_dict
                         )
-                        #print(ckpt, [x['uid'] for x in evaluation_logs['individual_results']])
                     # Analyse batch for s-mha, e-mha, and e-cpv and maybe errors (if we have annotations)
                     (
                         ensembles_analyzed,
@@ -844,7 +837,6 @@ class NetworkTrainer(ABC):
                     ) = ensemble_handler.ensemble_inference_with_uncertainties(
                         evaluation_logs
                     )
-
                     # Update the dictionaries with the results
                     for k_ in list(ensemble_result_dicts.keys()):
                         ensemble_result_dicts[k_].extend(ensembles_analyzed[k_])
@@ -852,48 +844,49 @@ class NetworkTrainer(ABC):
                     for ens_key, coord_extact_methods in ind_landmark_errors.items():
                         for ile_idx, ind_lm_ers in enumerate(coord_extact_methods):
                             all_ind_errors[ens_key][ile_idx].extend(ind_lm_ers)
-
                 except StopIteration:
                     generator = None
                 print("-", end="")
             print("No more in generator")
             del generator
-
         else:
             # this is where we patchify and stitch the input image
             raise NotImplementedError()
-
         ind_results = {}
         all_summary_results = {}
-
         for u_key in uncertainty_estimation_keys:
             summary_results, ind_results_this = self.evaluation_metrics(
                 ensemble_result_dicts[u_key], all_ind_errors[u_key]
             )
             ind_results[u_key] = ind_results_this
             all_summary_results[u_key] = summary_results
-
         return all_summary_results, ind_results
 
     def maybe_load_checkpoint(self):
-        """ Helper function from initialisation that loads checkpoint
+        """
+        Helper function from initialisation that loads checkpoint
         """
         if self.continue_checkpoint:
             self.load_checkpoint(self.continue_checkpoint, self.is_train)
 
     def update_dataloader_sigmas(self, new_sigmas):
-        """ Update the dataset sigmas, used if regressing sigmas
+        """
+        Update the dataset sigmas, used if regressing sigmas
         """
         np_sigmas = [x.cpu().detach().numpy() for x in new_sigmas]
         self.train_dataloader.dataset.sigmas = (np_sigmas)
         self.valid_dataloader.dataset.sigmas = (np_sigmas)
 
     def load_checkpoint(self, model_path, training_bool):
-        """Load checkpoint from path.
+        """
+        Load checkpoint from path.
 
-        Args:
-            model_path (str): path to checkpoint
-            training_bool (bool): If training or not.
+        Parameters
+        ----------
+        `model_path` : str 
+            Path to checkpoint.
+        `training_bool` : boolean
+            If training or not.
         """
         if not self.was_initialized:
             self.initialize(training_bool)
@@ -901,54 +894,45 @@ class NetworkTrainer(ABC):
         self.epoch = checkpoint_info['epoch']
         self.network.load_state_dict(checkpoint_info["state_dict"])
         self.optimizer.load_state_dict(checkpoint_info["optimizer"])
-
         if training_bool:
             self.best_valid_loss = checkpoint_info['best_valid_loss']
             self.best_valid_loss_epoch = checkpoint_info['best_valid_loss_epoch']
             self.best_valid_coord_error = checkpoint_info['best_valid_coord_error']
             self.best_valid_coords_epoch = checkpoint_info["best_valid_coords_epoch"]
             self.epochs_wo_val_improv = checkpoint_info["epochs_wo_improvement"]
-
         # Allow legacy models to be loaded (they didn't use to save sigmas)
         if "sigmas" in checkpoint_info:
             self.sigmas = checkpoint_info["sigmas"]
-
         # if not saved, default to full since this was the only option for legacy models
         if "training_sampler" in checkpoint_info:
             self.sampler_mode = checkpoint_info["training_sampler"]
         else:
             self.sampler_mode = "full"
-
         # if not saved, default to input_size since this was the only option for legacy models
         if "training_resolution" in checkpoint_info:
             self.training_resolution = checkpoint_info["training_resolution"]
         else:
             self.training_resolution = self.trainer_config.SAMPLER.INPUT_SIZE
-
         self.checkpoint_loading_checking()
-
         if self.auto_mixed_precision:
             self._maybe_init_amp()
-
             if 'amp_grad_scaler' in checkpoint_info.keys():
                 self.amp_grad_scaler.load_state_dict(checkpoint_info['amp_grad_scaler'])
-
         if self.print_initiaization_info:
             print("Loaded checkpoint %s. Epoch: %s, " % (model_path, self.epoch))
 
     def checkpoint_loading_checking(self):
-        """Checks that the loaded checkpoint is compatible with the current model and training settings.
-
-        Raises:
-            ValueError: _description_
-            ValueError: _description_
         """
+        Checks that the loaded checkpoint is compatible with the current model and training settings.
 
+        Raises
+        ------
+        ValueError: _description_
+        """
         # Check the sampler in config is the same as the one in the checkpoint.
         if self.sampler_mode != self.trainer_config.SAMPLER.SAMPLE_MODE:
             raise ValueError("model was trained using SAMPLER.SAMPLE_MODE %s but attempting to load with SAMPLER.SAMPLE_MODE %s. \
                 Please amend this in config file." % (self.sampler_mode, self.trainer_config.SAMPLER.SAMPLE_MODE))
-
         # check if the training resolution from config is the same as the one in the checkpoint.
         if self.sampler_mode == "patch":
             if self.training_resolution != self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM:
@@ -960,11 +944,11 @@ class NetworkTrainer(ABC):
                     Please amend this in config file." % (self.training_resolution, self.trainer_config.SAMPLER.INPUT_SIZE))
 
     def initialize_dataloader_settings(self):
-        """Initializes dataloader settings. If debug use only main thread to load data bc we only 
-            want to show a single plot on screen. 
-            If num_workers=0 we are only using the main thread, so persist_workers = False.
         """
-
+        Initializes dataloader settings. If debug, use only main thread to load data as we only 
+        want to show a single plot on screen. If num_workers is 0 we are only using the main thread, 
+        so persist_workers is False.
+        """
         if self.trainer_config.SAMPLER.DEBUG or self.trainer_config.SAMPLER.NUM_WORKERS == 0:
             self.persist_workers = False
             self.num_workers_cfg = 0
@@ -976,9 +960,7 @@ class NetworkTrainer(ABC):
         """
         set train_dataset, valid_dataset and train_dataloader and valid_dataloader here.
         """
-
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
-
         train_dataset = self.dataset_class(
             annotation_path=self.trainer_config.DATASET.SRC_TARGETS,
             landmarks=self.landmarks,
@@ -1001,7 +983,6 @@ class NetworkTrainer(ABC):
             data_augmentation_package=self.trainer_config.SAMPLER.DATA_AUG_PACKAGE,
             dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE,
         )
-
         if self.perform_validation:
             # if patchify, we want to return the full image
             if self.sampler_mode == "patch":
@@ -1009,7 +990,6 @@ class NetworkTrainer(ABC):
                     "validation", self.trainer_config.SAMPLER.PATCH.RESOLUTION_TO_SAMPLE_FROM)
             else:
                 valid_dataset = self.get_evaluation_dataset("validation", self.trainer_config.SAMPLER.INPUT_SIZE)
-
         else:
             if self.sampler_mode == "patch":
                 valid_dataset = self.get_evaluation_dataset(
@@ -1018,7 +998,6 @@ class NetworkTrainer(ABC):
                 valid_dataset = self.get_evaluation_dataset(
                     "training", self.trainer_config.SAMPLER.INPUT_SIZE, dataset_split_size=self.trainer_config.DATASET.TRAINSET_SIZE)
             print("WARNING: NOT performing validation. Instead performing \"validation\" on training set for coord error metrics.")
-
         print("Using %s Dataloader workers and persist workers bool : %s " %
               (self.num_workers_cfg, self.persist_workers))
         self.train_dataloader = DataLoader(train_dataset, batch_size=self.data_loader_batch_size, shuffle=True, num_workers=self.num_workers_cfg,
@@ -1027,15 +1006,23 @@ class NetworkTrainer(ABC):
                                            persistent_workers=self.persist_workers, worker_init_fn=NetworkTrainer.worker_init_fn, pin_memory=True)
 
     def get_evaluation_dataset(self, split, load_im_size, dataset_split_size=-1):
-        """Gets an evaluation dataset based on split given (must be "validation" or "testing").
-            We do not perform patch sampling on evaluation dataset, always returning the full image (sample_mode = "full").
-            Patchifying the evaluation image is too large memory constraint to do in batches here.
+        """
+        Gets an evaluation dataset based on split given (must be "validation" or "testing").
+        We do not perform patch sampling on evaluation dataset, always returning the full image (sample_mode = "full").
+        Patchifying the evaluation image is too large memory constraint to do in batches here.
 
-        Args:
-            split (string): Which split of data to return ( "validation" or "testing")
+        Parameters
+        ----------
+        `split` : str 
+            Which split of data to return, either "validation" or "testing".
+        `load_im_size` : int
+            The number of images to load.
+        `dataset_split_size` : int
+            The datatset split size.
 
-        Returns:
-            dataset: Dataset object
+        Returns
+        -------
+            dataset: Dataset
         """
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
         dataset = self.dataset_class(
@@ -1063,15 +1050,21 @@ class NetworkTrainer(ABC):
         return dataset
 
     def generate_heatmaps_batch(self, data_dict, dataloader):
-        """Generate heatmaps from the main thread. Used only when regressing sigmas, because we can't update the sigma values in the dataloader workers.
-            This is a workaround to allow us to update the sigmas in the main thread, and then generate the heatmaps in the main thread.
+        """
+        Generate heatmaps from the main thread. Used only when regressing sigmas, because we can't update the sigma values in the dataloader workers.
+        This is a workaround to allow us to update the sigmas in the main thread, and then generate the heatmaps in the main thread.
 
-        Args:
-            data_dict (dict): List of dictionaries of samples to generate heatmap labels from.  
-            dataloader (Dataloader): Dataloader where the generate_labels function is defined.
+        Parameters
+        ----------
+        `data_dict` : dict
+            List of dictionaries of samples to generate heatmap labels from.  
+        `dataloader` : Dataloader
+            Dataloader where the generate_labels function is defined.
 
-        Returns:
-            batch_hms: The batch of heatmaps generated from the data_dict to use as target labels.
+        Returns
+        -------
+        batch_hms: List
+            The batch of heatmaps generated from the data_dict to use as target labels.
         """
         batch_hms = []
         np_sigmas = [x.cpu().detach().numpy() for x in self.sigmas]
@@ -1083,15 +1076,17 @@ class NetworkTrainer(ABC):
                 for hm_idx, hm in enumerate(x):
                     batch_hms[hm_idx].append(hm)
         batch_hms = [torch.stack(x) for x in batch_hms]
-
         return batch_hms
 
     @staticmethod
     def worker_init_fn(worker_id):
-        """Function to set the seed for each worker. This is used to ensure that each worker has a different seed, 
+        """
+        Function to set the seed for each worker. This is used to ensure that each worker has a different seed, 
         so that the random sampling is different for each worker.
 
-        Args:
-            worker_id (int): dataloader worker id
+        Parameters
+        ----------
+        `worker_id` : int
+            Dataloader worker id
         """
         imgaug.seed(np.random.get_state()[1][0] + worker_id)

@@ -16,7 +16,6 @@ import torch
 module_path = os.path.abspath(os.path.join('..', '/utils/uncertainty_utils'))
 sys.path.append(module_path)
 
-# Now you can import the module
 from tta import extract_original_coords_from_flipud, extract_original_coords_from_fliplr, extract_coords_from_movevertical, extract_coords_from_movehorizontal
 
 def test_extract_original_coords_from_flipud():
