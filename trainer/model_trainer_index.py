@@ -3,6 +3,9 @@
 
 from trainer.model_trainer_unet import UnetTrainer
 from trainer.model_trainer_phdnet import PHDNetTrainer
+from trainer.model_trainer_phdresnet import PHDResNetTrainer
+from trainer.model_trainer_phdtransformer import PHDTransformerTrainer
 from trainer.model_trainer_GP import GPTrainer
 
-MODEL_TRAINER_INDEX = {"PHD-Net": PHDNetTrainer, "U-Net": UnetTrainer, "GP": GPTrainer}
+MODEL_TRAINER_INDEX = {"PHD-Net": PHDNetTrainer, "U-Net": UnetTrainer, "GP": GPTrainer,
+                       "PHD-Resnet": PHDResNetTrainer,  "PHD-Transformer": PHDTransformerTrainer}

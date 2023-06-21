@@ -130,7 +130,9 @@ def main():
             output_append = "_ensemble"
 
     else:
-        writer.add_tag("single_inference")
+        if writer is not None:
+
+            writer.add_tag("single_inference")
 
         if cfg.MODEL.CHECKPOINT:
             logger.info("loading provided checkpoint %s", cfg.MODEL.CHECKPOINT)

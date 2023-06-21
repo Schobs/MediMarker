@@ -30,8 +30,8 @@ DATASET:
     
  
 TRAINER:
-  INFERENCE_ONLY: False # set to true if already trained and want to perform inference (testing) only.
-  CACHE_DATA: True #Ideally true, saves time from loading from disk.
+  INFERENCE_ONLY: True # set to true if already trained and want to perform inference (testing) only.
+  CACHE_DATA: False #Ideally true, saves time from loading from disk.
   FOLD: -1 # Set to -1 and directly put the path to JSON in SRC_TARGETS.
 
 INFERENCE:

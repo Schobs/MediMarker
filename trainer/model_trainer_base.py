@@ -168,7 +168,6 @@ class NetworkTrainer(ABC):
 
         self.num_landmarks = len(self.trainer_config.DATASET.LANDMARKS)
         print('num landmarks: ' + str(self.num_landmarks))
-        
 
     def initialize(self, training_bool=True):
         """
@@ -185,7 +184,7 @@ class NetworkTrainer(ABC):
         if training_bool:
             self.set_training_dataloaders()
 
-        self.initialize_network(self.num_landmarks)
+        self.initialize_network()
         self.initialize_optimizer_and_scheduler()
         self.initialize_loss_function(self.num_landmarks)
         self._maybe_init_amp()
@@ -414,8 +413,6 @@ class NetworkTrainer(ABC):
         if self.auto_mixed_precision:
             with autocast():
 
-                
-
                 output = self.network(data)
                 del data
                 # Only attempts loss if annotations avaliable for entire batch
@@ -457,7 +454,7 @@ class NetworkTrainer(ABC):
         if list(logged_vars.keys()) != []:
             with torch.no_grad():
 
-                #can print target_coords to see actual landmark
+                # can print target_coords to see actual landmark
 
                 (
                     pred_coords,
