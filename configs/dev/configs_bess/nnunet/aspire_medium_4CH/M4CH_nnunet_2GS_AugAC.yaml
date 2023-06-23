@@ -22,7 +22,7 @@ DATASET:
   SRC_TARGETS: '/shared/tale2/Shared/data/CMRI/PAH-Baseline/Proc/landmark_localisation_annotations/4ch'
   NAME:  "APSIRE_MEDIUM_4CH"
   IMAGE_MODALITY: 'CMRI'
-  LANDMARKS : [0,1,2,3,]
+  LANDMARKS : [0,1,2,3]
     
   
 TRAINER:

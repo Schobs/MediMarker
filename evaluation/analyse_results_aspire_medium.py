@@ -162,11 +162,11 @@ def analyse_all_folds(
         os.path.join(exp_path, "individual_results_allfolds.xlsx")
     ) as writer:
         for n, df in (individual_dicts).items():
-            df.to_excel(writer, n, index=False)
+            df.to_excel(writer, n, index=True)
 
     with ExcelWriter(os.path.join(exp_path, "summary_results_allfolds.xlsx")) as writer:
         for n, df in (summary_dicts).items():
-            df.to_excel(writer, n, index=False)
+            df.to_excel(writer, n, index=True)
 
     # Also save elsewhere
     collation_location = os.path.join(root_path, "all_summaries")
@@ -174,21 +174,24 @@ def analyse_all_folds(
         os.path.join(collation_location, name_of_exp + "_individual.xlsx")
     ) as writer:
         for n, df in (individual_dicts).items():
-            df.to_excel(writer, n, index=False)
+            df.to_excel(writer, n, index=True)
 
     with ExcelWriter(
         os.path.join(collation_location, name_of_exp + "_summary_results_allfolds.xlsx")
     ) as writer:
         for n, df in (summary_dicts).items():
-            df.to_excel(writer, n, index=False)
+            df.to_excel(writer, n, index=True)
 
     return summary_dicts, False
 
 
 # root_path = "/mnt/bess/home/acq19las/landmark_unet/LaNNU-Net/outputsISBI/v2"
-root_path = "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/MSA/testing/nnuent"
+# root_path = "/shared/tale2/Shared/schobs/landmark_unet/lannUnet_exps/MSA/testing/nnuent"
+
+root_path = "/mnt/tale_shared/schobs/landmark_unet/lannUnet_exps/M4CH/thesis/nnuent/"
 # name_of_exp = "ISBI_256F_512Res_8GS_32MFR_AugACEL_DS3"
 models_to_test = [
+    "el_best_valid_coord_error",
     "model_best_valid_coord_error",
     "model_best_valid_loss",
     "model_latest",
@@ -196,14 +199,14 @@ models_to_test = [
 # models_to_test = ["model_best_valid_coord_error"]
 
 early_stop_strategy = "150 epochs val best coord error"
-folds = [0, 1, 2, 3]
+folds = [0, 1, 2, 3, 4, 5]
 
 
 # Summarise all summaries into one big file #################
 
 
 # Walk through dir to get all exps
-all_exps = [x for x in os.listdir(root_path) if "SA" in x]
+all_exps = [x for x in os.listdir(root_path) if "4CH" in x]
 info_keys = [
     "Name",
     "Dataset",
@@ -211,7 +214,7 @@ info_keys = [
     "Gauss Sigma",
     "Aug",
 ]
-
+# info_keys = []
 collation_location = os.path.join(root_path, "all_summaries")
 os.makedirs(collation_location, exist_ok=True)
 
