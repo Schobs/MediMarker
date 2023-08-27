@@ -27,6 +27,8 @@ For advanced users, we provide the following features:
 - Evaluation Metrics (Point Error, Success Detection Rate, Negative Loss Preditive Density, and more.)
 - Comet.ML logging
 
+
+For Gaussian Processes check the gaussian_process branch. For transformers and resnet check the tom branch. 
 # Table of Contents
 - [MediMarker](#MediMarker)
 - [Table of Contents](#table-of-contents)
