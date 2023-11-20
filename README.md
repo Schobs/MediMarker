@@ -1,6 +1,6 @@
-# LaNNU-Net
+# MediMarker
 
-LannU-Net is an out-of-the-box automated pipeline for landmark localization. We also support uncertainty estimation for model predictions.
+MediMarker is an out-of-the-box automated pipeline for landmark localization. We also support uncertainty estimation for model predictions.
 
 As a user, all you need to do is provide your data in the correct format and the pipeline will take care of the rest. You can also use our pre-trained models for inference.
 
@@ -27,8 +27,10 @@ For advanced users, we provide the following features:
 - Evaluation Metrics (Point Error, Success Detection Rate, Negative Loss Preditive Density, and more.)
 - Comet.ML logging
 
+
+For Gaussian Processes check the gaussian_process branch. For transformers and resnet check the tom branch. 
 # Table of Contents
-- [LaNNU-Net](#lannu-net)
+- [MediMarker](#MediMarker)
 - [Table of Contents](#table-of-contents)
 - [Installation](#installation)
 - [Running an Example](#running-an-example)
@@ -92,7 +94,7 @@ conda env update --name my_env --file requirements/environment.yml
 That's it!
 
 # Running an Example
-If you have the [ISBI 2015 Cephalometric landmarking dataset](https://www.sciencedirect.com/science/article/pii/S1361841516000190) accessible, you can run to perform inference on a pretrained model with the default U-Net model, or easily train your own. In LannU-Net, we use .yaml files to configure the pipeline. You can find the .yaml files in the configs/examples folder. 
+If you have the [ISBI 2015 Cephalometric landmarking dataset](https://www.sciencedirect.com/science/article/pii/S1361841516000190) accessible, you can run to perform inference on a pretrained model with the default U-Net model, or easily train your own. In MediMarker, we use .yaml files to configure the pipeline. You can find the .yaml files in the configs/examples folder. 
 
 To run inference, run:
 
@@ -114,14 +116,14 @@ For students at the University of Sheffield using the Bessemer on the HPC, you h
 If you included a *testing* list in your JSON (this is the case for the above example), inference will be completed after training and the results will be saved in the OUTPUT.OUTPUT_DIR (defined in the .yaml file). If you cancel training early or want to re-run inference, change your .yaml file as follows:
 
 1) Set TRAINER.INFERENCE_ONLY=True. 
-2) Either define the model checkpoint you want to use in MODEL.CHECKPOINT, or leave it as None and LannU-Net will automatically find the latest checkpoints in the OUTPUT.OUTPUT_DIR.
+2) Either define the model checkpoint you want to use in MODEL.CHECKPOINT, or leave it as None and MediMarker will automatically find the latest checkpoints in the OUTPUT.OUTPUT_DIR.
 3) Re-run the script.
 
 
  If you did not include a *testing* list (e.g. you want to use a pre-trained model on your own data), you can run inference on a separate json file if you change your .yaml file as follows:
 
 1) Set TRAINER.INFERENCE_ONLY=True. 
-2) Either define the model checkpoint you want to use in MODEL.CHECKPOINT, or leave it as None and LannU-Net will automatically find the latest checkpoints in the OUTPUT.OUTPUT_DIR.
+2) Either define the model checkpoint you want to use in MODEL.CHECKPOINT, or leave it as None and MediMarker will automatically find the latest checkpoints in the OUTPUT.OUTPUT_DIR.
 3) Setting DATASET.SRC_TARGETS to the path of the new JSON file with the *testing* list.
 4) Setting TRAINER.FOLD to -1 (if it is not -1 it will automatically try to find the fold0.json, fold1.json etc. files from the SRC_TARGETS folder).
 
