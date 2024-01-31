@@ -1,4 +1,4 @@
-# MediMarker
+# MediMarker: AI Powered Anatomical Landmark Localisation
 
 MediMarker is an out-of-the-box automated pipeline for landmark localization. We also support uncertainty estimation for model predictions.
 
